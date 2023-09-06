@@ -9,8 +9,8 @@ from qiskit.circuit import Parameter
 
 
 class ExactCover(Problem):
-    def __init__(self, params=None) -> None:
-        super().__init__(params)
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
 
         self.FR = self.params.get("FR", None)
         self.CR = self.params.get("CR", None)

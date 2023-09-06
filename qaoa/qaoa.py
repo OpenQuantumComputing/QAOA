@@ -36,8 +36,8 @@ class QAOA:
 
         self.params = params
 
-        self.problem = problem(self.params)
-        self.mixer = mixer(self.params)
+        self.problem = problem(self)
+        self.mixer = mixer(self)
 
 
 
@@ -69,7 +69,7 @@ class QAOA:
         for d in range(depth):
             self.gamma_params[d] = Parameter("gamma_" + str(d))
             cost_circuit = self.problem.phase_circuit.assign_parameters(
-                {self.cost_circuit.parameters[0]: self.gamma_params[d]},
+                {self.problem.phase_circuit.parameters[0]: self.gamma_params[d]},
                 inplace=False,
             )
             self.parameterized_circuit.compose(cost_circuit, inplace=True)
@@ -84,4 +84,12 @@ class QAOA:
         self.parameterized_circuit.barrier()
         self.parameterized_circuit.measure(q, c)
         self.parametrized_circuit_depth = depth
+
+    @property
+    def phase_circuit(self):
+        return self.problem.phase_circuit
+
+    @property
+    def mixer_circuit(self):
+        return self.mixer.mixer_circuit
 

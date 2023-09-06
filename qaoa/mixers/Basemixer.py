@@ -4,15 +4,18 @@ from abc import ABC, abstractmethod
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
-
-class Mixer(ABC):
-    def __init__(self, params={}) -> None:
+class MixerBase(ABC):
+    def __init__(self, parent) -> None:
         super().__init__()
-
-        self.params = params
+        self.parent = parent
         self.mixer_circuit = None
 
+    @property
+    def params(self):
+        return self.parent.params
 
+
+class Mixer(MixerBase):
     @abstractmethod
     def set_initial_state(self, circuit, qubit_register):
         pass
@@ -21,14 +24,16 @@ class Mixer(ABC):
     def create_mixer(self):
         pass
 
+
+
 class Constrained(Mixer):
-    def __init__(self, params={}) -> None:
-        super().__init__(params)
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
 
         self.B = []
         self.best_mixer_terms = []
         self.mixer_circuit = None
-        self.reduced = params.get("reduced", True)
+        self.reduced = self.params.get("reduced", True)
 
     def set_initial_state(self, circuit, qubit_register):
         # set to ground state of mixer hamilton??
@@ -69,18 +74,18 @@ class Constrained(Mixer):
         pass
 
 class Unconstrained(Mixer):
-    def __init__(self, params={}) -> None:
-        super().__init__(params)
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
 
     def set_initial_state(self, circuit, qubit_register):
         circuit.h(qubit_register)
 
     def create_mixer(self):
-        q = QuantumRegister(self.N_qubits)
+        q = QuantumRegister(self.params['N_qubits'])
         mixer_param = Parameter("x_beta")
 
         self.mixer_circuit = QuantumCircuit(q)
-        self.mixer_circuit.rx(-2 * mixer_param, range(self.N_qubits))
+        self.mixer_circuit.rx(-2 * mixer_param, range(self.params['N_qubits']))
 
         usebarrier = self.params.get("usebarrier", False)
         if usebarrier:

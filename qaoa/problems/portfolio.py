@@ -7,18 +7,15 @@ from .Baseproblem import QUBO
 
 
 class PortfolioOptimization(QUBO):
-    def __init__(self, params=None) -> None:
-        super().__init__(params)
-
-    def __init__(self, params=None):
-        super().__init__(params=params)
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
 
         self.__checkParams()
-        self.risk = params.get("risk")
-        self.budget = params.get("budget")
-        self.cov_matrix = params.get("cov_matrix")
-        self.exp_return = params.get("exp_return")
-        self.penalty = params.get("penalty", 0.0)
+        self.risk = self.params.get("risk")
+        self.budget = self.params.get("budget")
+        self.cov_matrix = self.params.get("cov_matrix")
+        self.exp_return = self.params.get("exp_return")
+        self.penalty = self.params.get("penalty", 0.0)
         self.N_qubits = len(self.exp_return)
 
         # Reformulated as a QUBO

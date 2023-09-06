@@ -11,12 +11,16 @@ from qiskit import QuantumCircuit, QuantumRegister
 
 from qiskit.circuit import Parameter
 
-
-class Problem(ABC):
-    def __init__(self, params=None) -> None:
-        self.params = params
+class BaseProblem(ABC):
+    def __init__(self, parent) -> None:
+        self.parent = parent
         self.phase_circuit = None
 
+    @property
+    def params(self):
+        return self.parent.params
+
+class Problem(BaseProblem):
     @abstractmethod
     def cost(self, string):
         pass
@@ -30,8 +34,8 @@ class Problem(ABC):
 
 
 class QUBO(Problem):
-    def __init__(self, params=None) -> None:
-        super().__init__(params)
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
 
         self.parameterized = False
         self.QUBO_Q = None
@@ -99,29 +103,29 @@ class QUBO(Problem):
         Creates a parameterized circuit of the triangularized QUBO problem.
         """
         q = QuantumRegister(self.N_qubits)
-        self.cost_circuit = QuantumCircuit(q)
+        self.phase_circuit = QuantumCircuit(q)
         cost_param = Parameter("x_gamma")
 
         usebarrier = self.params.get("usebarrier", False)
         if usebarrier:
-            self.cost_circuit.barrier()
+            self.phase_circuit.barrier()
 
         ### cost Hamiltonian
         for i in range(self.N_qubits):
             w_i = 0.5 * (self.QUBO_c[i] + np.sum(self.QUBO_Q[:, i]))
 
             if not math.isclose(w_i, 0, abs_tol=1e-7):
-                self.cost_circuit.rz(cost_param * w_i, q[i])
+                self.phase_circuit.rz(cost_param * w_i, q[i])
 
             for j in range(i + 1, self.N_qubits):
                 w_ij = 0.25 * self.QUBO_Q[j][i]
 
                 if not math.isclose(w_ij, 0, abs_tol=1e-7):
-                    self.cost_circuit.cx(q[i], q[j])
-                    self.cost_circuit.rz(cost_param * w_ij, q[j])
-                    self.cost_circuit.cx(q[i], q[j])
+                    self.phase_circuit.cx(q[i], q[j])
+                    self.phase_circuit.rz(cost_param * w_ij, q[j])
+                    self.phase_circuit.cx(q[i], q[j])
         if usebarrier:
-            self.cost_circuit.barrier()
+            self.phase_circuit.barrier()
 
     def __str2np(self, s):
         x = np.array(list(map(int, s)))
