@@ -15,7 +15,7 @@ class ExactCover(Problem):
         self.FR = self.params.get("FR", None)
         self.CR = self.params.get("CR", None)
         self.mu = self.params.get("mu", 1)
-        self.N_qubits = self.params.get("instances")
+        self.N_qubits = self.params["instances"]
 
     def cost(self, string):
         x = np.array(list(map(int, string)))
@@ -31,11 +31,11 @@ class ExactCover(Problem):
         Creates parameterized circuit corresponding to the cost function
         """
         q = QuantumRegister(self.N_qubits)
-        self.cost_circuit = QuantumCircuit(q)
+        self.phase_circuit = QuantumCircuit(q)
         cost_param = Parameter("x_gamma")
         usebarrier = self.params.get("usebarrier", False)
         if usebarrier:
-            self.parameterized_circuit.barrier()
+            self.phase_circuit.barrier()
 
         F, R = np.shape(self.FR)
 
@@ -46,17 +46,17 @@ class ExactCover(Problem):
                 hr += 0.5 * self.CR[r]
 
             if not math.isclose(hr, 0, abs_tol=1e-7):
-                self.cost_circuit.rz(cost_param * hr, q[r])
+                self.phase_circuit.rz(cost_param * hr, q[r])
 
             for r_ in range(r + 1, R):
                 Jrr_ = self.mu * 0.5 * self.FR[:, r] @ self.FR[:, r_]
 
                 if not math.isclose(Jrr_, 0, abs_tol=1e-7):
-                    self.cost_circuit.cx(q[r], q[r_])
-                    self.cost_circuit.rz(cost_param * Jrr_, q[r_])
-                    self.cost_circuit.cx(q[r], q[r_])
+                    self.phase_circuit.cx(q[r], q[r_])
+                    self.phase_circuit.rz(cost_param * Jrr_, q[r_])
+                    self.phase_circuit.cx(q[r], q[r_])
         if usebarrier:
-            self.cost_circuit.barrier()
+            self.phase_circuit.barrier()
 
     def isFeasible(self, string):
         x = np.array(list(map(int, string)))

@@ -12,6 +12,7 @@ class Mixer(ABC):
         self.params = params
         self.mixer_circuit = None
 
+
     @abstractmethod
     def set_initial_state(self, circuit, qubit_register):
         pass
