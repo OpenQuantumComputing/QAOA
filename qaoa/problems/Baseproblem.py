@@ -20,6 +20,16 @@ class BaseProblem(ABC):
     def params(self):
         return self.parent.params
 
+    def __getattr__(self, attr):
+        """ IMPORTANT
+        One could change this to
+            getattr(self.parent, attr)
+        Which basically would result in Problem and Mixer being more intertwined.
+        Using getattr(*) would be more elegant, but makes it easier to make mistakes
+        (spelling errors would for example be dangerous)
+        """
+        return self.params[attr]
+
 class Problem(BaseProblem):
     @abstractmethod
     def cost(self, string):

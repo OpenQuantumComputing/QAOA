@@ -42,23 +42,26 @@ class QAOA:
         assert issubclass(problem, Problem)
         assert issubclass(mixer, Mixer)
 
+        # All values of params gets added as attributes, see end of __init__
         self.params = params
+
+
+        self.problem = problem(self)
+        self.mixer = mixer(self)
+
 
         self.Var = None
         self.isQNSPSA = False
 
-        
-        self.optimizer = self.params.get("optimizer", [COBYLA, {}])
-        qasm_sim = Aer.get_backend("qasm_simulator")
-        self.backend = self.params.get("backend", qasm_sim)
-        self.shots = self.params.get("shots", 1024)
-        self.noisemodel = self.params.get("noisemodel", None)
-        self.precision = self.params.get("precision", None)
+        # Default values
+        self.optimizer = [COBYLA, {}]
+        self.backend = Aer.get_backend("qasm_simulator")
+        self.shots = 1024
+        self.noisemodel = None
+        self.precision = None
 
         self.stat = Statistic(alpha=self.params.get("alpha", 1))
 
-        self.problem = problem(self)
-        self.mixer = mixer(self)
 
         self.current_depth = 0  # depth at which local optimization has been done
         self.angles_hist = {}  # initial and final angles during optimization per depth
@@ -75,7 +78,8 @@ class QAOA:
         self.gamma_params = None
         self.beta_params = None
 
-
+        for key, val in self.params.items():
+            setattr(self, key, val)
 
     @property
     def phase_circuit(self):
@@ -84,6 +88,9 @@ class QAOA:
     @property
     def mixer_circuit(self):
         return self.mixer.mixer_circuit
+
+    def isFeasible(self, string):
+        return self.problem.isFeasible(string)
 
     def cost(self, string):
         return self.problem.cost(string)
@@ -164,7 +171,7 @@ class QAOA:
         self.t_per_fval["d" + str(self.current_depth + 1)] = (
             time.time() - t_start
         ) / res.nfev
-        print("cost(depth=", self.current_depth + 1, ")=", res.fun)
+        LOG.info(f"cost(depth { self.current_depth + 1} = {res.fun}", func=self.increase_depth.__name__)
 
         ind = min(self.g_values, key=self.g_values.get)
         self.angles_hist["d" + str(self.current_depth + 1) + "_final"] = self.g_angles[
@@ -350,6 +357,54 @@ class QAOA:
                 params[self.gamma_params[d]] = angles[2 * d + 0]
                 params[self.beta_params[d]] = angles[2 * d + 1]
         return params
+
+    def interp(self, angles):
+        """
+        INTERP heuristic/linear interpolation for initial parameters
+        when going from depth p to p+1 (https://doi.org/10.1103/PhysRevX.10.021067)
+        E.g. [0., 2., 3., 6., 11., 0.] becomes [2., 2.75, 4.5, 7.25, 11.]
+
+        :param angles: angles for depth p
+        :return: linear interpolation of angles for depth p+1
+        """
+        depth = len(angles)
+        tmp = np.zeros(len(angles) + 2)
+        tmp[1:-1] = angles.copy()
+        w = np.arange(0, depth + 1)
+        return w / depth * tmp[:-1] + (depth - w) / depth * tmp[1:]
+
+    def hist(self, angles):
+        depth = int(len(angles) / 2)
+        self.createParameterizedCircuit(depth)
+
+        params = self.getParametersToBind(angles, depth, asList=True)
+        if self.backend.configuration().local:
+            job = execute(
+                self.parameterized_circuit,
+                self.backend,
+                shots=self.shots,
+                parameter_binds=[params],
+                optimization_level=0,
+            )
+        else:
+            job = start_or_retrieve_job(
+                "hist", self.backend, circ, options={"shots": self.shots}
+            )
+        return job.result().get_counts()
+
+    def random_init(self, gamma_bounds, beta_bounds, depth):
+        """
+        Enforces the bounds of gamma and beta based on the graph type.
+        :param gamma_bounds: Parameter bound tuple (min,max) for gamma
+        :param beta_bounds: Parameter bound tuple (min,max) for beta
+        :return: np.array on the form (gamma_1, beta_1, gamma_2, ...., gamma_d, beta_d)
+        """
+        gamma_list = np.random.uniform(gamma_bounds[0], gamma_bounds[1], size=depth)
+        beta_list = np.random.uniform(beta_bounds[0], beta_bounds[1], size=depth)
+        initial = np.empty((gamma_list.size + beta_list.size,), dtype=gamma_list.dtype)
+        initial[0::2] = gamma_list
+        initial[1::2] = beta_list
+        return initial
 
 
 

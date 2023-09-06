@@ -21,7 +21,7 @@ class XY(Constrained):
     def create_mixer(self):
         q = QuantumRegister(self.params['N_qubits'])
         self.mixer_circuit = QuantumCircuit(q)
-        self.best_mixer_terms, self.logical_X_operators = self.__XYMixerTerms()
+        # self.best_mixer_terms, self.logical_X_operators = self.__XYMixerTerms()
 
         Beta = Parameter("x_beta")
         scale = 0.5  # Since every logical X has two stabilizers
@@ -36,6 +36,7 @@ class XY(Constrained):
 
     def compute_feasible_subspace(self):
         print("Its now computing the feasible subspace")
+        self.B.clear()
         for combination in itertools.combinations(range(self.params['N_qubits']), self.budget):
             current_state = ["0"] * self.params['N_qubits']
             for index in combination:

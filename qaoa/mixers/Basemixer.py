@@ -14,6 +14,17 @@ class MixerBase(ABC):
     def params(self):
         return self.parent.params
 
+    def __getattr__(self, attr):
+        """ IMPORTANT
+        One could change this to
+            getattr(self.parent, attr)
+        Which basically would result in Problem and Mixer being more intertwined.
+        Using getattr(*) would be more elegant, but makes it easier to make mistakes
+        (spelling errors would for example be dangerous)
+        """
+        return self.parent.params[attr]
+
+
 
 class Mixer(MixerBase):
     @abstractmethod
@@ -38,7 +49,7 @@ class Constrained(Mixer):
     def set_initial_state(self, circuit, qubit_register):
         # set to ground state of mixer hamilton??
         if not self.B:
-            self.computeFeasibleSubspace()
+            self.compute_feasible_subspace()
             # initial state
         ampl_vec = np.zeros(2 ** len(self.B[0]))
         ampl = 1 / np.sqrt(len(self.B))
@@ -49,7 +60,7 @@ class Constrained(Mixer):
 
     def create_mixer(self):
         if not self.B:
-            self.computeFeasibleSubspace()
+            self.compute_feasible_subspace()
 
         m = Mixer(self.B, sort=True)
         m.compute_commuting_pairs()
