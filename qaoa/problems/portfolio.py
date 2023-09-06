@@ -13,6 +13,7 @@ class PortfolioOptimization(QUBO):
         self.__checkParams()
         self.risk = self.params.get("risk")
         self.budget = self.params.get("budget")
+        self.params["k"] = self.budget
         self.cov_matrix = self.params.get("cov_matrix")
         self.exp_return = self.params.get("exp_return")
         self.penalty = self.params.get("penalty", 0.0)

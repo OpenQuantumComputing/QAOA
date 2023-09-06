@@ -171,6 +171,7 @@ class QAOA:
         self.t_per_fval["d" + str(self.current_depth + 1)] = (
             time.time() - t_start
         ) / res.nfev
+
         LOG.info(f"cost(depth { self.current_depth + 1} = {res.fun}", func=self.increase_depth.__name__)
 
         ind = min(self.g_values, key=self.g_values.get)

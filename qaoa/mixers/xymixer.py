@@ -15,8 +15,8 @@ class PauliString:
         raise NotImplementedError
 
 class XY(Constrained):
-    def __init__(self, params={}) -> None:
-        super().__init__(params)
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
 
     def create_mixer(self):
         q = QuantumRegister(self.params['N_qubits'])
@@ -37,7 +37,7 @@ class XY(Constrained):
     def compute_feasible_subspace(self):
         print("Its now computing the feasible subspace")
         self.B.clear()
-        for combination in itertools.combinations(range(self.params['N_qubits']), self.budget):
+        for combination in itertools.combinations(range(self.params['N_qubits']), self.k):
             current_state = ["0"] * self.params['N_qubits']
             for index in combination:
                 current_state[index] = "1"
