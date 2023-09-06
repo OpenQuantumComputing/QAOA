@@ -47,6 +47,7 @@ class QAOA:
         self.Var = None
         self.isQNSPSA = False
 
+        
         self.optimizer = self.params.get("optimizer", [COBYLA, {}])
         qasm_sim = Aer.get_backend("qasm_simulator")
         self.backend = self.params.get("backend", qasm_sim)
@@ -73,6 +74,8 @@ class QAOA:
         self.parameterized_circuit_depth = 0
         self.gamma_params = None
         self.beta_params = None
+
+
 
     @property
     def phase_circuit(self):

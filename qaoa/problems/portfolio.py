@@ -18,6 +18,8 @@ class PortfolioOptimization(QUBO):
         self.penalty = self.params.get("penalty", 0.0)
         self.N_qubits = len(self.exp_return)
 
+        self.params['N_qubits'] = self.N_qubits
+
         # Reformulated as a QUBO
         # min x^T Q x + c^T x + b
         # Writing Q as lower triangular matrix since it otherwise is symmetric
