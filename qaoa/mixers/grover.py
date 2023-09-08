@@ -20,12 +20,12 @@ class Grover(Constrained):
         self.k = self.params["k"]
         self.n = self.params["N_qubits"]
 
-        self.U_s = Operator(dicke_state(self.n, self.k))
-        self.U_s_dagger = self.U_s.adjoint()
+        self.U_s = dicke_state(self.n, self.k)
+        self.U_s_dagger = self.U_s.inverse()
 
 
     def set_initial_state(self, circuit, qubit_register):
-        circuit.unitary(self.U_s, qubit_register, label="Us")
+        circuit.compose(self.U_s, qubit_register, inplace=True)
 
     def create_mixer(self):
         q = QuantumRegister(self.params['N_qubits'])
@@ -35,11 +35,15 @@ class Grover(Constrained):
         Beta = Parameter("x_beta")
         rz = RZGate(Beta).control(self.n - 1)
 
-        self.mixer_circuit.unitary(self.U_s_dagger, q, label="Us^*")
-        self.mixer_circuit.append(rz, q)
-        self.mixer_circuit.unitary(self.U_s, q, label="Us")
-
         usebarrier = self.params.get("usebarrier", False)
+
+        self.mixer_circuit.compose(self.U_s_dagger, q, inplace=True)
+        self.mixer_circuit.x(range(self.n))
+        self.mixer_circuit.append(rz, self.mixer_circuit.qubits)
+        self.mixer_circuit.x(range(self.n))
+        self.mixer_circuit.compose(self.U_s, self.mixer_circuit.qubits, inplace=True)
+
+
         if usebarrier:
             self.mixer_circuit.barrier()
 

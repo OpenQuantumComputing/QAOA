@@ -78,6 +78,11 @@ class QAOA:
         self.gamma_params = None
         self.beta_params = None
 
+        self.E = None
+        self.g_it = 0
+        self.g_values = {}
+        self.g_angles = {}
+
         for key, val in self.params.items():
             setattr(self, key, val)
 
@@ -107,11 +112,18 @@ class QAOA:
         c = ClassicalRegister(self.problem.N_qubits)
         self.parameterized_circuit = QuantumCircuit(q, c)
 
+
+        set_initial_state = self.params.get('init_circuit', None)
+
+        if set_initial_state is not None:
+            set_initial_state(self.parameterized_circuit, q, params=self.params)
+        else:
+            self.mixer.set_initial_state(self.parameterized_circuit, q)
+
+
         self.gamma_params = [None] * depth
         self.beta_params = [None] * depth
 
-        ### Initial state
-        self.mixer.set_initial_state(self.parameterized_circuit, q)
 
         for d in range(depth):
             self.gamma_params[d] = Parameter("gamma_" + str(d))

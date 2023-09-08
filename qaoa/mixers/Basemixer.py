@@ -28,12 +28,16 @@ class MixerBase(ABC):
 
 class Mixer(MixerBase):
     @abstractmethod
-    def set_initial_state(self, circuit, qubit_register):
-        pass
-
-    @abstractmethod
     def create_mixer(self):
         pass
+
+
+    def set_initial_state(self, circuit, qubit_register):
+        """ Initial state will by default be decided here, but can be overwritten with the
+        :parm init_circ
+
+        """
+        raise NotImplementedError
 
 
 
@@ -79,6 +83,10 @@ class Constrained(Mixer):
     @abstractmethod
     def compute_feasible_subspace(self):
         pass
+
+    def set_feasible_subspace(self, space):
+        self.B = space
+
 
     @abstractmethod
     def isFeasible(self, string):
