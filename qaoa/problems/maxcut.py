@@ -3,13 +3,15 @@ from qaoa.problems import Problem
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
+
 class MaxCut(Problem):
     def __init__(self, parent) -> None:
         super().__init__(parent=parent)
 
         self.G = self.params["G"]
         self.N_qubits = self.G.number_of_nodes()
-        self.params['N_qubits'] = self.N_qubits
+        self.params["N_qubits"] = self.N_qubits
+
     def cost(self, string):
         C = 0
         for edge in self.G.edges():

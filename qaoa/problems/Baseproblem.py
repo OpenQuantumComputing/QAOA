@@ -1,4 +1,5 @@
 import structlog
+
 LOG = structlog.get_logger(file=__name__)
 
 import math
@@ -11,6 +12,7 @@ from qiskit import QuantumCircuit, QuantumRegister
 
 from qiskit.circuit import Parameter
 
+
 class BaseProblem(ABC):
     def __init__(self, parent) -> None:
         self.parent = parent
@@ -21,7 +23,7 @@ class BaseProblem(ABC):
         return self.parent.params
 
     def __getattr__(self, attr):
-        """ IMPORTANT
+        """IMPORTANT
         One could change this to
             getattr(self.parent, attr)
         Which basically would result in Problem and Mixer being more intertwined.
@@ -29,6 +31,7 @@ class BaseProblem(ABC):
         (spelling errors would for example be dangerous)
         """
         return self.params[attr]
+
 
 class Problem(BaseProblem):
     @abstractmethod
@@ -63,8 +66,6 @@ class QUBO(Problem):
             LOG.error("Function not implemented!", func=self.create_phase.__name__)
             raise NotImplementedError
         self._createParameterizedCostCircuitTril()
-
-
 
     def _init_QUBO(self, Q=None, c=None, b=None):
         """

@@ -19,7 +19,7 @@ class PortfolioOptimization(QUBO):
         self.penalty = self.params.get("penalty", 0.0)
         self.N_qubits = len(self.exp_return)
 
-        self.params['N_qubits'] = self.N_qubits
+        self.params["N_qubits"] = self.N_qubits
 
         # Reformulated as a QUBO
         # min x^T Q x + c^T x + b
@@ -55,7 +55,6 @@ class PortfolioOptimization(QUBO):
         x = self.__str2np(string)
         constraint = np.sum(x) - self.params.get("budget")
         return math.isclose(constraint, 0, abs_tol=1e-7)
-
 
     def __checkParams(self):
         # we require the following params:

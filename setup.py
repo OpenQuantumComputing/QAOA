@@ -9,5 +9,17 @@ setup(
     description="Tools for quantum computing",
     long_description=open("README.md").read(),
     keywords="quantum computing, qaoa, qiskit",
-    install_requires=["qiskit", "numpy", "scipy", "structlog"],
+    install_requires=[
+        "numpy",
+        "scipy",
+        "structlog",
+        "matplotlib",
+        "networkx",
+        "jupyter",
+        "qiskit",
+        "qiskit-aer",
+        "qiskit-algorithms",
+        "qiskit-finance",
+        "pylatexenc",
+    ],
 )

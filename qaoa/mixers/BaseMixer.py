@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
+
 class MixerBase(ABC):
     def __init__(self, parent) -> None:
         super().__init__()
@@ -15,7 +16,7 @@ class MixerBase(ABC):
         return self.parent.params
 
     def __getattr__(self, attr):
-        """ IMPORTANT
+        """IMPORTANT
         One could change this to
             getattr(self.parent, attr)
         Which basically would result in Problem and Mixer being more intertwined.
@@ -25,20 +26,17 @@ class MixerBase(ABC):
         return self.parent.params[attr]
 
 
-
 class Mixer(MixerBase):
     @abstractmethod
     def create_mixer(self):
         pass
 
-
     def set_initial_state(self, circuit, qubit_register):
-        """ Initial state will by default be decided here, but can be overwritten with the
+        """Initial state will by default be decided here, but can be overwritten with the
         :parm init_circ
 
         """
         raise NotImplementedError
-
 
 
 class Constrained(Mixer):
@@ -87,12 +85,12 @@ class Constrained(Mixer):
     def set_feasible_subspace(self, space):
         self.B = space
 
-
     @abstractmethod
     def isFeasible(self, string):
         pass
 
-class Unconstrained(Mixer):
+
+class X(Mixer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
 
@@ -100,11 +98,11 @@ class Unconstrained(Mixer):
         circuit.h(qubit_register)
 
     def create_mixer(self):
-        q = QuantumRegister(self.params['N_qubits'])
+        q = QuantumRegister(self.params["N_qubits"])
         mixer_param = Parameter("x_beta")
 
         self.mixer_circuit = QuantumCircuit(q)
-        self.mixer_circuit.rx(-2 * mixer_param, range(self.params['N_qubits']))
+        self.mixer_circuit.rx(-2 * mixer_param, range(self.params["N_qubits"]))
 
         usebarrier = self.params.get("usebarrier", False)
         if usebarrier:

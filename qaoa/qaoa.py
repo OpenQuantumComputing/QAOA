@@ -1,14 +1,12 @@
 import structlog
+
 LOG = structlog.get_logger(file=__name__)
 
 
 import time
 import numpy as np
 
-from qiskit import (
-    QuantumCircuit, QuantumRegister, ClassicalRegister,
-    execute, Aer
-)
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute, Aer
 from qiskit.circuit import Parameter
 from qiskit.primitives import Sampler
 from qiskit.algorithms.optimizers import COBYLA
@@ -17,9 +15,10 @@ from qaoa.mixers import Mixer
 from qaoa.problems import Problem
 from qaoa.util import Statistic
 
+
 class QAOA:
-    """ Main class
-    """
+    """Main class"""
+
     def __init__(self, problem, mixer, params=None) -> None:
         """
         A QAO-Ansatz consist of two parts:
@@ -45,10 +44,8 @@ class QAOA:
         # All values of params gets added as attributes, see end of __init__
         self.params = params
 
-
         self.problem = problem(self)
         self.mixer = mixer(self)
-
 
         self.Var = None
         self.isQNSPSA = False
@@ -62,14 +59,13 @@ class QAOA:
 
         self.stat = Statistic(alpha=self.params.get("alpha", 1))
 
-
         self.current_depth = 0  # depth at which local optimization has been done
         self.angles_hist = {}  # initial and final angles during optimization per depth
         self.num_fval = {}  # number of function evaluations per depth
         self.t_per_fval = {}  # wall time per function evaluation per depth
         self.num_shots = (
             {}
-        ) # number of total shots taken for local optimization per depth
+        )  # number of total shots taken for local optimization per depth
         self.costval = {}  # optimal cost values per depth
 
         # Related to parameterized circuit
@@ -102,7 +98,9 @@ class QAOA:
 
     def createParameterizedCircuit(self, depth):
         if self.parameterized_circuit_depth == depth:
-            LOG.info("Circuit is already of depth " + str(self.parameterized_circuit_depth))
+            LOG.info(
+                "Circuit is already of depth " + str(self.parameterized_circuit_depth)
+            )
             return
 
         self.problem.create_phase()
@@ -112,18 +110,15 @@ class QAOA:
         c = ClassicalRegister(self.problem.N_qubits)
         self.parameterized_circuit = QuantumCircuit(q, c)
 
-
-        set_initial_state = self.params.get('init_circuit', None)
+        set_initial_state = self.params.get("init_circuit", None)
 
         if set_initial_state is not None:
             set_initial_state(self.parameterized_circuit, q, params=self.params)
         else:
             self.mixer.set_initial_state(self.parameterized_circuit, q)
 
-
         self.gamma_params = [None] * depth
         self.beta_params = [None] * depth
-
 
         for d in range(depth):
             self.gamma_params[d] = Parameter("gamma_" + str(d))
@@ -184,7 +179,10 @@ class QAOA:
             time.time() - t_start
         ) / res.nfev
 
-        LOG.info(f"cost(depth { self.current_depth + 1} = {res.fun}", func=self.increase_depth.__name__)
+        LOG.info(
+            f"cost(depth { self.current_depth + 1} = {res.fun}",
+            func=self.increase_depth.__name__,
+        )
 
         ind = min(self.g_values, key=self.g_values.get)
         self.angles_hist["d" + str(self.current_depth + 1) + "_final"] = self.g_angles[
@@ -195,8 +193,8 @@ class QAOA:
         self.current_depth += 1
 
     def sample_cost_landscape(
-            self,
-            angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
+        self,
+        angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
     ):
         logger = LOG.bind(func=self.sample_cost_landscape.__name__)
         logger.info("Calculating energy landscape for depth p=1...")
@@ -243,7 +241,6 @@ class QAOA:
 
         logger.info("Calculating Energy landscape done")
 
-
     def measurementStatistics(self, job):
         """
         implements a function for expectation value and variance
@@ -283,7 +280,7 @@ class QAOA:
         try:
             opt = self.optimizer[0](**self.optimizer[1])
         except TypeError as e:  ### QNSPSA needs fidelity
-            self.isQNSPSA=True
+            self.isQNSPSA = True
             self.optimizer[1]["fidelity"] = self.optimizer[0].get_fidelity(
                 self.parameterized_circuit, sampler=Sampler()
             )
@@ -418,9 +415,3 @@ class QAOA:
         initial[0::2] = gamma_list
         initial[1::2] = beta_list
         return initial
-
-
-
-
-
-
