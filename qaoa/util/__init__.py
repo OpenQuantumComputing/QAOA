@@ -1,3 +1,2 @@
 from .Statistic import Statistic
-
-# from .dicke_state import dicke_state
+from .dicke_state import dicke_state
