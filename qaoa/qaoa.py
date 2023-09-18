@@ -11,6 +11,7 @@ from qiskit.circuit import Parameter
 from qiskit.primitives import Sampler
 from qiskit.algorithms.optimizers import COBYLA
 
+from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
 from qaoa.problems import Problem
 from qaoa.util import Statistic
@@ -19,15 +20,18 @@ from qaoa.util import Statistic
 class QAOA:
     """Main class"""
 
-    def __init__(self, problem, mixer, params=None) -> None:
+    def __init__(self, problem, mixer, initialstate, params={}) -> None:
         """
-        A QAO-Ansatz consist of two parts:
+        A QAO-Ansatz consist of these parts:
 
             :problem of Basetype Problem,
             implementing the phase circuit and the cost.
 
             :mixer of Basetype Mixer,
-            specifying the mixer circuit and the initial state.
+            specifying the mixer circuit.
+
+            :initialstate of Basetype InitialState,
+            specifying the initial state.
 
         :params additional parameters
 
@@ -38,24 +42,31 @@ class QAOA:
 
         """
 
-        assert issubclass(problem, Problem)
-        assert issubclass(mixer, Mixer)
-
-        # All values of params gets added as attributes, see end of __init__
         self.params = params
+        self.usebarrier = self.params.get("usebarrier", False)
 
-        self.problem = problem(self)
-        self.mixer = mixer(self)
+        assert issubclass(type(problem), Problem)
+        assert issubclass(type(mixer), Mixer)
+        assert issubclass(type(initialstate), InitialState)
+
+        self.problem = problem
+        self.mixer = mixer
+        self.initialstate = initialstate
+        self.initialstate.setNumQubits(self.problem.N_qubits)
+        self.mixer.setNumQubits(self.problem.N_qubits)
 
         self.Var = None
         self.isQNSPSA = False
 
-        # Default values
-        self.optimizer = [COBYLA, {}]
-        self.backend = Aer.get_backend("qasm_simulator")
-        self.shots = 1024
-        self.noisemodel = None
-        self.precision = None
+        qasm_sim = Aer.get_backend("qasm_simulator")
+        self.backend = self.params.get("backend", qasm_sim)
+
+        self.optimizer = self.params.get("optimizer", [COBYLA, {}])
+
+        self.shots = self.params.get("shots", 1024)
+
+        self.noisemodel = self.params.get("noisemodel", None)
+        self.precision = self.params.get("precision", None)
 
         self.stat = Statistic(alpha=self.params.get("alpha", 1))
 
@@ -82,13 +93,18 @@ class QAOA:
         for key, val in self.params.items():
             setattr(self, key, val)
 
+### getter functions
     @property
     def phase_circuit(self):
-        return self.problem.phase_circuit
+        return self.problem.circuit
 
     @property
     def mixer_circuit(self):
-        return self.mixer.mixer_circuit
+        return self.mixer.circuit
+
+    @property
+    def initialstate_circuit(self):
+        return self.initialstate.circuit
 
     def isFeasible(self, string):
         return self.problem.isFeasible(string)
@@ -103,37 +119,44 @@ class QAOA:
             )
             return
 
-        self.problem.create_phase()
-        self.mixer.create_mixer()
+        self.problem.create_circuit()
+        self.mixer.create_circuit()
+        self.initialstate.create_circuit()
 
         q = QuantumRegister(self.problem.N_qubits)
         c = ClassicalRegister(self.problem.N_qubits)
         self.parameterized_circuit = QuantumCircuit(q, c)
 
-        set_initial_state = self.params.get("init_circuit", None)
-
-        if set_initial_state is not None:
-            set_initial_state(self.parameterized_circuit, q, params=self.params)
-        else:
-            self.mixer.set_initial_state(self.parameterized_circuit, q)
+        #set_initial_state = self.params.get("init_circuit", None)
 
         self.gamma_params = [None] * depth
         self.beta_params = [None] * depth
 
+        self.parameterized_circuit.compose(self.initialstate.circuit, inplace=True)
+
+        if self.usebarrier:
+            self.circuit.barrier()
+
         for d in range(depth):
             self.gamma_params[d] = Parameter("gamma_" + str(d))
-            cost_circuit = self.problem.phase_circuit.assign_parameters(
-                {self.problem.phase_circuit.parameters[0]: self.gamma_params[d]},
+            tmp_circuit = self.problem.circuit.assign_parameters(
+                {self.problem.circuit.parameters[0]: self.gamma_params[d]},
                 inplace=False,
             )
-            self.parameterized_circuit.compose(cost_circuit, inplace=True)
+            self.parameterized_circuit.compose(tmp_circuit, inplace=True)
+
+            if self.usebarrier:
+                self.circuit.barrier()
 
             self.beta_params[d] = Parameter("beta_" + str(d))
-            mixer_circuit = self.mixer.mixer_circuit.assign_parameters(
-                {self.mixer.mixer_circuit.parameters[0]: self.beta_params[d]},
+            tmp_circuit = self.mixer.circuit.assign_parameters(
+                {self.mixer.circuit.parameters[0]: self.beta_params[d]},
                 inplace=False,
             )
-            self.parameterized_circuit.compose(mixer_circuit, inplace=True)
+            self.parameterized_circuit.compose(tmp_circuit, inplace=True)
+
+            if self.usebarrier:
+                self.circuit.barrier()
 
         self.parameterized_circuit.barrier()
         self.parameterized_circuit.measure(q, c)

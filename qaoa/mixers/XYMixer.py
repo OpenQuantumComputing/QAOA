@@ -17,32 +17,27 @@ class PauliString:
 
 
 class XY(Constrained):
-    def __init__(self, parent) -> None:
-        super().__init__(parent)
 
-    def create_mixer(self):
-        q = QuantumRegister(self.params["N_qubits"])
-        self.mixer_circuit = QuantumCircuit(q)
+    def create_circuit(self):
+        q = QuantumRegister(self.N_qubits)
+        self.circuit = QuantumCircuit(q)
         # self.best_mixer_terms, self.logical_X_operators = self.__XYMixerTerms()
 
         Beta = Parameter("x_beta")
         scale = 0.5  # Since every logical X has two stabilizers
-        for i in range(self.params["N_qubits"] - 1):
+        for i in range(self.N_qubits - 1):
             # Hard coded XY mixer
             current_gate = XXPlusYYGate(scale * Beta)
-            self.mixer_circuit.append(current_gate, [i, i + 1])
+            self.circuit.append(current_gate, [i, i + 1])
 
-        usebarrier = self.params.get("usebarrier", False)
-        if usebarrier:
-            self.mixer_circuit.barrier()
 
     def compute_feasible_subspace(self):
         print("Its now computing the feasible subspace")
         self.B.clear()
         for combination in itertools.combinations(
-            range(self.params["N_qubits"]), self.k
+            range(self.N_qubits), self.k
         ):
-            current_state = ["0"] * self.params["N_qubits"]
+            current_state = ["0"] * selfN_qubits
             for index in combination:
                 current_state[index] = "1"
             self.B.append("".join(current_state))
@@ -53,7 +48,7 @@ class XY(Constrained):
         return math.isclose(constraint, 0, abs_tol=1e-7)
 
     def __XYMixerTerms(self):
-        logical_X_operators = [None] * (self.params["N_qubits"] - 1)
+        logical_X_operators = [None] * (selfN_qubits - 1)
         mixer_terms = {}
         scale = 0.5  # 1/size, size of stabilizer space
         for i in range(self.params["N_qubits"] - 2):

@@ -9,13 +9,16 @@ from qiskit.circuit import Parameter
 
 
 class ExactCover(Problem):
-    def __init__(self, parent) -> None:
-        super().__init__(parent)
+    def __init__(self, FR, CR=None, mu=1, ) -> None:
 
-        self.FR = self.params.get("FR", None)
-        self.CR = self.params.get("CR", None)
-        self.mu = self.params.get("mu", 1)
-        self.N_qubits = self.params["instances"]
+        self.FR = FR
+        self.CR = CR
+        self.mu = 1 
+
+        fN=FR.shape[0]### number of flights
+        rN=FR.shape[1]### number of routes
+
+        self.N_qubits = rN
 
     def cost(self, string):
         x = np.array(list(map(int, string)))
@@ -26,16 +29,13 @@ class ExactCover(Problem):
         else:
             return -(self.CR @ x + self.mu * c_e)
 
-    def create_phase(self):
+    def create_circuit(self):
         """
         Creates parameterized circuit corresponding to the cost function
         """
         q = QuantumRegister(self.N_qubits)
-        self.phase_circuit = QuantumCircuit(q)
+        self.circuit = QuantumCircuit(q)
         cost_param = Parameter("x_gamma")
-        usebarrier = self.params.get("usebarrier", False)
-        if usebarrier:
-            self.phase_circuit.barrier()
 
         F, R = np.shape(self.FR)
 
@@ -46,17 +46,15 @@ class ExactCover(Problem):
                 hr += 0.5 * self.CR[r]
 
             if not math.isclose(hr, 0, abs_tol=1e-7):
-                self.phase_circuit.rz(cost_param * hr, q[r])
+                self.circuit.rz(cost_param * hr, q[r])
 
             for r_ in range(r + 1, R):
                 Jrr_ = self.mu * 0.5 * self.FR[:, r] @ self.FR[:, r_]
 
                 if not math.isclose(Jrr_, 0, abs_tol=1e-7):
-                    self.phase_circuit.cx(q[r], q[r_])
-                    self.phase_circuit.rz(cost_param * Jrr_, q[r_])
-                    self.phase_circuit.cx(q[r], q[r_])
-        if usebarrier:
-            self.phase_circuit.barrier()
+                    self.circuit.cx(q[r], q[r_])
+                    self.circuit.rz(cost_param * Jrr_, q[r_])
+                    self.circuit.cx(q[r], q[r_])
 
     def isFeasible(self, string):
         x = np.array(list(map(int, string)))

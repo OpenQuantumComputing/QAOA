@@ -1,7 +1,5 @@
 import structlog
 
-LOG = structlog.get_logger(file=__name__)
-
 import math
 
 import numpy as np
@@ -13,19 +11,15 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
 
-class BaseProblem(ABC):
+class BaseInitialState(ABC):
     def __init__(self) -> None:
         self.circuit = None
 
-class Problem(BaseProblem):
-    @abstractmethod
-    def cost(self, string):
-        pass
+    def setNumQubits(self, n):
+        self.N_qubits = n
 
+class InitialState(BaseInitialState):
     @abstractmethod
     def create_circuit(self):
         pass
-
-    def isFeasible(self, string):
-        return True
 
