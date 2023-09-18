@@ -31,11 +31,11 @@ class PortfolioOptimization(QUBO):
         super().__init__(Q=Q, c=c, b=b)
 
     def cost_nonQUBO(self, string, penalize=True):
-        #risk = self.params.get("risk")
-        #budget = self.params.get("budget")
-        #cov_matrix = self.params.get("cov_matrix")
-        #exp_return = self.params.get("exp_return")
-        #penalty = self.params.get("penalty", 0.0)
+        # risk = self.params.get("risk")
+        # budget = self.params.get("budget")
+        # cov_matrix = self.params.get("cov_matrix")
+        # exp_return = self.params.get("exp_return")
+        # penalty = self.params.get("penalty", 0.0)
 
         x = np.array(list(map(int, string)))
         cost = risk * (x.T @ cov_matrix @ x) - exp_return.T @ x

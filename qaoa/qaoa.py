@@ -93,7 +93,7 @@ class QAOA:
         for key, val in self.params.items():
             setattr(self, key, val)
 
-### getter functions
+    ### getter functions
     @property
     def phase_circuit(self):
         return self.problem.circuit
@@ -127,7 +127,7 @@ class QAOA:
         c = ClassicalRegister(self.problem.N_qubits)
         self.parameterized_circuit = QuantumCircuit(q, c)
 
-        #set_initial_state = self.params.get("init_circuit", None)
+        # set_initial_state = self.params.get("init_circuit", None)
 
         self.gamma_params = [None] * depth
         self.beta_params = [None] * depth

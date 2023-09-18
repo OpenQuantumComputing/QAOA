@@ -17,6 +17,7 @@ class BaseProblem(ABC):
     def __init__(self) -> None:
         self.circuit = None
 
+
 class Problem(BaseProblem):
     @abstractmethod
     def cost(self, string):
@@ -28,4 +29,3 @@ class Problem(BaseProblem):
 
     def isFeasible(self, string):
         return True
-

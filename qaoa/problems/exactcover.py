@@ -9,14 +9,18 @@ from qiskit.circuit import Parameter
 
 
 class ExactCover(Problem):
-    def __init__(self, FR, CR=None, mu=1, ) -> None:
-
+    def __init__(
+        self,
+        FR,
+        CR=None,
+        mu=1,
+    ) -> None:
         self.FR = FR
         self.CR = CR
-        self.mu = 1 
+        self.mu = 1
 
-        fN=FR.shape[0]### number of flights
-        rN=FR.shape[1]### number of routes
+        fN = FR.shape[0]  ### number of flights
+        rN = FR.shape[1]  ### number of routes
 
         self.N_qubits = rN
 

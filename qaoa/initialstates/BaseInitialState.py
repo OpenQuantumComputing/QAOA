@@ -18,8 +18,8 @@ class BaseInitialState(ABC):
     def setNumQubits(self, n):
         self.N_qubits = n
 
+
 class InitialState(BaseInitialState):
     @abstractmethod
     def create_circuit(self):
         pass
-

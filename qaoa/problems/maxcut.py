@@ -6,7 +6,6 @@ from qiskit.circuit import Parameter
 
 class MaxCut(Problem):
     def __init__(self, G) -> None:
-
         self.G = G
         self.N_qubits = self.G.number_of_nodes()
 

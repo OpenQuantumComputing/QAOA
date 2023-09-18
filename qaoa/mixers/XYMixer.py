@@ -17,7 +17,6 @@ class PauliString:
 
 
 class XY(Constrained):
-
     def create_circuit(self):
         q = QuantumRegister(self.N_qubits)
         self.circuit = QuantumCircuit(q)
@@ -30,13 +29,10 @@ class XY(Constrained):
             current_gate = XXPlusYYGate(scale * Beta)
             self.circuit.append(current_gate, [i, i + 1])
 
-
     def compute_feasible_subspace(self):
         print("Its now computing the feasible subspace")
         self.B.clear()
-        for combination in itertools.combinations(
-            range(self.N_qubits), self.k
-        ):
+        for combination in itertools.combinations(range(self.N_qubits), self.k):
             current_state = ["0"] * selfN_qubits
             for index in combination:
                 current_state[index] = "1"

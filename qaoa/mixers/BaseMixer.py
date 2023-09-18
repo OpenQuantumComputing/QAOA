@@ -18,15 +18,15 @@ class Mixer(MixerBase):
     def create_circuit(self):
         pass
 
+
 class Constrained(Mixer):
     def __init__(self) -> None:
-
         self.B = []
         self.best_mixer_terms = []
         self.circuit = None
-        #self.reduced = self.params.get("reduced", True)
+        # self.reduced = self.params.get("reduced", True)
 
-    #def set_initial_state(self, circuit, qubit_register):
+    # def set_initial_state(self, circuit, qubit_register):
     #    # set to ground state of mixer hamiltonian??
     #    if not self.B:
     #        self.compute_feasible_subspace()
@@ -62,4 +62,3 @@ class Constrained(Mixer):
     @abstractmethod
     def isFeasible(self, string):
         pass
-

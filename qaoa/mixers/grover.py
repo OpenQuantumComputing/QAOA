@@ -22,7 +22,7 @@ class Grover(Constrained):
         self.U_s = dicke_state(self.n, self.k)
         self.U_s_dagger = self.U_s.inverse()
 
-    #def set_initial_state(self, circuit, qubit_register):
+    # def set_initial_state(self, circuit, qubit_register):
     #    circuit.compose(self.U_s, qubit_register, inplace=True)
 
     def create_circuit(self):
@@ -33,13 +33,11 @@ class Grover(Constrained):
         Beta = Parameter("x_beta")
         rz = RZGate(Beta).control(self.n - 1)
 
-
         self.circuit.compose(self.U_s_dagger, q, inplace=True)
         self.circuit.x(range(self.n))
         self.circuit.append(rz, self.circuit.qubits)
         self.circuit.x(range(self.n))
         self.circuit.compose(self.U_s, self.circuit.qubits, inplace=True)
-
 
     def compute_feasible_subspace(self):
         print("Its now computing the feasible subspace")

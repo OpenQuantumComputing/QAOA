@@ -6,6 +6,7 @@ from qaoa.problems import Problem
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
+
 class QUBO(Problem):
     def __init__(self, Q=None, c=None, b=None) -> None:
         """
@@ -82,7 +83,7 @@ class QUBO(Problem):
                     self.circuit.rz(cost_param * w_ij, q[j])
                     self.circuit.cx(q[i], q[j])
 
-    #def __str2np(self, s):
+    # def __str2np(self, s):
     #    x = np.array(list(map(int, s)))
     #    assert len(x) == self.N_qubits, (
     #        "bitstring  "
