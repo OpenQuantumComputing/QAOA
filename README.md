@@ -36,9 +36,9 @@ $U_M(\beta_l)=e^{-i\beta_l H_M}$,  $U_P(\gamma_l)=e^{-i\gamma_l H_P}$, and the s
 
 This library mimicks how one makes an ansatz by specifying classes that implement
 
-- a [mixer](qaoa/mixers/BaseMixer.py),
-- a  [problem](qaoa/problems/BaseProblem.py), and
-- an [initial state](qaoa/initialstates/BaseInitialState.py) .
+- a [mixer](qaoa/mixers/base_mixer.py),
+- a  [problem](qaoa/problems/base_problem.py), and
+- an [initial state](qaoa/initialstates/base_initialstate.py) .
 
 The base classes have an `@abstractmethod` called `create_circuit`which needs to be implemented.
 The problem base class additionally has an `@abstractmethod` called `cost`.
