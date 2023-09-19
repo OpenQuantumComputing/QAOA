@@ -3,7 +3,7 @@ from qiskit.circuit import Parameter
 
 from abc import abstractmethod
 
-from .BaseMixer import Mixer
+from .base_mixer import Mixer
 
 class Constrained(Mixer):
     def __init__(self) -> None:

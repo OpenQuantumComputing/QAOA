@@ -1,8 +1,7 @@
-from qaoa.initialstates import InitialState
-
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
+from .base_initialstate import InitialState
 
 class Plus(InitialState):
     def __init__(self) -> None:

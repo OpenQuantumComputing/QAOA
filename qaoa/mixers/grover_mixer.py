@@ -8,7 +8,7 @@ from qiskit.circuit import Parameter
 from qiskit.quantum_info import Operator
 from qiskit.circuit.library import RZGate
 
-from .Basemixer import Constrained
+from .constrained_mixer import Constrained
 
 from qaoa.util import dicke_state
 

@@ -1,15 +1,13 @@
+from qiskit import QuantumCircuit, QuantumRegister
+from qiskit.circuit import Parameter
+from qiskit.circuit.library import XXPlusYYGate
+
+from .constrained_mixer import Constrained
+
 import math
 import itertools
 
 import numpy as np
-
-from qiskit import QuantumCircuit, QuantumRegister
-
-from qiskit.circuit import Parameter
-from .ConstrainedMixer import Constrained
-
-from qiskit.circuit.library import XXPlusYYGate
-
 
 class PauliString:
     def __init__(self, *args, **kwargs) -> None:

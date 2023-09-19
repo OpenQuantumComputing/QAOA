@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from qaoa.problems import Problem
+from .base_problem import Problem
 from qiskit import QuantumCircuit, QuantumRegister
 
 from qiskit.circuit import Parameter

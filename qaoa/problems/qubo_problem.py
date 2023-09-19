@@ -1,11 +1,10 @@
 import math
 import numpy as np
 
-from qaoa.problems import Problem
-
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
+from .base_problem import Problem
 
 class QUBO(Problem):
     def __init__(self, Q=None, c=None, b=None) -> None:

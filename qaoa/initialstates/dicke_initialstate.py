@@ -1,5 +1,6 @@
-from qaoa.initialstates import InitialState
 from qaoa.util import dicke_state
+
+from .base_initialstate import InitialState
 
 class DickeState(InitialState):
     def __init__(self, k) -> None:

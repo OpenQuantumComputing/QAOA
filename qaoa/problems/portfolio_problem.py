@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from .qubo import QUBO
+from .qubo_problem import QUBO
 
 
 class PortfolioOptimization(QUBO):
