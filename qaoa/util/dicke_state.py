@@ -2,7 +2,7 @@ import numpy as np
 from qiskit import QuantumRegister, QuantumCircuit
 from qiskit.circuit.library import RYGate
 
-def getGate_i(n):
+def getRYi(n):
     '''
     returns gate (i) from section 2.2
     '''
@@ -15,9 +15,9 @@ def getGate_i(n):
     qc.append(ry, [1, 0])
     qc.cnot(0, 1)
 
-    return qc.to_gate()
+    return qc
 
-def getGate_ii_l(l, n):
+def getRYii(l, n):
     '''
     returns gate (ii)_l from section 2.2
     '''
@@ -30,22 +30,22 @@ def getGate_ii_l(l, n):
     qc.append(ry, [2, 1, 0])
     qc.cnot(0, 2)
 
-    return qc.to_gate()
+    return qc
 
-def getGate_scs_nk(n, k):
+def getSCS(n, k):
     '''
     returns SCS_{n,k} gate from definition 3
     '''
 
     qc = QuantumCircuit(k+1)
 
-    qc.append(getGate_i(n), [k-1, k])
+    qc.append(getRYi(n), [k-1, k])
     for l in range(2, k+1):
-        qc.append(getGate_ii_l(l, n), [k-l, k-l+1, k])
+        qc.append(getRYii(l, n), [k-l, k-l+1, k])
 
-    return qc.to_gate()
+    return qc
 
-def getFirstBlock(n, k, l):
+def getBlock1(n, k, l):
     '''
     returns the first block in Lemma 2
     '''
@@ -64,15 +64,15 @@ def getFirstBlock(n, k, l):
 
     if last !=0:
         index = index[:-last]
-        qc.append(getGate_scs_nk(l, k), index)
+        qc.append(getSCS(l, k), index)
         qc.i(qr[-last:])
 
     else:
-        qc.append(getGate_scs_nk(l, k), index)
+        qc.append(getSCS(l, k), index)
 
-    return qc.to_gate()
+    return qc
 
-def getSecondBlock(n, k, l):
+def getBlock2(n, k, l):
     '''
     returns second block from Lemma 2
     '''
@@ -85,12 +85,12 @@ def getSecondBlock(n, k, l):
 
     if last !=0:
         index = index[:-last]
-        qc.append(getGate_scs_nk(l, l-1), index)
+        qc.append(getSCS(l, l-1), index)
         qc.i(qr[-last:])
     else:
-        qc.append(getGate_scs_nk(l, l-1), index)
+        qc.append(getSCS(l, l-1), index)
 
-    return qc.to_gate()
+    return qc
 
 def dicke_state(n, k, barrier=False):
     '''
@@ -106,9 +106,9 @@ def dicke_state(n, k, barrier=False):
     qc.x(qr[-k:])
 
     for l in range(k+1, n+1)[::-1]:
-        qc.append(getFirstBlock(n, k, l), range(n))
+        qc.append(getBlock1(n, k, l), range(n))
 
     for l in range(2, k+1)[::-1]:
-        qc.append(getSecondBlock(n, k, l), range(n))
+        qc.append(getBlock2(n, k, l), range(n))
 
     return qc

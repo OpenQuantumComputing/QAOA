@@ -20,7 +20,18 @@ from qaoa.util import Statistic
 class QAOA:
     """Main class"""
 
-    def __init__(self, problem, mixer, initialstate, params={}) -> None:
+    def __init__(
+        self,
+        problem,
+        mixer,
+        initialstate,
+        backend=Aer.get_backend("qasm_simulator"),
+        noisemodel=None,
+        optimizer=[COBYLA, {}],  # optimizer, options
+        precision=None,
+        shots=1024,
+        alpha=1,
+    ) -> None:
         """
         A QAO-Ansatz consist of these parts:
 
@@ -33,17 +44,12 @@ class QAOA:
             :initialstate of Basetype InitialState,
             specifying the initial state.
 
-        :params additional parameters
-
         :param backend: backend
         :param precision: precision to reach for expectation value based on error=variance/sqrt(shots)
         :param shots: if precision=None, the number of samples taken
                       if precision!=None, the minimum number of samples taken
-
+        :param alpha: used for CVar
         """
-
-        self.params = params
-        self.usebarrier = self.params.get("usebarrier", False)
 
         assert issubclass(type(problem), Problem)
         assert issubclass(type(mixer), Mixer)
@@ -55,20 +61,26 @@ class QAOA:
         self.initialstate.setNumQubits(self.problem.N_qubits)
         self.mixer.setNumQubits(self.problem.N_qubits)
 
-        self.Var = None
+        self.backend = backend
+        self.optimizer = optimizer
+        self.noisemodel = noisemodel
+        self.shots = shots
+        self.precision = precision
+        self.stat = Statistic(alpha=alpha)
+
+        self.usebarrier = False
         self.isQNSPSA = False
 
-        qasm_sim = Aer.get_backend("qasm_simulator")
-        self.backend = self.params.get("backend", qasm_sim)
+        # qasm_sim = Aer.get_backend("qasm_simulator")
+        # self.backend = self.params.get("backend", qasm_sim)
 
-        self.optimizer = self.params.get("optimizer", [COBYLA, {}])
+        # self.optimizer = self.params.get("optimizer", [COBYLA, {}])
+        # self.shots = self.params.get("shots", 1024)
 
-        self.shots = self.params.get("shots", 1024)
+        # self.noisemodel = self.params.get("noisemodel", None)
+        # self.precision = self.params.get("precision", None)
 
-        self.noisemodel = self.params.get("noisemodel", None)
-        self.precision = self.params.get("precision", None)
-
-        self.stat = Statistic(alpha=self.params.get("alpha", 1))
+        # self.stat = Statistic(alpha=self.params.get("alpha", 1))
 
         self.current_depth = 0  # depth at which local optimization has been done
         self.angles_hist = {}  # initial and final angles during optimization per depth
@@ -90,8 +102,8 @@ class QAOA:
         self.g_values = {}
         self.g_angles = {}
 
-        for key, val in self.params.items():
-            setattr(self, key, val)
+        # for key, val in self.params.items():
+        #    setattr(self, key, val)
 
     ### getter functions
     @property

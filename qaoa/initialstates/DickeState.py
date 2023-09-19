@@ -11,4 +11,10 @@ class DickeState(InitialState):
         self.k = k
 
     def create_circuit(self):
-        self.circuit = dicke_state(self.N_qubits, self.k)
+        decompose = True
+        if decompose:
+            self.circuit = (
+                dicke_state(self.N_qubits, self.k).decompose().decompose().decompose()
+            )
+        else:
+            self.circuit = dicke_state(self.N_qubits, self.k)
