@@ -32,7 +32,7 @@ Typicall these have the form
 $U_M(\beta_l)=e^{-i\beta_l H_M}$,  $U_P(\gamma_l)=e^{-i\gamma_l H_P}$, and the simplest initial state is the uniform superposition, i.e. $| s \rangle = |+\rangle^{\otimes n}$. 
 
 ***
-### API of this library
+### Basic API of this library
 
 This library mimicks how one makes an ansatz by specifying classes that implement (with the following 
 
@@ -60,3 +60,8 @@ To make a concrete ansatz, one can create an instance like this:
 			problem=problems.MaxCut(G=[networkx instance]),
 			mixer=mixers.X()
 		)
+
+Of course, one can easily create more instances, by providing a differet implementation of the base classes.
+
+***
+### Further parameters
