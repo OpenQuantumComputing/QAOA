@@ -3,4 +3,5 @@ from .BaseMixer import Mixer
 from .XYMixer import XY
 from .XMixer import X
 
-# from .grover        import Grover
+# from .grover import Grover
+# from .ConstrainedMixer import Constrained

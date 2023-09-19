@@ -6,7 +6,7 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 
 from qiskit.circuit import Parameter
-from .BaseMixer import Constrained
+from .ConstrainedMixer import Constrained
 
 from qiskit.circuit.library import XXPlusYYGate
 

@@ -1,10 +1,7 @@
-import numpy as np
-
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
 from .BaseMixer import Mixer
-
 
 class X(Mixer):
     def create_circuit(self):
