@@ -34,15 +34,26 @@ $U_M(\beta_l)=e^{-i\beta_l H_M}$,  $U_P(\gamma_l)=e^{-i\gamma_l H_P}$, and the s
 ***
 ### API of this library
 
-This library mimicks how one makes an ansatz by specifying classes that implement
+This library mimicks how one makes an ansatz by specifying classes that implement (with the following 
 
-- a [mixer](qaoa/mixers/base_mixer.py),
-- a  [problem](qaoa/problems/base_problem.py), and
-- an [initial state](qaoa/initialstates/base_initialstate.py) .
+- a [mixer](qaoa/mixers/base_mixer.py) with implementations:
+	- [X-mixer](qaoa/mixers/x_mixer.py)
+	- [XY-mixer](qaoa/mixers/xy_mixer.py)
+	- [Grover-mixer](qaoa/mixers/grover_mixer.py)
+- a  [problem](qaoa/problems/base_problem.py) with implementations:
+	- [maxcut](qaoa/problems/maxcut_problem.py)
+	- [QUBO](qaoa/problems/qubo_problem.py)
+	- [Exact cover](qaoa/problems/exactcover_problem.py)
+	- [Portfolio](qaoa/problems/portfolio_problem.py)
+- an [initial state](qaoa/initialstates/base_initialstate.py) with implementations:
+	- [Plus](qaoa/initialstates/plus_initialstate.py)
+	- [Statevector](qaoa/initialstates/statevector_initialstate.py)
+	- [Dicke](qaoa/initialstates/dicke_initialstate.py)
 
 The base classes have an `@abstractmethod` called `create_circuit`which needs to be implemented.
 The problem base class additionally has an `@abstractmethod` called `cost`.
 
+By default, the following 
 
 		qaoamc = QAOA(
 			initialstate=initialstates.Plus(),
