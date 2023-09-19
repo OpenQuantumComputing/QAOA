@@ -1,6 +1,6 @@
 # QAOA
 
-This package is a versatile python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator Ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) aimed for researchers to quickly test the performance of new ansätze, new classical optimizers, etc.
+This package is a flexible python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator Ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) aimed for researchers to quickly test the performance of new ansätze, new classical optimizers, etc. By default it uses qiskit as a backend.
 
 
 ***
@@ -8,9 +8,12 @@ This package is a versatile python implementation of the [Quantum Approximate Op
 Given a **cost function** 
 $$c: \{ 0, 1\}^n \rightarrow \mathbb{R}$$
 one defines a **problem Hamiltonian** $H_P$ through the action on computational basis states via
+
 $$ H_P |x\rangle = c(x) |x\rangle,$$
+
 which means that ground states minimize the cost function $c$.
 Given a parametrized ansatz $ | \gamma, \beta \rangle$, a classical optimizers tries than to minimize the energy
+
 $$ \langle \gamma, \beta | H_P | \gamma, \beta \rangle$$.
 
 ***
