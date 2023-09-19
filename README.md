@@ -29,16 +29,20 @@ where
 - $|s\rangle$ is a "simple" **initial** state.
 
 Typicall these have the form
-$U_M(\beta_l)=e^{-i\beta_l H_M}$,  and $U_P(\gamma_l)=e^{-i\gamma_l H_P}$, and the simplest initial state is the uniform superposition, i.e. $| s \rangle = |+\rangle^{\otimes n}$. 
+$U_M(\beta_l)=e^{-i\beta_l H_M}$,  $U_P(\gamma_l)=e^{-i\gamma_l H_P}$, and the simplest initial state is the uniform superposition, i.e. $| s \rangle = |+\rangle^{\otimes n}$. 
 
 ***
 ### API of this library
 
 This library mimicks how one makes an ansatz by specifying classes that implement
 
-- an initial state,
-- a problem instance, and
-- a mixer
+- a mixer,
+- a problem, and
+- an [initial state](qaoa/initialstates/BaseInitialState.py) .
+
+The base classes have an `@abstractmethod` called `create_circuit`which needs to be implemented.
+The problem base class additionally has an `@abstractmethod` called `cost`.
+
 
 		qaoamc = QAOA(
 			initialstate=initialstates.Plus(),
