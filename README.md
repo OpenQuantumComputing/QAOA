@@ -12,9 +12,9 @@ one defines a **problem Hamiltonian** $H_P$ through the action on computational 
 $$ H_P |x\rangle = c(x) |x\rangle,$$
 
 which means that ground states minimize the cost function $c$.
-Given a parametrized ansatz $ | \gamma, \beta \rangle$, a classical optimizers tries than to minimize the energy
+Given a parametrized ansatz $ | \gamma, \beta \rangle$, a classical optimizer is used to minimize the energy
 
-$$ \langle \gamma, \beta | H_P | \gamma, \beta \rangle$$.
+$$ \langle \gamma, \beta | H_P | \gamma, \beta \rangle.$$
 
 ***
 ### Ansatz
