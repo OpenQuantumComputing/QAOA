@@ -45,6 +45,8 @@ class QAOA:
         specifying the initial state.
 
         :backend: backend
+        :noisemodel: noisemodel
+        :optmizer: optimizer
         :precision: precision to reach for expectation value based on error=variance/sqrt(shots)
         :shots: if precision=None, the number of samples taken
                       if precision!=None, the minimum number of samples taken
@@ -98,6 +100,7 @@ class QAOA:
         self.beta_params = None
 
         self.E = None
+        self.Var = None
         self.g_it = 0
         self.g_values = {}
         self.g_angles = {}
@@ -175,10 +178,6 @@ class QAOA:
         self.parametrized_circuit_depth = depth
 
     def increase_depth(self):
-        """
-        sample cost landscape
-        """
-
         t_start = time.time()
         if self.current_depth == 0:
             if self.E is None:
@@ -340,7 +339,7 @@ class QAOA:
         shots_taken = 0
         shots = self.shots
 
-        for i in range(3):
+        for i in range(3):  # this loop is used if precision is set
             if self.backend.configuration().local:
                 params = self.getParametersToBind(
                     angles, self.parametrized_circuit_depth, asList=True
