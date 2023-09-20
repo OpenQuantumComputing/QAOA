@@ -35,20 +35,20 @@ class QAOA:
         """
         A QAO-Ansatz consist of these parts:
 
-            :problem of Basetype Problem,
-            implementing the phase circuit and the cost.
+        :problem of Basetype Problem,
+        implementing the phase circuit and the cost.
 
-            :mixer of Basetype Mixer,
-            specifying the mixer circuit.
+        :mixer of Basetype Mixer,
+        specifying the mixer circuit.
 
-            :initialstate of Basetype InitialState,
-            specifying the initial state.
+        :initialstate of Basetype InitialState,
+        specifying the initial state.
 
-        :param backend: backend
-        :param precision: precision to reach for expectation value based on error=variance/sqrt(shots)
-        :param shots: if precision=None, the number of samples taken
+        :backend: backend
+        :precision: precision to reach for expectation value based on error=variance/sqrt(shots)
+        :shots: if precision=None, the number of samples taken
                       if precision!=None, the minimum number of samples taken
-        :param alpha: used for CVar
+        :alpha: used for CVar
         """
 
         assert issubclass(type(problem), Problem)
