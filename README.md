@@ -1,6 +1,6 @@
 # QAOA
 
-This package is a flexible python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator Ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) **aimed at researchers** to readily test the performance of a new Ansatz, a new classical optimizers, etc. By default it uses qiskit as a backend.
+This package is a flexible python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) **aimed at researchers** to readily test the performance of a new ansatz, a new classical optimizers, etc. By default it uses qiskit as a backend.
 
 Install with `pip install qaoa` or `pip install -e .`.
 
@@ -13,11 +13,11 @@ one defines a **problem Hamiltonian** $H_P$ through the action on computational 
 $$ H_P |x\rangle = c(x) |x\rangle,$$
 
 which means that ground states minimize the cost function $c$.
-Given a parametrized Ansatz $ | \gamma, \beta \rangle$, a classical optimizer is used to minimize the energy
+Given a parametrized ansatz $ | \gamma, \beta \rangle$, a classical optimizer is used to minimize the energy
 
 $$ \langle \gamma, \beta | H_P | \gamma, \beta \rangle.$$
 
-QAOA of depth $p$ consist of the following **Ansatz**:
+QAOA of depth $p$ consist of the following **ansatz**:
 
 $$ |\gamma, \beta \rangle = \prod_{l=1}^p \left( U_M(\beta_l) U_P(\gamma_l)\right) | s\rangle, $$
 
@@ -31,9 +31,9 @@ In plain vanilla QAOA these have the form
 $U_M(\beta_l)=e^{-i\beta_l X^{\otimes n}}$,  $U_P(\gamma_l)=e^{-i\gamma_l H_P}$, and the uniform superposition $| s \rangle = |+\rangle^{\otimes n}$ as initial state.
 
 ***
-### Create a custom Ansatz
+### Create a custom ansatz
 
-In order to create a custom QAOA Ansatz, one needs to specify a [problem](qaoa/problems/base_problem.py), a [mixer](qaoa/mixers/base_mixer.py), and an [initial state](qaoa/initialstates/base_initialstate.py). These base classes have an abstract method `def create_circuit:`which needs to be implemented. The problem base class additionally has an abstract method `def cost:`.
+In order to create a custom QAOA ansatz, one needs to specify a [problem](qaoa/problems/base_problem.py), a [mixer](qaoa/mixers/base_mixer.py), and an [initial state](qaoa/initialstates/base_initialstate.py). These base classes have an abstract method `def create_circuit:`which needs to be implemented. The problem base class additionally has an abstract method `def cost:`.
 
 This library already contains several standard implementations.
 
@@ -53,7 +53,7 @@ This library already contains several standard implementations.
 
 It is **very easy to extend this list** by providing  an implementation of a circuit/cost of the base classes mentioned above. Feel free to fork the repo and create a pull request :-)
 
-To make an Ansatz for the MaxCut problem, the X-mixer and the initial state $|+\rangle^{\otimes n}$  one can create an instance like this: 
+To make an ansatz for the MaxCut problem, the X-mixer and the initial state $|+\rangle^{\otimes n}$  one can create an instance like this: 
 
 	qaoa = QAOA(
 		initialstate=initialstates.Plus(),
@@ -95,7 +95,7 @@ QAOA supports the following keywords:
 - `optimizer`: a list of the optimizer to be used from qiskit-algorithms together with options, defaults to `[COBYLA, {}]`,
 - `precision`: sampel until a certain precision of the expectation value is reached based on $\text{error}=\frac{\text{variance}}{\sqrt{\text{shots}}}$, defaults to `None`,
 - `shots`: number of shots to be used, defaults to `1024`,
-- `alpha`: the value for [Conditional value at risk (CVAR)](https://arxiv.org/pdf/1907.04769.pdf), defaults to `1`, which are the standard moments.
+- `alpha`: the value for [conditional value at risk (CVAR)](https://arxiv.org/pdf/1907.04769.pdf), defaults to `1`, which are the standard moments.
 
 ***
 ### extracting results
