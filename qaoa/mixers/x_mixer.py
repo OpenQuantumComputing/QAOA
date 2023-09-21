@@ -3,6 +3,7 @@ from qiskit.circuit import Parameter
 
 from .base_mixer import Mixer
 
+
 class X(Mixer):
     def create_circuit(self):
         q = QuantumRegister(self.N_qubits)

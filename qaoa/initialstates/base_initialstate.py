@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BaseInitialState(ABC):
     """
     Base class for defining initial quantum states.
@@ -66,4 +67,3 @@ class InitialState(BaseInitialState):
             NotImplementedError: This method must be implemented by subclasses.
         """
         pass
-

@@ -12,6 +12,8 @@ class Statistic:
 
     def reset(self):
         self.W = 0
+        self.maxval = float("-inf")
+        self.minval = float("inf")
         self.E = 0
         self.S = 0
         self.all_values = np.array([])
@@ -19,6 +21,8 @@ class Statistic:
     def add_sample(self, value, weight):
         self.W += weight
         tmp_E = self.E
+        self.maxval = max(value, self.maxval)
+        self.minval = max(value, self.minval)
         self.E += weight / self.W * (value - self.E)
         self.S += weight * (value - tmp_E) * (value - self.E)
         if self.alpha < 1:
@@ -32,6 +36,12 @@ class Statistic:
 
     def get_Variance(self):
         return self.S / (self.W - 1)
+
+    def get_max(self):
+        return self.maxval
+
+    def get_min(self):
+        return self.minval
 
     def get_CVaR(self):
         if self.alpha < 1:

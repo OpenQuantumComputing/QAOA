@@ -5,6 +5,7 @@ from abc import abstractmethod
 
 from .base_mixer import Mixer
 
+
 class Constrained(Mixer):
     def __init__(self) -> None:
         self.B = []

@@ -73,17 +73,6 @@ class QAOA:
         self.usebarrier = False
         self.isQNSPSA = False
 
-        # qasm_sim = Aer.get_backend("qasm_simulator")
-        # self.backend = self.params.get("backend", qasm_sim)
-
-        # self.optimizer = self.params.get("optimizer", [COBYLA, {}])
-        # self.shots = self.params.get("shots", 1024)
-
-        # self.noisemodel = self.params.get("noisemodel", None)
-        # self.precision = self.params.get("precision", None)
-
-        # self.stat = Statistic(alpha=self.params.get("alpha", 1))
-
         self.current_depth = 0  # depth at which local optimization has been done
         self.angles_hist = {}  # initial and final angles during optimization per depth
         self.num_fval = {}  # number of function evaluations per depth
@@ -99,33 +88,47 @@ class QAOA:
         self.gamma_params = None
         self.beta_params = None
 
-        self.E = None
-        self.Var = None
+        self.E_sampled_p1 = None
+        self.landscape_p1_angles = {}
+        self.Var_sampled_p1 = None
         self.g_it = 0
         self.g_values = {}
         self.g_angles = {}
 
-        # for key, val in self.params.items():
-        #    setattr(self, key, val)
-
     ### getter functions
-    @property
-    def phase_circuit(self):
-        return self.problem.circuit
 
-    @property
-    def mixer_circuit(self):
-        return self.mixer.circuit
+    def exp_landscape(self):
+        ### at depth p = 1
+        return self.E_sampled_p1
 
-    @property
-    def initialstate_circuit(self):
-        return self.initialstate.circuit
+    def var_landscape(self):
+        ### at depth p = 1
+        return self.Var_sampled_p1
 
-    def isFeasible(self, string):
-        return self.problem.isFeasible(string)
+    def cost(self, depth=None):
+        if depth == None:
+            return list(self.costval.values())
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.costval["d" + str(depth) + "_final"]
 
-    def cost(self, string):
-        return self.problem.cost(string)
+    def get_beta(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return (self.angles_hist["d" + str(depth) + "_final"][1::2],)
+
+    def get_gamma(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return (self.angles_hist["d" + str(depth) + "_final"][::2],)
+
+    # def isFeasible(self, string):
+    #    return self.problem.isFeasible(string)
+
+    # def cost(self, string):
+    #    return self.problem.cost(string)
+
+    ### --------- ###
 
     def createParameterizedCircuit(self, depth):
         if self.parameterized_circuit_depth == depth:
@@ -177,59 +180,66 @@ class QAOA:
         self.parameterized_circuit.measure(q, c)
         self.parametrized_circuit_depth = depth
 
-    def increase_depth(self):
-        t_start = time.time()
-        if self.current_depth == 0:
-            if self.E is None:
-                self.sample_cost_landscape(
-                    angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
+    def optimize(self, depth):
+        ## run local optimization by iteratively increasing the depth until depth p is reached
+        while self.current_depth < depth:
+            t_start = time.time()
+            if self.current_depth == 0:
+                if self.E_sampled_p1 is None:
+                    self.sample_cost_landscape()
+                ind_Emin = np.unravel_index(
+                    np.argmin(self.E_sampled_p1, axis=None), self.E_sampled_p1.shape
                 )
-            ind_Emin = np.unravel_index(np.argmin(self.E, axis=None), self.E.shape)
-            angles0 = np.array(
-                (self.gamma_grid[ind_Emin[1]], self.beta_grid[ind_Emin[0]])
+                angles0 = np.array(
+                    (self.gamma_grid[ind_Emin[1]], self.beta_grid[ind_Emin[0]])
+                )
+                self.angles_hist["d1_initial"] = angles0
+            else:
+                gamma = self.angles_hist["d" + str(self.current_depth) + "_final"][::2]
+                beta = self.angles_hist["d" + str(self.current_depth) + "_final"][1::2]
+                gamma_interp = self.interp(gamma)
+                beta_interp = self.interp(beta)
+                angles0 = np.zeros(2 * (self.current_depth + 1))
+                angles0[::2] = gamma_interp
+                angles0[1::2] = beta_interp
+                self.angles_hist[
+                    "d" + str(self.current_depth + 1) + "_initial"
+                ] = angles0
+
+            self.g_it = 0
+            self.g_values = {}
+            self.g_angles = {}
+            # Create parameterized circuit at new depth
+            self.createParameterizedCircuit(int(len(angles0) / 2))
+
+            res = self.local_opt(angles0)
+            # if not res.success:
+            #    raise Warning("Local optimization was not successful.", res)
+            self.num_fval["d" + str(self.current_depth + 1)] = res.nfev
+            self.t_per_fval["d" + str(self.current_depth + 1)] = (
+                time.time() - t_start
+            ) / res.nfev
+
+            LOG.info(
+                f"cost(depth { self.current_depth + 1} = {res.fun}",
+                func=self.optimize.__name__,
             )
-            self.angles_hist["d1_initial"] = angles0
-        else:
-            gamma = self.angles_hist["d" + str(self.current_depth) + "_final"][::2]
-            beta = self.angles_hist["d" + str(self.current_depth) + "_final"][1::2]
-            gamma_interp = self.interp(gamma)
-            beta_interp = self.interp(beta)
-            angles0 = np.zeros(2 * (self.current_depth + 1))
-            angles0[::2] = gamma_interp
-            angles0[1::2] = beta_interp
-            self.angles_hist["d" + str(self.current_depth + 1) + "_initial"] = angles0
 
-        self.g_it = 0
-        self.g_values = {}
-        self.g_angles = {}
-        # Create parameterized circuit at new depth
-        self.createParameterizedCircuit(int(len(angles0) / 2))
+            ind = min(self.g_values, key=self.g_values.get)
+            self.angles_hist[
+                "d" + str(self.current_depth + 1) + "_final"
+            ] = self.g_angles[ind]
+            self.costval["d" + str(self.current_depth + 1) + "_final"] = self.g_values[
+                ind
+            ]
 
-        res = self.local_opt(angles0)
-        # if not res.success:
-        #    raise Warning("Local optimization was not successful.", res)
-        self.num_fval["d" + str(self.current_depth + 1)] = res.nfev
-        self.t_per_fval["d" + str(self.current_depth + 1)] = (
-            time.time() - t_start
-        ) / res.nfev
-
-        LOG.info(
-            f"cost(depth { self.current_depth + 1} = {res.fun}",
-            func=self.increase_depth.__name__,
-        )
-
-        ind = min(self.g_values, key=self.g_values.get)
-        self.angles_hist["d" + str(self.current_depth + 1) + "_final"] = self.g_angles[
-            ind
-        ]
-        self.costval["d" + str(self.current_depth + 1) + "_final"] = self.g_values[ind]
-
-        self.current_depth += 1
+            self.current_depth += 1
 
     def sample_cost_landscape(
         self,
         angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
     ):
+        self.landscape_p1_angles = angles
         logger = LOG.bind(func=self.sample_cost_landscape.__name__)
         logger.info("Calculating energy landscape for depth p=1...")
 
@@ -267,8 +277,12 @@ class QAOA:
             logger.info("Done execute")
             e, v = self.measurementStatistics(job)
             logger.info("Done measurement")
-            self.E = -np.array(e).reshape(angles["beta"][2], angles["gamma"][2])
-            self.Var = np.array(v).reshape(angles["beta"][2], angles["gamma"][2])
+            self.E_sampled_p1 = -np.array(e).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
+            self.Var_sampled_p1 = np.array(v).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
 
         else:
             raise NotImplementedError
@@ -291,7 +305,7 @@ class QAOA:
                 self.stat.reset()
                 for string in counts:
                     # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                    cost = self.cost(string[::-1])
+                    cost = self.problem.cost(string[::-1])
                     self.stat.add_sample(cost, counts[string])
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
@@ -299,7 +313,7 @@ class QAOA:
         else:
             for string in counts_list:
                 # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                cost = self.cost(string[::-1])
+                cost = self.problem.cost(string[::-1])
                 self.stat.add_sample(cost, counts_list[string])
             return self.stat.get_CVaR(), self.stat.get_Variance()
 

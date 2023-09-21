@@ -1,8 +1,8 @@
-
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
 from .base_problem import Problem
+
 
 class MaxCut(Problem):
     def __init__(self, G) -> None:

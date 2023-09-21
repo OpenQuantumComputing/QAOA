@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class MixerBase(ABC):
     """
     Base class for defining quantum mixing operations.
@@ -72,4 +73,3 @@ class Mixer(MixerBase):
             QuantumCircuit: The quantum circuit representing the mixing operation.
         """
         pass
-

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BaseProblem(ABC):
     """
     Base class for defining optimization problems.
@@ -102,4 +103,3 @@ class Problem(BaseProblem):
             bool: True if the solution is feasible; otherwise, False.
         """
         return True
-

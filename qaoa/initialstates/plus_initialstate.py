@@ -3,6 +3,7 @@ from qiskit.circuit import Parameter
 
 from .base_initialstate import InitialState
 
+
 class Plus(InitialState):
     def __init__(self) -> None:
         super().__init__()

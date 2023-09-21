@@ -6,6 +6,7 @@ from qiskit.circuit import Parameter
 
 from .base_problem import Problem
 
+
 class QUBO(Problem):
     def __init__(self, Q=None, c=None, b=None) -> None:
         """

@@ -65,15 +65,16 @@ For depth $p=1$ the expectation value can be sampled on an $n\times m$ Cartesian
 		
 	qaoa.sample_cost_landscape()
 	
-Sampling high-dimensional target functions quickly becomes intractable for depth $p>1$. We therefore iteratively increase the depth. At each depth a **local optimization** algorithm, e.g. COBYLA, is used to find a local minimum. As **initial guess** the following is used:
+Sampling high-dimensional target functions quickly becomes intractable for depth $p>1$. We therefore **iteratively increase the depth**. At each depth a **local optimization** algorithm, e.g. COBYLA, is used to find a local minimum. As **initial guess** the following is used:
 
 - At depth $p=1$ initial parameters $(\gamma, \beta)$ are given by the lowest value of the sampled cost landscape. 
 - At depth $p>1$ initial parameters $(\gamma, \beta)$ are based on an [interpolation-based heuristic](https://arxiv.org/pdf/1812.01041.pdf) of the optimal values at the previous depth.
 
-This can be achieved by calling:
+Running this iterative local optimization to depth $p$ can be done by the following call:
 
-	qaoa.increase_depth()
+	qaoa.optimize(depth=p)
 
+The function will call `sample_cost_landscape` if not already done, before iteratively increasing the depth.
 
 ***
 ### Further parameters

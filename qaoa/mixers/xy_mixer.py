@@ -9,6 +9,7 @@ import itertools
 
 import numpy as np
 
+
 class PauliString:
     def __init__(self, *args, **kwargs) -> None:
         raise NotImplementedError
