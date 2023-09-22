@@ -137,7 +137,12 @@ class QAOA:
         ### at depth p = 1
         return self.Var_sampled_p1
 
-    def get_Exp(self, depth):
+    def get_Exp(self, depth=None):
+        if not depth:
+            ret = []
+            for i in range(1, self.current_depth + 1):
+                ret.append(self.optimization_results[i].get_best_Exp())
+            return ret
         if depth > self.current_depth + 1:
             raise ValueError
         return self.optimization_results[depth].get_best_Exp()

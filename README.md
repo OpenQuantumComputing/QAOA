@@ -68,6 +68,8 @@ For depth $p=1$ the expectation value can be sampled on an $n\times m$ Cartesian
 		
 	qaoa.sample_cost_landscape()
 	
+![Energy landscape](images/E.png  "Energy landscape")
+
 Sampling high-dimensional target functions quickly becomes intractable for depth $p>1$. We therefore **iteratively increase the depth**. At each depth a **local optimization** algorithm, e.g. COBYLA, is used to find a local minimum. As **initial guess** the following is used:
 
 - At depth $p=1$ initial parameters $(\gamma, \beta)$ are given by the lowest value of the sampled cost landscape. 
