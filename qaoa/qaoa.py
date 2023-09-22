@@ -1,203 +1,220 @@
 import structlog
+
 LOG = structlog.get_logger(file=__name__)
 
-
-import time
 import numpy as np
 
-from qiskit import (
-    QuantumCircuit, QuantumRegister, ClassicalRegister,
-    execute, Aer
-)
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute, Aer
 from qiskit.circuit import Parameter
 from qiskit.primitives import Sampler
 from qiskit.algorithms.optimizers import COBYLA
 
+from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
 from qaoa.problems import Problem
 from qaoa.util import Statistic
 
-class QAOA:
-    """ Main class
+
+class OptResult:
     """
-    def __init__(self, problem, mixer, params=None) -> None:
+    Class for results of optimization at depth p
+    """
+
+    def __init__(self, depth):
+        self.depth = depth
+
+        self.angles = []
+        self.Exp = []
+        self.Var = []
+        self.MaxCost = []
+        self.MinCost = []
+        self.shots = []
+
+        self.index_Exp_min = -1
+
+    def add_iteration(self, angles, stat, shots):
+        self.angles.append(angles)
+        self.Exp.append(-stat.get_CVaR())
+        self.Var.append(stat.get_Variance())
+        self.MaxCost.append(-stat.get_max())
+        self.MinCost.append(-stat.get_min())
+        self.shots.append(shots)
+
+    def compute_best_index(self):
+        self.index_Exp_min = self.Exp.index(min(self.Exp))
+
+    def get_best_Exp(self):
+        return self.Exp[self.index_Exp_min]
+
+    def get_best_Var(self):
+        return self.Var[self.index_Exp_min]
+
+    def get_best_angles(self):
+        return self.angles[self.index_Exp_min]
+
+    def num_fval(self):
+        return len(self.Exp)
+
+    def num_shots(self):
+        return sum(self.shots)
+
+
+class QAOA:
+    """Main class"""
+
+    def __init__(
+        self,
+        problem,
+        mixer,
+        initialstate,
+        backend=Aer.get_backend("qasm_simulator"),
+        noisemodel=None,
+        optimizer=[COBYLA, {}],  # optimizer, options
+        precision=None,
+        shots=1024,
+        alpha=1,
+    ) -> None:
         """
-        A QAO-Ansatz consist of two parts:
+        A QAO-Ansatz consist of these parts:
 
-            :problem of Basetype Problem,
-            implementing the phase circuit and the cost.
+        :problem of Basetype Problem,
+        implementing the phase circuit and the cost.
 
-            :mixer of Basetype Mixer,
-            specifying the mixer circuit and the initial state.
+        :mixer of Basetype Mixer,
+        specifying the mixer circuit.
 
-        :params additional parameters
+        :initialstate of Basetype InitialState,
+        specifying the initial state.
 
-        :param backend: backend
-        :param precision: precision to reach for expectation value based on error=variance/sqrt(shots)
-        :param shots: if precision=None, the number of samples taken
+        :backend: backend
+        :noisemodel: noisemodel
+        :optmizer: optimizer
+        :precision: precision to reach for expectation value based on error=variance/sqrt(shots)
+        :shots: if precision=None, the number of samples taken
                       if precision!=None, the minimum number of samples taken
-
+        :alpha: used for CVar
         """
 
-        assert issubclass(problem, Problem)
-        assert issubclass(mixer, Mixer)
+        assert issubclass(type(problem), Problem)
+        assert issubclass(type(mixer), Mixer)
+        assert issubclass(type(initialstate), InitialState)
 
-        # All values of params gets added as attributes, see end of __init__
-        self.params = params
+        self.problem = problem
+        self.mixer = mixer
+        self.initialstate = initialstate
+        self.initialstate.setNumQubits(self.problem.N_qubits)
+        self.mixer.setNumQubits(self.problem.N_qubits)
 
-
-        self.problem = problem(self)
-        self.mixer = mixer(self)
-
-
-        self.Var = None
-        self.isQNSPSA = False
-
-        # Default values
-        self.optimizer = [COBYLA, {}]
-        self.backend = Aer.get_backend("qasm_simulator")
-        self.shots = 1024
-        self.noisemodel = None
-        self.precision = None
-
-        self.stat = Statistic(alpha=self.params.get("alpha", 1))
-
-
-        self.current_depth = 0  # depth at which local optimization has been done
-        self.angles_hist = {}  # initial and final angles during optimization per depth
-        self.num_fval = {}  # number of function evaluations per depth
-        self.t_per_fval = {}  # wall time per function evaluation per depth
-        self.num_shots = (
-            {}
-        ) # number of total shots taken for local optimization per depth
-        self.costval = {}  # optimal cost values per depth
-
-        # Related to parameterized circuit
         self.parameterized_circuit = None
         self.parameterized_circuit_depth = 0
+
+        self.backend = backend
+        self.optimizer = optimizer
+        self.noisemodel = noisemodel
+        self.shots = shots
+        self.precision = precision
+        self.stat = Statistic(alpha=alpha)
+
+        self.usebarrier = False
+        self.isQNSPSA = False
+
+        self.current_depth = 0  # depth at which local optimization has been done
+
         self.gamma_params = None
         self.beta_params = None
 
-        self.E = None
-        self.g_it = 0
-        self.g_values = {}
-        self.g_angles = {}
+        self.Exp_sampled_p1 = None
+        self.landscape_p1_angles = {}
+        self.Var_sampled_p1 = None
 
-        for key, val in self.params.items():
-            setattr(self, key, val)
+        self.optimization_results = {}
 
-    @property
-    def phase_circuit(self):
-        return self.problem.phase_circuit
+    def exp_landscape(self):
+        ### at depth p = 1
+        return self.Exp_sampled_p1
 
-    @property
-    def mixer_circuit(self):
-        return self.mixer.mixer_circuit
+    def var_landscape(self):
+        ### at depth p = 1
+        return self.Var_sampled_p1
 
-    def isFeasible(self, string):
-        return self.problem.isFeasible(string)
+    def get_Exp(self, depth=None):
+        if not depth:
+            ret = []
+            for i in range(1, self.current_depth + 1):
+                ret.append(self.optimization_results[i].get_best_Exp())
+            return ret
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_best_Exp()
 
-    def cost(self, string):
-        return self.problem.cost(string)
+    def get_Var(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_best_Var()
+
+    def get_beta(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_best_angles()[1::2]
+
+    def get_gamma(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_best_angles()[::2]
 
     def createParameterizedCircuit(self, depth):
         if self.parameterized_circuit_depth == depth:
-            LOG.info("Circuit is already of depth " + str(self.parameterized_circuit_depth))
+            LOG.info(
+                "Circuit is already of depth " + str(self.parameterized_circuit_depth)
+            )
             return
 
-        self.problem.create_phase()
-        self.mixer.create_mixer()
+        self.problem.create_circuit()
+        self.mixer.create_circuit()
+        self.initialstate.create_circuit()
 
         q = QuantumRegister(self.problem.N_qubits)
         c = ClassicalRegister(self.problem.N_qubits)
         self.parameterized_circuit = QuantumCircuit(q, c)
 
-
-        set_initial_state = self.params.get('init_circuit', None)
-
-        if set_initial_state is not None:
-            set_initial_state(self.parameterized_circuit, q, params=self.params)
-        else:
-            self.mixer.set_initial_state(self.parameterized_circuit, q)
-
-
         self.gamma_params = [None] * depth
         self.beta_params = [None] * depth
 
+        self.parameterized_circuit.compose(self.initialstate.circuit, inplace=True)
+
+        if self.usebarrier:
+            self.circuit.barrier()
 
         for d in range(depth):
             self.gamma_params[d] = Parameter("gamma_" + str(d))
-            cost_circuit = self.problem.phase_circuit.assign_parameters(
-                {self.problem.phase_circuit.parameters[0]: self.gamma_params[d]},
+            tmp_circuit = self.problem.circuit.assign_parameters(
+                {self.problem.circuit.parameters[0]: self.gamma_params[d]},
                 inplace=False,
             )
-            self.parameterized_circuit.compose(cost_circuit, inplace=True)
+            self.parameterized_circuit.compose(tmp_circuit, inplace=True)
+
+            if self.usebarrier:
+                self.circuit.barrier()
 
             self.beta_params[d] = Parameter("beta_" + str(d))
-            mixer_circuit = self.mixer.mixer_circuit.assign_parameters(
-                {self.mixer.mixer_circuit.parameters[0]: self.beta_params[d]},
+            tmp_circuit = self.mixer.circuit.assign_parameters(
+                {self.mixer.circuit.parameters[0]: self.beta_params[d]},
                 inplace=False,
             )
-            self.parameterized_circuit.compose(mixer_circuit, inplace=True)
+            self.parameterized_circuit.compose(tmp_circuit, inplace=True)
+
+            if self.usebarrier:
+                self.circuit.barrier()
 
         self.parameterized_circuit.barrier()
         self.parameterized_circuit.measure(q, c)
         self.parametrized_circuit_depth = depth
 
-    def increase_depth(self):
-        """
-        sample cost landscape
-        """
-
-        t_start = time.time()
-        if self.current_depth == 0:
-            if self.E is None:
-                self.sample_cost_landscape(
-                    angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
-                )
-            ind_Emin = np.unravel_index(np.argmin(self.E, axis=None), self.E.shape)
-            angles0 = np.array(
-                (self.gamma_grid[ind_Emin[1]], self.beta_grid[ind_Emin[0]])
-            )
-            self.angles_hist["d1_initial"] = angles0
-        else:
-            gamma = self.angles_hist["d" + str(self.current_depth) + "_final"][::2]
-            beta = self.angles_hist["d" + str(self.current_depth) + "_final"][1::2]
-            gamma_interp = self.interp(gamma)
-            beta_interp = self.interp(beta)
-            angles0 = np.zeros(2 * (self.current_depth + 1))
-            angles0[::2] = gamma_interp
-            angles0[1::2] = beta_interp
-            self.angles_hist["d" + str(self.current_depth + 1) + "_initial"] = angles0
-
-        self.g_it = 0
-        self.g_values = {}
-        self.g_angles = {}
-        # Create parameterized circuit at new depth
-        self.createParameterizedCircuit(int(len(angles0) / 2))
-
-        res = self.local_opt(angles0)
-        # if not res.success:
-        #    raise Warning("Local optimization was not successful.", res)
-        self.num_fval["d" + str(self.current_depth + 1)] = res.nfev
-        self.t_per_fval["d" + str(self.current_depth + 1)] = (
-            time.time() - t_start
-        ) / res.nfev
-
-        LOG.info(f"cost(depth { self.current_depth + 1} = {res.fun}", func=self.increase_depth.__name__)
-
-        ind = min(self.g_values, key=self.g_values.get)
-        self.angles_hist["d" + str(self.current_depth + 1) + "_final"] = self.g_angles[
-            ind
-        ]
-        self.costval["d" + str(self.current_depth + 1) + "_final"] = self.g_values[ind]
-
-        self.current_depth += 1
-
     def sample_cost_landscape(
-            self,
-            angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
+        self,
+        angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
     ):
+        self.landscape_p1_angles = angles
         logger = LOG.bind(func=self.sample_cost_landscape.__name__)
         logger.info("Calculating energy landscape for depth p=1...")
 
@@ -209,8 +226,8 @@ class QAOA:
         self.beta_grid = np.linspace(tmp[0], tmp[1], tmp[2])
 
         if self.backend.configuration().local:
+            print(depth, self.current_depth)
             self.createParameterizedCircuit(depth)
-            # parameters = []
             gamma = [None] * angles["beta"][2] * angles["gamma"][2]
             beta = [None] * angles["beta"][2] * angles["gamma"][2]
 
@@ -235,21 +252,24 @@ class QAOA:
             logger.info("Done execute")
             e, v = self.measurementStatistics(job)
             logger.info("Done measurement")
-            self.E = -np.array(e).reshape(angles["beta"][2], angles["gamma"][2])
-            self.Var = np.array(v).reshape(angles["beta"][2], angles["gamma"][2])
+            self.Exp_sampled_p1 = -np.array(e).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
+            self.Var_sampled_p1 = np.array(v).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
 
         else:
             raise NotImplementedError
 
         logger.info("Calculating Energy landscape done")
 
-
     def measurementStatistics(self, job):
         """
         implements a function for expectation value and variance
 
         :param job: job instance derived from BaseJob
-        :return: expectation and variance
+        :return: expectation and variance, if the job is a list
         """
         jres = job.result()
         counts_list = jres.get_counts()
@@ -260,7 +280,7 @@ class QAOA:
                 self.stat.reset()
                 for string in counts:
                     # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                    cost = self.cost(string[::-1])
+                    cost = self.problem.cost(string[::-1])
                     self.stat.add_sample(cost, counts[string])
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
@@ -268,9 +288,52 @@ class QAOA:
         else:
             for string in counts_list:
                 # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                cost = self.cost(string[::-1])
+                cost = self.problem.cost(string[::-1])
                 self.stat.add_sample(cost, counts_list[string])
-            return self.stat.get_CVaR(), self.stat.get_Variance()
+            # return self.stat.get_CVaR(), self.stat.get_Variance(), self.stat.maxval, self.stat.minval
+
+    def optimize(self, depth):
+        ## run local optimization by iteratively increasing the depth until depth p is reached
+        while self.current_depth < depth:
+            if self.current_depth == 0:
+                if self.Exp_sampled_p1 is None:
+                    self.sample_cost_landscape()
+                ind_Emin = np.unravel_index(
+                    np.argmin(self.Exp_sampled_p1, axis=None), self.Exp_sampled_p1.shape
+                )
+                angles0 = np.array(
+                    (self.gamma_grid[ind_Emin[1]], self.beta_grid[ind_Emin[0]])
+                )
+            else:
+                gamma = self.optimization_results[self.current_depth].get_best_angles()[
+                    ::2
+                ]
+                beta = self.optimization_results[self.current_depth].get_best_angles()[
+                    1::2
+                ]
+
+                gamma_interp = self.interp(gamma)
+                beta_interp = self.interp(beta)
+                angles0 = np.zeros(2 * (self.current_depth + 1))
+                angles0[::2] = gamma_interp
+                angles0[1::2] = beta_interp
+
+            self.optimization_results[self.current_depth + 1] = OptResult(
+                self.current_depth + 1
+            )
+            # Create parameterized circuit at new depth
+            self.createParameterizedCircuit(int(len(angles0) / 2))
+
+            res = self.local_opt(angles0)
+
+            self.optimization_results[self.current_depth + 1].compute_best_index()
+
+            LOG.info(
+                f"cost(depth { self.current_depth + 1} = {res.fun}",
+                func=self.optimize.__name__,
+            )
+
+            self.current_depth += 1
 
     def local_opt(self, angles0):
         """
@@ -278,12 +341,10 @@ class QAOA:
         :param angles0: initial guess
         """
 
-        self.num_shots["d" + str(self.current_depth + 1)] = 0
-
         try:
             opt = self.optimizer[0](**self.optimizer[1])
         except TypeError as e:  ### QNSPSA needs fidelity
-            self.isQNSPSA=True
+            self.isQNSPSA = True
             self.optimizer[1]["fidelity"] = self.optimizer[0].get_fidelity(
                 self.parameterized_circuit, sampler=Sampler()
             )
@@ -298,9 +359,6 @@ class QAOA:
         loss function
         :return: an instance of the qiskit class QuantumCircuit
         """
-        self.g_it += 1
-
-        # depth = int(len(angles) / 2)
 
         circuit = None
         n_target = self.shots
@@ -308,7 +366,7 @@ class QAOA:
         shots_taken = 0
         shots = self.shots
 
-        for i in range(3):
+        for i in range(3):  # this loop is used only used if precision is set
             if self.backend.configuration().local:
                 params = self.getParametersToBind(
                     angles, self.parametrized_circuit_depth, asList=True
@@ -323,15 +381,8 @@ class QAOA:
                 )
             else:
                 raise NotImplementedError
-                # name = ""
-                # job = start_or_retrieve_job(
-                #     name + "_" + str(opt_iterations),
-                #     self.backend,
-                #     circuit,
-                #     options={"shots": shots},
-                # )
             shots_taken += shots
-            _, _ = self.measurementStatistics(job)
+            self.measurementStatistics(job)
             if self.precision is None:
                 break
             else:
@@ -340,13 +391,10 @@ class QAOA:
                 if shots <= 0:
                     break
 
-        self.num_shots["d" + str(self.current_depth + 1)] += shots_taken
+        self.optimization_results[self.current_depth + 1].add_iteration(
+            angles.copy(), self.stat, shots_taken
+        )
 
-        self.g_values[str(self.g_it)] = -self.stat.get_CVaR()
-        self.g_angles[str(self.g_it)] = angles.copy()
-
-        # opt_values[str(opt_iterations )] = e[0]
-        # opt_angles[str(opt_iterations )] = angles
         return -self.stat.get_CVaR()
 
     def getParametersToBind(self, angles, depth, asList=False):
@@ -418,9 +466,3 @@ class QAOA:
         initial[0::2] = gamma_list
         initial[1::2] = beta_list
         return initial
-
-
-
-
-
-

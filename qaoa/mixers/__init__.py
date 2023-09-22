@@ -1,4 +1,5 @@
-from .              import Basemixer
-from .Basemixer     import Mixer, Unconstrained
-from .xymixer       import XY
-from .grover        import Grover
+from .base_mixer import Mixer
+from .xy_mixer import XY
+from .x_mixer import X
+from .grover_mixer import Grover
+from .constrained_mixer import Constrained

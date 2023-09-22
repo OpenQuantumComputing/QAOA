@@ -1,2 +1,2 @@
-from .Statistic import Statistic
-from .dicke_state import dicke_state
+from .statistic import Statistic
+from .dicke_state import DickeState
