@@ -112,7 +112,7 @@ Once `qaoa.optimize(depth=p)` is run, one can extract, the expectation value, va
 	qaoa.get_gamma(depth=i)
 	qaoa.get_beta(depth=i)
 
-Additionally, for each depth every time the loss function is called, the angles, expectation value, variance, maximum cost, minimum cost, and number of shots are stored in 
+Additionally, for each depth every time the loss function is called, the **angles, expectation value, variance, maximum cost, minimum cost, **and** number of shots** are stored in 
 
 	qaoa.optimization_results[i]
 

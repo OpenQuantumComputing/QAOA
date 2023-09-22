@@ -328,6 +328,11 @@ class QAOA:
 
             self.optimization_results[self.current_depth + 1].compute_best_index()
 
+            LOG.info(
+                f"cost(depth { self.current_depth + 1} = {res.fun}",
+                func=self.optimize.__name__,
+            )
+
             self.current_depth += 1
 
     def local_opt(self, angles0):
