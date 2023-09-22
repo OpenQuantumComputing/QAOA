@@ -61,6 +61,9 @@ To make an ansatz for the MaxCut problem, the X-mixer and the initial state $|+\
 		mixer=mixers.X()
 	)
 
+***
+### Run optimization at depth $p$
+
 For depth $p=1$ the expectation value can be sampled on an $n\times m$ Cartesian grid over the domain $[0,\gamma_\text{max}]\times[0,\beta_\text{max}]$ with:
 		
 	qaoa.sample_cost_landscape()
@@ -98,11 +101,21 @@ QAOA supports the following keywords:
 - `alpha`: the value for [conditional value at risk (CVAR)](https://arxiv.org/pdf/1907.04769.pdf), defaults to `1`, which are the standard moments.
 
 ***
-### extracting results
+### Extract results
 
-to be written
+Once `qaoa.optimize(depth=p)` is run, one can extract, the expectation value, variance, and parametres for each depth $1\leq i \leq p$ by respectively calling:
+
+	qaoa.get_Exp(depth=i)
+	qaoa.get_Var(depth=i)
+	qaoa.get_gamma(depth=i)
+	qaoa.get_beta(depth=i)
+
+Additionally, for each depth every time the loss function is called, the angles, expectation value, variance, maximum cost, minimum cost, and number of shots are stored in 
+
+	qaoa.optimization_results[i]
+
 
 ***
 ### Example usage
 
-See further [examples here](examples/). to be written.
+See [examples here](examples/).

@@ -22,7 +22,7 @@ class Statistic:
         self.W += weight
         tmp_E = self.E
         self.maxval = max(value, self.maxval)
-        self.minval = max(value, self.minval)
+        self.minval = min(value, self.minval)
         self.E += weight / self.W * (value - self.E)
         self.S += weight * (value - tmp_E) * (value - self.E)
         if self.alpha < 1:
