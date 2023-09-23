@@ -8,6 +8,8 @@ setup(
     author_email="franzgeorgfuchs@gmail.com",
     description="Quantum Alternating Operator Ansatz/Quantum Approximate Optimization Algorithm (QAOA)",
     long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    packages=find_packages(include=["qaoa"]),
     keywords="quantum computing, qaoa, qiskit",
     install_requires=[
         "numpy",
