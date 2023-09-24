@@ -126,6 +126,8 @@ class QAOA:
         self.Exp_sampled_p1 = None
         self.landscape_p1_angles = {}
         self.Var_sampled_p1 = None
+        self.MaxCost_sampled_p1 = None
+        self.MinCost_sampled_p1 = None
 
         self.optimization_results = {}
 
@@ -250,14 +252,8 @@ class QAOA:
                 optimization_level=0,
             )
             logger.info("Done execute")
-            e, v = self.measurementStatistics(job)
+            self.measurementStatistics(job)
             logger.info("Done measurement")
-            self.Exp_sampled_p1 = -np.array(e).reshape(
-                angles["beta"][2], angles["gamma"][2]
-            )
-            self.Var_sampled_p1 = np.array(v).reshape(
-                angles["beta"][2], angles["gamma"][2]
-            )
 
         else:
             raise NotImplementedError
@@ -276,6 +272,8 @@ class QAOA:
         if isinstance(counts_list, list):
             expectations = []
             variances = []
+            maxcosts = []
+            mincosts = []
             for i, counts in enumerate(counts_list):
                 self.stat.reset()
                 for string in counts:
@@ -284,13 +282,26 @@ class QAOA:
                     self.stat.add_sample(cost, counts[string])
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
-            return expectations, variances
+                maxcosts.append(self.stat.get_max())
+                mincosts.append(self.stat.get_min())
+            angles = self.landscape_p1_angles
+            self.Exp_sampled_p1 = -np.array(expectations).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
+            self.Var_sampled_p1 = np.array(variances).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
+            self.MaxCost_sampled_p1 = -np.array(maxcosts).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
+            self.MinCost_sampled_p1 = -np.array(mincosts).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
         else:
             for string in counts_list:
                 # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
                 cost = self.problem.cost(string[::-1])
                 self.stat.add_sample(cost, counts_list[string])
-            # return self.stat.get_CVaR(), self.stat.get_Variance(), self.stat.maxval, self.stat.minval
 
     def optimize(self, depth):
         ## run local optimization by iteratively increasing the depth until depth p is reached
