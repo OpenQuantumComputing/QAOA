@@ -10,7 +10,7 @@ from qiskit.circuit.library import RZGate
 
 from .constrained_mixer import Constrained
 
-from qaoa.util import dicke_state
+from qaoa.util import dicke_circuit
 
 
 class Grover(Constrained):
@@ -19,7 +19,7 @@ class Grover(Constrained):
         self.k = self.params["k"]
         self.n = self.params["N_qubits"]
 
-        self.U_s = dicke_state(self.n, self.k)
+        self.U_s = DickeCircuit(self.n, self.k)
         self.U_s_dagger = self.U_s.inverse()
 
     # def set_initial_state(self, circuit, qubit_register):

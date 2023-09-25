@@ -1,2 +1,2 @@
 from .statistic import Statistic
-from .dicke_state import DickeState
+from .dicke_circuit import DickeCircuit

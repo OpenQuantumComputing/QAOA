@@ -133,7 +133,7 @@ def getBlock2(n, k, l):
     return qc
 
 
-def DickeState(n, k, barrier=False):
+def DickeCircuit(n, k, barrier=False):
     """
     Circuit to prepare Dicke states, following the algorithm from https://arxiv.org/pdf/1904.07358.pdf.
 
