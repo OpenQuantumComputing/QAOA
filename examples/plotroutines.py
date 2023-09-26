@@ -43,17 +43,17 @@ def plot_Var(qaoa_instance, fig=None):
     return __plot_landscape(qaoa_instance.var_landscape(), extent, fig=fig)
 
 
-def plot_Exp(qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=None, shots=None):
-
+def plot_Exp(
+    qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=None, shots=None
+):
     if not shots:
         exp = np.array(qaoa_instance.get_Exp())
     else:
-        exp=[]
-        for p in range(1, qaoa_instance.current_depth+1):
-            exp.append(__ApprRatioConstr(qaoa_instance, p, shots=shots))
+        exp = []
+        for p in range(1, qaoa_instance.current_depth + 1):
+            alpha, sp = __apprpostproc_successprob(qaoa_instance, p, shots=shots)
+            exp.append(alpha)
         exp = np.array(exp)
-        print(exp)
-
 
     if not fig:
         ax = pl.figure().gca()
@@ -73,17 +73,51 @@ def plot_Exp(qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=Non
     _ = pl.legend(loc="lower right", framealpha=1)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 
-def __ApprRatioConstr(qaoa_instance, depth, shots=1024):
-    ratio = 0
 
-    hist = qaoa_instance.hist(qaoa_instance.optimization_results[depth].get_best_angles())
+def plot_successprob(
+    qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=None, shots=10**4
+):
+    successp = []
+    for p in range(1, qaoa_instance.current_depth + 1):
+        alpha, sp = __apprpostproc_successprob(qaoa_instance, p, shots=shots)
+        successp.append(sp)
+    successp = np.array(successp)
+
+    if not fig:
+        ax = pl.figure().gca()
+    else:
+        ax = fig.gca()
+    pl.hlines(1, 1, maxdepth, linestyles="solid", colors="black")
+    pl.plot(
+        np.arange(1, maxdepth + 1),
+        successp,
+        style,
+        label=label,
+    )
+    pl.ylim(0, 1.01)
+    pl.xlim(1 - 0.25, maxdepth + 0.25)
+    _ = pl.ylabel("appr. ratio")
+    _ = pl.xlabel("depth")
+    _ = pl.legend(loc="lower right", framealpha=1)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+
+def __apprpostproc_successprob(qaoa_instance, depth, shots=10**4):
+    """
+    approximation ratio post processed with feasibility and success probability
+    """
+    hist = qaoa_instance.hist(
+        qaoa_instance.optimization_results[depth].get_best_angles(), shots=shots
+    )
+
+    ratio = 0
+    counts = 0
 
     for key in hist:
-        #Qiskit uses big endian encoding, cost function uses litle endian encoding.
-        #Therefore the string is reversed before passing it to the cost function.
-        string=key[::-1]
+        # Qiskit uses big endian encoding, cost function uses litle endian encoding.
+        # Therefore the string is reversed before passing it to the cost function.
+        string = key[::-1]
         if qaoa_instance.problem.isFeasible(string):
             ratio -= qaoa_instance.problem.cost(string) * hist[key]
-
-    return ratio/shots
-
+            counts += hist[key]
+    return ratio / counts, counts / shots

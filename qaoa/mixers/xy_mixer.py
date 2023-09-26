@@ -16,6 +16,9 @@ class PauliString:
 
 
 class XY(Constrained):
+    def __init__(self, method="chain") -> None:
+        self.method = method
+
     def create_circuit(self):
         q = QuantumRegister(self.N_qubits)
         self.circuit = QuantumCircuit(q)
@@ -27,6 +30,9 @@ class XY(Constrained):
             # Hard coded XY mixer
             current_gate = XXPlusYYGate(scale * Beta)
             self.circuit.append(current_gate, [i, i + 1])
+        if self.method == "ring":
+            current_gate = XXPlusYYGate(scale * Beta)
+            self.circuit.append(current_gate, [self.N_qubits - 1, 0])
 
     def compute_feasible_subspace(self):
         print("Its now computing the feasible subspace")

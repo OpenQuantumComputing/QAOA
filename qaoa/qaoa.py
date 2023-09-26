@@ -445,7 +445,7 @@ class QAOA:
         w = np.arange(0, depth + 1)
         return w / depth * tmp[:-1] + (depth - w) / depth * tmp[1:]
 
-    def hist(self, angles):
+    def hist(self, angles, shots):
         depth = int(len(angles) / 2)
         self.createParameterizedCircuit(depth)
 
@@ -454,14 +454,12 @@ class QAOA:
             job = execute(
                 self.parameterized_circuit,
                 self.backend,
-                shots=self.shots,
+                shots=shots,
                 parameter_binds=[params],
                 optimization_level=0,
             )
         else:
-            job = start_or_retrieve_job(
-                "hist", self.backend, circ, options={"shots": self.shots}
-            )
+            raise NotImplementedError
         return job.result().get_counts()
 
     def random_init(self, gamma_bounds, beta_bounds, depth):
