@@ -5,6 +5,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 
 from qaoa import QAOA
+from qaoa.mixers.constrained_mixer import Constrained
 
 
 def __plot_landscape(A, extent, fig):
@@ -42,7 +43,18 @@ def plot_Var(qaoa_instance, fig=None):
     return __plot_landscape(qaoa_instance.var_landscape(), extent, fig=fig)
 
 
-def plot_Exp(qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=None):
+def plot_Exp(qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=None, shots=None):
+
+    if not shots:
+        exp = np.array(qaoa_instance.get_Exp())
+    else:
+        exp=[]
+        for p in range(1, qaoa_instance.current_depth+1):
+            exp.append(__ApprRatioConstr(qaoa_instance, p, shots=shots))
+        exp = np.array(exp)
+        print(exp)
+
+
     if not fig:
         ax = pl.figure().gca()
     else:
@@ -50,7 +62,7 @@ def plot_Exp(qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=Non
     pl.hlines(1, 1, maxdepth, linestyles="solid", colors="black")
     pl.plot(
         np.arange(1, maxdepth + 1),
-        (maxcost - np.array(qaoa_instance.get_Exp())) / (maxcost - mincost),
+        (maxcost - exp) / (maxcost - mincost),
         style,
         label=label,
     )
@@ -60,3 +72,18 @@ def plot_Exp(qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=Non
     _ = pl.xlabel("depth")
     _ = pl.legend(loc="lower right", framealpha=1)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+def __ApprRatioConstr(qaoa_instance, depth, shots=1024):
+    ratio = 0
+
+    hist = qaoa_instance.hist(qaoa_instance.optimization_results[depth].get_best_angles())
+
+    for key in hist:
+        #Qiskit uses big endian encoding, cost function uses litle endian encoding.
+        #Therefore the string is reversed before passing it to the cost function.
+        string=key[::-1]
+        if qaoa_instance.problem.isFeasible(string):
+            ratio -= qaoa_instance.problem.cost(string) * hist[key]
+
+    return ratio/shots
+
