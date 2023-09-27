@@ -434,7 +434,6 @@ class QAOA:
         """
         INTERP heuristic/linear interpolation for initial parameters
         when going from depth p to p+1 (https://doi.org/10.1103/PhysRevX.10.021067)
-        E.g. [0., 2., 3., 6., 11., 0.] becomes [2., 2.75, 4.5, 7.25, 11.]
 
         :param angles: angles for depth p
         :return: linear interpolation of angles for depth p+1
