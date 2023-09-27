@@ -103,3 +103,19 @@ class Problem(BaseProblem):
             bool: True if the solution is feasible; otherwise, False.
         """
         return True
+
+
+    def computeMinMaxCosts(self): 
+        """
+        Brute force method to compute min and max cost of feasible solution
+        """
+        import itertools
+        max_cost = float("-inf")
+        min_cost = float("inf")
+        for s in [''.join(i) for i in itertools.product('01', repeat = self.N_qubits)]:
+            if self.isFeasible(s):
+                cost=-self.cost(s)
+                max_cost=max(max_cost, cost)
+                min_cost=min(min_cost, cost)
+        return min_cost, max_cost
+

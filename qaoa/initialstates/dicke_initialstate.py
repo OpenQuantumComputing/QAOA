@@ -1,4 +1,4 @@
-from qaoa.util import dicke_state
+from qaoa.util import dicke_circuit
 
 from .base_initialstate import InitialState
 
@@ -12,7 +12,10 @@ class DickeState(InitialState):
         decompose = True
         if decompose:
             self.circuit = (
-                dicke_state(self.N_qubits, self.k).decompose().decompose().decompose()
+                dicke_circuit.DickeCircuit(self.N_qubits, self.k)
+                .decompose()
+                .decompose()
+                .decompose()
             )
         else:
-            self.circuit = dicke_state(self.N_qubits, self.k)
+            self.circuit = dicke_circuit.DickeCircuit(self.N_qubits, self.k)

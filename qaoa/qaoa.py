@@ -434,7 +434,6 @@ class QAOA:
         """
         INTERP heuristic/linear interpolation for initial parameters
         when going from depth p to p+1 (https://doi.org/10.1103/PhysRevX.10.021067)
-        E.g. [0., 2., 3., 6., 11., 0.] becomes [2., 2.75, 4.5, 7.25, 11.]
 
         :param angles: angles for depth p
         :return: linear interpolation of angles for depth p+1
@@ -445,7 +444,7 @@ class QAOA:
         w = np.arange(0, depth + 1)
         return w / depth * tmp[:-1] + (depth - w) / depth * tmp[1:]
 
-    def hist(self, angles):
+    def hist(self, angles, shots):
         depth = int(len(angles) / 2)
         self.createParameterizedCircuit(depth)
 
@@ -454,14 +453,12 @@ class QAOA:
             job = execute(
                 self.parameterized_circuit,
                 self.backend,
-                shots=self.shots,
+                shots=shots,
                 parameter_binds=[params],
                 optimization_level=0,
             )
         else:
-            job = start_or_retrieve_job(
-                "hist", self.backend, circ, options={"shots": self.shots}
-            )
+            raise NotImplementedError
         return job.result().get_counts()
 
     def random_init(self, gamma_bounds, beta_bounds, depth):
