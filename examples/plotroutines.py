@@ -120,4 +120,7 @@ def __apprpostproc_successprob(qaoa_instance, depth, shots=10**4):
         if qaoa_instance.problem.isFeasible(string):
             ratio -= qaoa_instance.problem.cost(string) * hist[key]
             counts += hist[key]
-    return ratio / counts, counts / shots
+    if counts>0:
+        ratio/=counts
+        ### if there are no feasible solutions, we define the ratio to be 0
+    return ratio, counts / shots
