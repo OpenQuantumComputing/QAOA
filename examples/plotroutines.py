@@ -75,7 +75,7 @@ def plot_Exp(
 
 
 def plot_successprob(
-    qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=None, shots=10**4
+    qaoa_instance, maxdepth, label, style="", fig=None, shots=10**4
 ):
     successp = []
     for p in range(1, qaoa_instance.current_depth + 1):
@@ -96,7 +96,7 @@ def plot_successprob(
     )
     pl.ylim(0, 1.01)
     pl.xlim(1 - 0.25, maxdepth + 0.25)
-    _ = pl.ylabel("appr. ratio")
+    _ = pl.ylabel("success prob")
     _ = pl.xlabel("depth")
     _ = pl.legend(loc="lower right", framealpha=1)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -124,3 +124,30 @@ def __apprpostproc_successprob(qaoa_instance, depth, shots=10**4):
         ratio/=counts
         ### if there are no feasible solutions, we define the ratio to be 0
     return ratio, counts / shots
+
+
+def plot_angles(qaoa_instance, depth, label, style="", fig=None):
+    angles=qaoa_instance.optimization_results[depth].get_best_angles()
+
+    if not fig:
+        ax = pl.figure().gca()
+    else:
+        ax = fig.gca()
+
+    pl.plot(
+        np.arange(1, depth + 1),
+        angles[::2],
+        "--"+style,
+        label=r"$\gamma$ " + label,
+    )
+    pl.plot(
+        np.arange(1, depth + 1),
+        angles[1::2],
+        "-"+style,
+        label=r"$\beta$ " + label,
+    )
+    pl.xlim(1 - 0.25, depth + 0.25)
+    _ = pl.ylabel("parameter")
+    _ = pl.xlabel("depth")
+    _ = pl.legend()
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
