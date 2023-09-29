@@ -18,7 +18,9 @@ class Grover(Constrained):
         self.k = k
 
     def create_circuit(self):
-        self.U_s = dicke_circuit.DickeCircuit(self.N_qubits, self.k)#.decompose().decompose().decompose()
+        self.U_s = dicke_circuit.DickeCircuit(
+            self.N_qubits, self.k
+        )  # .decompose().decompose().decompose()
         self.U_s_dagger = self.U_s.inverse()
 
         q = QuantumRegister(self.N_qubits)
@@ -53,7 +55,7 @@ class Grover(Constrained):
         constraint = np.sum(x) - self.k
         return math.isclose(constraint, 0, abs_tol=1e-7)
 
-    #def compute_feasible_subspace(self):
+    # def compute_feasible_subspace(self):
     #    print("Its now computing the feasible subspace")
     #    self.B.clear()
     #    for combination in itertools.combinations(
@@ -64,7 +66,7 @@ class Grover(Constrained):
     #            current_state[index] = "1"
     #        self.B.append("".join(current_state))
 
-    #def isFeasible(self, string):
+    # def isFeasible(self, string):
     #    x = self.__str2np(string)
     #    constraint = np.sum(x) - self.k
     #    return math.isclose(constraint, 0, abs_tol=1e-7)
