@@ -7,6 +7,7 @@ import numpy as np
 from qaoa import QAOA
 from qaoa.mixers.constrained_mixer import Constrained
 
+from qaoa.util import Statistic
 
 def __plot_landscape(A, extent, fig):
     if not fig:
@@ -43,7 +44,7 @@ def plot_Var(qaoa_instance, fig=None):
     return __plot_landscape(qaoa_instance.var_landscape(), extent, fig=fig)
 
 
-def plot_Exp(
+def plot_ApproximationRatio(
     qaoa_instance, maxdepth, mincost, maxcost, label, style="", fig=None, shots=None
 ):
     if not shots:
@@ -51,8 +52,8 @@ def plot_Exp(
     else:
         exp = []
         for p in range(1, qaoa_instance.current_depth + 1):
-            alpha, sp = __apprpostproc_successprob(qaoa_instance, p, shots=shots)
-            exp.append(alpha)
+            ar, sp = __apprrat_successprob(qaoa_instance, p, shots=shots)
+            exp.append(ar)
         exp = np.array(exp)
 
     if not fig:
@@ -79,7 +80,7 @@ def plot_successprob(
 ):
     successp = []
     for p in range(1, qaoa_instance.current_depth + 1):
-        alpha, sp = __apprpostproc_successprob(qaoa_instance, p, shots=shots)
+        ar, sp = __apprrat_successprob(qaoa_instance, p, shots=shots)
         successp.append(sp)
     successp = np.array(successp)
 
@@ -102,7 +103,7 @@ def plot_successprob(
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 
 
-def __apprpostproc_successprob(qaoa_instance, depth, shots=10**4):
+def __apprrat_successprob(qaoa_instance, depth, shots=10**4):
     """
     approximation ratio post processed with feasibility and success probability
     """
@@ -110,20 +111,20 @@ def __apprpostproc_successprob(qaoa_instance, depth, shots=10**4):
         qaoa_instance.optimization_results[depth].get_best_angles(), shots=shots
     )
 
-    ratio = 0
     counts = 0
+
+    stat = Statistic(cvar=qaoa_instance.cvar)
 
     for key in hist:
         # Qiskit uses big endian encoding, cost function uses litle endian encoding.
         # Therefore the string is reversed before passing it to the cost function.
         string = key[::-1]
         if qaoa_instance.problem.isFeasible(string):
-            ratio -= qaoa_instance.problem.cost(string) * hist[key]
+            cost = qaoa_instance.problem.cost(string)
             counts += hist[key]
-    if counts>0:
-        ratio/=counts
-        ### if there are no feasible solutions, we define the ratio to be 0
-    return ratio, counts / shots
+            stat.add_sample(cost, hist[key])
+
+    return -stat.get_CVaR(), counts / shots
 
 
 def plot_angles(qaoa_instance, depth, label, style="", fig=None):

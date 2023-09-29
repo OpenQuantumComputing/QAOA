@@ -6,8 +6,8 @@ class Statistic:
     See: https://fanf2.user.srcf.net/hermes/doc/antiforgery/stats.pdf
     """
 
-    def __init__(self, alpha=1):
-        self.alpha = alpha
+    def __init__(self, cvar=1):
+        self.cvar = cvar
         self.reset()
 
     def reset(self):
@@ -25,7 +25,7 @@ class Statistic:
         self.minval = min(value, self.minval)
         self.E += weight / self.W * (value - self.E)
         self.S += weight * (value - tmp_E) * (value - self.E)
-        if self.alpha < 1:
+        if self.cvar < 1:
             idx = np.searchsorted(self.all_values, value)
             self.all_values = np.insert(
                 self.all_values, idx, np.ones(int(weight)) * value
@@ -44,9 +44,9 @@ class Statistic:
         return self.minval
 
     def get_CVaR(self):
-        if self.alpha < 1:
-            alphaK = int(np.round(self.alpha * len(self.all_values)))
-            cvar = np.sum(self.all_values[-alphaK:]) / alphaK
+        if self.cvar < 1:
+            cvarK = int(np.round(self.cvar * len(self.all_values)))
+            cvar = np.sum(self.all_values[-cvarK:]) / cvarK
             return cvar
         else:
             return self.get_E()
