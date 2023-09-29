@@ -72,7 +72,7 @@ class QAOA:
         optimizer=[COBYLA, {}],  # optimizer, options
         precision=None,
         shots=1024,
-        alpha=1,
+        cvar=1,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -92,7 +92,7 @@ class QAOA:
         :precision: precision to reach for expectation value based on error=variance/sqrt(shots)
         :shots: if precision=None, the number of samples taken
                       if precision!=None, the minimum number of samples taken
-        :alpha: used for CVar
+        :cvar: used for CVar
         """
 
         assert issubclass(type(problem), Problem)
@@ -113,7 +113,8 @@ class QAOA:
         self.noisemodel = noisemodel
         self.shots = shots
         self.precision = precision
-        self.stat = Statistic(alpha=alpha)
+        self.stat = Statistic(cvar=cvar)
+        self.cvar = cvar
 
         self.usebarrier = False
         self.isQNSPSA = False
