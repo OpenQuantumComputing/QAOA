@@ -92,7 +92,7 @@ QAOA supports the following keywords:
 		optimizer= ,
 		precision= ,
 		shots= ,
-		alpha=
+		cvar=
 	)
 
 - `backend`: the backend to be used, defaults to `Aer.get_backend("qasm_simulator")`
@@ -100,7 +100,7 @@ QAOA supports the following keywords:
 - `optimizer`: a list of the optimizer to be used from qiskit-algorithms together with options, defaults to `[COBYLA, {}]`,
 - `precision`: sampel until a certain precision of the expectation value is reached based on $\text{error}=\frac{\text{variance}}{\sqrt{\text{shots}}}$, defaults to `None`,
 - `shots`: number of shots to be used, defaults to `1024`,
-- `alpha`: the value for [conditional value at risk (CVAR)](https://arxiv.org/pdf/1907.04769.pdf), defaults to `1`, which are the standard moments.
+- `cvar`: the value for [conditional value at risk (CVAR)](https://arxiv.org/pdf/1907.04769.pdf), defaults to `1`, which are the standard moments.
 
 ***
 ### Extract results
