@@ -11,27 +11,27 @@ from qiskit.circuit import Parameter
 class ExactCover(Problem):
     def __init__(
         self,
-        FR,
-        CR=None,
-        mu=1,
+        columns,
+        weights=None,
+        penalty_factor=1,
     ) -> None:
-        self.FR = FR
-        self.CR = CR
-        self.mu = 1
+        self.columns = columns 
+        self.weights = weights 
+        self.penalty_factor = penalty_factor
 
-        fN = FR.shape[0]  ### number of flights
-        rN = FR.shape[1]  ### number of routes
+        colSize = columns.shape[0]  ### Size per column
+        numColumns = columns.shape[1]  ### number of columns/qubits
 
-        self.N_qubits = rN
+        self.N_qubits = numColumns
 
     def cost(self, string):
         x = np.array(list(map(int, string)))
         c_e = self.__exactCover(x)
 
-        if self.CR is None:
+        if self.weights is None:
             return -c_e
         else:
-            return -(self.CR @ x + self.mu * c_e)
+            return -(self.weights @ x + self.penalty_factor * c_e)
 
     def create_circuit(self):
         """
@@ -41,24 +41,24 @@ class ExactCover(Problem):
         self.circuit = QuantumCircuit(q)
         cost_param = Parameter("x_gamma")
 
-        F, R = np.shape(self.FR)
+        colSize, numColumns = np.shape(self.columns) 
 
         ### cost Hamiltonian
-        for r in range(R):
-            hr = self.mu * 0.5 * self.FR[:, r] @ (np.sum(self.FR, axis=1) - 2)
-            if not self.CR is None:
-                hr += 0.5 * self.CR[r]
+        for col in range(numColumns):
+            hr = self.penalty_factor * 0.5 * self.columns[:, col] @ (np.sum(self.columns, axis=1) - 2)
+            if not self.weights is None:
+                hr += 0.5 * self.weights[col]
 
             if not math.isclose(hr, 0, abs_tol=1e-7):
-                self.circuit.rz(cost_param * hr, q[r])
+                self.circuit.rz(cost_param * hr, q[col])
 
-            for r_ in range(r + 1, R):
-                Jrr_ = self.mu * 0.5 * self.FR[:, r] @ self.FR[:, r_]
+            for col_ in range(col + 1, numColumns):
+                Jrr_ = self.penalty_factor * 0.5 * self.columns[:, col] @ self.columns[:, col_]
 
                 if not math.isclose(Jrr_, 0, abs_tol=1e-7):
-                    self.circuit.cx(q[r], q[r_])
-                    self.circuit.rz(cost_param * Jrr_, q[r_])
-                    self.circuit.cx(q[r], q[r_])
+                    self.circuit.cx(q[col], q[col_])
+                    self.circuit.rz(cost_param * Jrr_, q[col_])
+                    self.circuit.cx(q[col], q[col_])
 
     def isFeasible(self, string):
         x = np.array(list(map(int, string)))
@@ -66,4 +66,4 @@ class ExactCover(Problem):
         return math.isclose(c_e, 0, abs_tol=1e-7)
 
     def __exactCover(self, x):
-        return np.sum((1 - (self.FR @ x)) ** 2)
+        return np.sum((1 - (self.columns @ x)) ** 2)

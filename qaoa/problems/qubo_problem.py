@@ -12,6 +12,9 @@ class QUBO(Problem):
         """
         Implements the mapping from the parameters in params to the QUBO problem.
         Is expected to be called by the child class.
+
+        # The QUBO will be on this form:
+        # min x^T Q x + c^T x + b
         """
         assert type(Q) is np.ndarray, "Q needs to be a numpy ndarray, but is " + str(
             type(Q)
