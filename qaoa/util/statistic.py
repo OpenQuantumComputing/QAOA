@@ -14,13 +14,28 @@ class Statistic:
         self.W = 0
         self.maxval = float("-inf")
         self.minval = float("inf")
+        self.minSols = []
+        self.maxSols = []
         self.E = 0
         self.S = 0
         self.all_values = np.array([])
 
-    def add_sample(self, value, weight):
+    def add_sample(self, value, weight, string):
         self.W += weight
         tmp_E = self.E
+        if value >= self.maxval:
+            if value == self.maxval:
+                self.maxSols.append(string)
+            else:
+                self.maxval = value
+                self.maxSols = [string]
+        if value <= self.minval:
+            if value == self.minval:
+                self.minSols.append(string)
+            else:
+                self.minval = value
+                self.minSols = [string]
+
         self.maxval = max(value, self.maxval)
         self.minval = min(value, self.minval)
         self.E += weight / self.W * (value - self.E)
@@ -42,6 +57,12 @@ class Statistic:
 
     def get_min(self):
         return self.minval
+    
+    def get_max_sols(self):
+        return self.maxSols
+    
+    def get_min_sols(self):
+        return self.minSols
 
     def get_CVaR(self):
         if self.cvar < 1:

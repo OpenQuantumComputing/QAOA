@@ -115,14 +115,11 @@ def __apprrat_successprob(qaoa_instance, depth, shots=10**4):
 
     stat = Statistic(cvar=qaoa_instance.cvar)
 
-    for key in hist:
-        # Qiskit uses big endian encoding, cost function uses litle endian encoding.
-        # Therefore the string is reversed before passing it to the cost function.
-        string = key[::-1]
+    for string in hist:
         if qaoa_instance.problem.isFeasible(string):
             cost = qaoa_instance.problem.cost(string)
-            counts += hist[key]
-            stat.add_sample(cost, hist[key])
+            counts += hist[string]
+            stat.add_sample(cost, hist[string], string)
 
     return -stat.get_CVaR(), counts / shots
 
