@@ -26,8 +26,9 @@ class OptResult:
         self.angles = []
         self.Exp = []
         self.Var = []
-        self.MaxCost = []
-        self.MinCost = []
+        self.WorstCost = []
+        self.BestCost = []
+        self.BestSols = [] 
         self.shots = []
 
         self.index_Exp_min = -1
@@ -36,8 +37,9 @@ class OptResult:
         self.angles.append(angles)
         self.Exp.append(-stat.get_CVaR())
         self.Var.append(stat.get_Variance())
-        self.MaxCost.append(-stat.get_max())
-        self.MinCost.append(-stat.get_min())
+        self.BestCost.append(-stat.get_max())
+        self.WorstCost.append(-stat.get_min())
+        self.BestSols.append(stat.get_max_sols())
         self.shots.append(shots)
 
     def compute_best_index(self):
@@ -57,6 +59,18 @@ class OptResult:
 
     def num_shots(self):
         return sum(self.shots)
+
+    def get_best_solution(self):
+        best_cost = np.min(self.BestCost)
+        iterations_with_best_cost = np.where(self.BestCost == best_cost)[0]
+        
+        all_best_sols = []
+        for i in iterations_with_best_cost:
+            all_best_sols.append(self.BestSols[i])
+        # flatten the list:
+        all_best_sols = [item for sublist in all_best_sols for item in sublist]
+        best_sols = np.unique(all_best_sols)
+        return best_sols, best_cost
 
 
 class QAOA:
@@ -88,7 +102,7 @@ class QAOA:
 
         :backend: backend
         :noisemodel: noisemodel
-        :optmizer: optimizer
+        :optmizer: optimizer as a list containing [optimizer object, options dict]
         :precision: precision to reach for expectation value based on error=variance/sqrt(shots)
         :shots: if precision=None, the number of samples taken
                       if precision!=None, the minimum number of samples taken
@@ -164,6 +178,12 @@ class QAOA:
         if depth > self.current_depth + 1:
             raise ValueError
         return self.optimization_results[depth].get_best_angles()[::2]
+
+    def get_angles(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_best_angles()
+
 
     def createParameterizedCircuit(self, depth):
         if self.parameterized_circuit_depth == depth:
@@ -270,6 +290,7 @@ class QAOA:
         """
         jres = job.result()
         counts_list = jres.get_counts()
+
         if isinstance(counts_list, list):
             expectations = []
             variances = []
@@ -280,7 +301,7 @@ class QAOA:
                 for string in counts:
                     # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
                     cost = self.problem.cost(string[::-1])
-                    self.stat.add_sample(cost, counts[string])
+                    self.stat.add_sample(cost, counts[string], string[::-1])
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
                 maxcosts.append(self.stat.get_max())
@@ -302,7 +323,7 @@ class QAOA:
             for string in counts_list:
                 # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
                 cost = self.problem.cost(string[::-1])
-                self.stat.add_sample(cost, counts_list[string])
+                self.stat.add_sample(cost, counts_list[string], string[::-1])
 
     def optimize(self, depth):
         ## run local optimization by iteratively increasing the depth until depth p is reached
@@ -317,12 +338,8 @@ class QAOA:
                     (self.gamma_grid[ind_Emin[1]], self.beta_grid[ind_Emin[0]])
                 )
             else:
-                gamma = self.optimization_results[self.current_depth].get_best_angles()[
-                    ::2
-                ]
-                beta = self.optimization_results[self.current_depth].get_best_angles()[
-                    1::2
-                ]
+                gamma = self.get_gamma(self.current_depth) 
+                beta = self.get_beta(self.current_depth)
 
                 gamma_interp = self.interp(gamma)
                 beta_interp = self.interp(beta)
@@ -460,7 +477,14 @@ class QAOA:
             )
         else:
             raise NotImplementedError
-        return job.result().get_counts()
+
+        # Qiskit uses big endian encoding, cost function uses litle endian encoding.
+        # Therefore the string is reversed before passing it to the cost function.
+        hist = job.result().get_counts()
+        corrected_hist = {}
+        for string in hist:
+            corrected_hist[string[::-1]] = hist[string]
+        return corrected_hist
 
     def random_init(self, gamma_bounds, beta_bounds, depth):
         """
@@ -475,3 +499,25 @@ class QAOA:
         initial[0::2] = gamma_list
         initial[1::2] = beta_list
         return initial
+    
+    def get_optimal_solutions(self):
+        """
+        Iterates through all optimization result objects looking for the bit-string(s)
+        that gave optimal cost value.
+        :return: list with the obtained best bit-strings 
+        """
+        best_sols = []
+        best_costs = []
+        for i in self.optimization_results:
+            best_sols_i, best_cost_i = self.optimization_results[i].get_best_solution()
+            best_sols.append(best_sols_i)
+            best_costs.append(best_cost_i)
+        
+        best_iterations = np.where(best_costs == np.min(best_costs))[0]
+        opt_sols = []
+        for i in best_iterations:
+            opt_sols.append(best_sols[i])
+        opt_sols = [item for sublist in opt_sols for item in sublist] 
+        return np.unique(opt_sols)
+
+
