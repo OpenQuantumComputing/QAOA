@@ -8,6 +8,15 @@ from qaoa import QAOA
 
 from qaoa.util import Statistic
 
+def np2str(npBitString):
+    """
+    Cast binary numpy arrays to bitstrings.
+    Safe to call both with a standard list and bitstring as long as the entries are in fact integers
+    """
+    s = ""
+    for i in npBitString:
+        s += str(int(i))
+    return s
 
 def __plot_landscape(A, extent, fig):
     if not fig:
@@ -185,3 +194,135 @@ def draw_colored_graph(G, edge_colors):
     # Show the graph
     plt.axis("off")
     plt.show()
+
+def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
+    """
+    2x2 plot showing the development of the best parameter values found for each parameter and each depth.
+    Top row:         Gamma parameters
+    Lower row:       Beta parameters
+    Left-hand side:  Relationship between parameters values plotted for each depth
+    Right-hand side: Development of each parameter's optimal value w.r.t. depth
+
+    Consept taken from Figure 1 a) and b) in https://arxiv.org/pdf/2209.11348.pdf 
+    """
+    maxdepth = qaoa.current_depth
+    fig, axs = pl.subplots(2, 2, figsize=figsize, constrained_layout=False, sharex=True)
+    axs = [None]*4
+    axs[0] = pl.subplot(2, 2, 1)
+    labelsLeft = []
+    for p in range(1, maxdepth+1):
+        labelsLeft.append("p = "+str(p))
+        axs[0].plot(np.arange(1, p+1), qaoa.get_gamma(p), label=labelsLeft[-1], linestyle='-', marker='o')
+    axs[0].set_ylabel(r'$\gamma_j$')
+    axs[0].grid()
+
+    axs[1] = pl.subplot(2, 2, 3)
+    for p in range(1, maxdepth+1):
+        axs[1].plot(np.arange(1, p+1), qaoa.get_beta(p), linestyle='-', marker='o')
+    axs[1].grid()
+    axs[1].set_ylabel(r'$\beta_j$')
+    axs[1].set_xlabel('Parameter index, $j$')
+
+
+
+    pl.xticks(np.arange(1,maxdepth+1))
+    fig.subplots_adjust(bottom=0.15)   ##  Need to play with this number.
+
+    fig.legend(labels=labelsLeft, loc='upper left', bbox_to_anchor=(0.08, 1.08), ncol=int(np.ceil(maxdepth/2)))
+
+
+
+    axs[2] = pl.subplot(2, 2, 2)
+    labelsRight = []
+    allGammas = [qaoa.get_gamma(p) for p in range(1, maxdepth+1)]
+    allBetas = [qaoa.get_beta(p) for p in range(1, maxdepth+1)]
+    
+    for p in range(1, maxdepth+1):
+        indexDevelopment = [allGammas[i][p-1] for i in range(p-1, maxdepth)]
+        labelsRight.append("j = "+str(p))
+        axs[2].plot(np.arange(p, maxdepth+1), indexDevelopment, label=labelsRight[-1], linestyle='-', marker='o')
+    axs[2].set_ylabel(r'$\gamma_j$')
+    axs[2].grid()
+
+    axs[3] = pl.subplot(2, 2, 4)
+    for p in range(1, maxdepth+1):
+        indexDevelopment = [allBetas[i][p-1] for i in range(p-1, maxdepth)]
+        axs[3].plot(np.arange(p, maxdepth+1), indexDevelopment, label=labelsRight[-1], linestyle='-', marker='o')
+    axs[3].grid()
+    axs[3].set_ylabel(r'$\beta_j$')
+    axs[3].set_xlabel('Circuit depth, $p$')
+
+
+    pl.xticks(np.arange(1,maxdepth+1))
+    fig.subplots_adjust(bottom=0.15)   ##  Need to play with this number.
+
+    fig.legend(labels=labelsRight, loc='upper right', bbox_to_anchor=(0.95, 1.08), ncol=int(np.ceil(maxdepth/2)))
+    fig.tight_layout() 
+
+    if title:
+        fig.suptitle(title, y = 1.12, fontsize=15)
+    
+
+def plot_optimalHitRatios(qaoa, optimal_solution, shots=1024, fig=None, label=None, style="", title=None, **kwargs):
+
+    # Compute the rate at which the best angles gives us the optimal solution
+    optimal_sol = np2str(optimal_solution)
+    hit_rates = np.zeros(qaoa.current_depth)
+    for d in range(qaoa.current_depth):
+        hist = qaoa.hist(qaoa.optimization_results[d+1].get_best_angles(), shots)
+        if optimal_sol in hist:
+            num_hits = hist[optimal_sol]
+            hit_rates[d] = num_hits/shots
+    
+    pl.plot(np.arange(1, qaoa.current_depth+1), hit_rates, style, label=label, **kwargs)
+    pl.legend()
+    pl.xlabel("depth")
+    pl.ylabel("Hit ratio for optimal solution")
+    if title:
+        pl.title(title)
+
+
+
+def printBestHistogramEntries( qaoa, classical_solution = None, num_solutions=10, shots=1024):
+
+    for p in range(1, qaoa.current_depth+1):
+        hist = qaoa.hist(qaoa.optimization_results[p].get_best_angles(), shots=shots)
+
+        sorted_hist = dict(sorted(hist.items(), key=lambda item: item[1], reverse=True))
+
+        best_classical_sol = None
+        if classical_solution is not None:
+            best_classical_sol = np2str(classical_solution)
+            print("Classical best result: ", (best_classical_sol, qaoa.problem.cost(best_classical_sol)))
+
+        i = 1
+        best_classical_sol_freq = None
+        best_classical_sol_i = None
+        for s, freq in sorted_hist.items():
+            cost = qaoa.problem.cost(s)
+            if i == 1:
+                best_sol = s
+                best_cost = cost
+                best_freq = freq
+                best_i = i
+            elif cost > best_cost:
+                best_sol = s
+                best_cost = cost
+                best_freq = freq
+                best_i = i 
+            if s == best_classical_sol:
+                best_classical_sol_freq = freq
+                best_classical_sol_i = i
+            if i <= num_solutions:
+                toprint = "    "
+                if s == best_classical_sol:
+                    toprint = "--> "
+                elif qaoa.problem.isFeasible(s):
+                    toprint = "  * "
+                print(str(i) +"\t" + toprint + str(s) +", " + str(cost) + ",   " +str(freq))
+            i = i + 1
+        if best_classical_sol_freq is not None:
+            print("Found best classical solution with " + str(best_classical_sol_freq) + " shots (rank: "+str(best_classical_sol_i)+")")
+        else:
+            print("Did not find best classical solution")
+            print(str(best_i) +"\t" + toprint + str(best_sol) +", " + str(best_cost) + ",   " +str(best_freq) +"<-- Best obtained solution")
