@@ -28,7 +28,9 @@ class OptResult:
         self.Var = []
         self.WorstCost = []
         self.BestCost = []
-        self.BestSols = [] 
+        self.BestSols = []
+        self.AllSols = []
+        self.AllVals = [] 
         self.shots = []
 
         self.index_Exp_min = -1
@@ -40,10 +42,15 @@ class OptResult:
         self.BestCost.append(-stat.get_max())
         self.WorstCost.append(-stat.get_min())
         self.BestSols.append(stat.get_max_sols())
+        self.AllVals.append(stat.get_all_vals())
+        self.AllSols.append(stat.get_all_sols())
         self.shots.append(shots)
 
     def compute_best_index(self):
         self.index_Exp_min = self.Exp.index(min(self.Exp))
+
+    def get_best_index(self):
+        return self.Exp.index(min(self.Exp))
 
     def get_best_Exp(self):
         return self.Exp[self.index_Exp_min]
@@ -53,12 +60,22 @@ class OptResult:
 
     def get_best_angles(self):
         return self.angles[self.index_Exp_min]
+    
+    def get_all_angles(self):
+        return self.angles
 
     def num_fval(self):
         return len(self.Exp)
 
     def num_shots(self):
         return sum(self.shots)
+    
+    def get_all_vals(self):
+        return self.AllVals
+    
+    def get_all_sols(self):
+        return self.AllSols
+    
 
     def get_best_solution(self):
         best_cost = np.min(self.BestCost)
@@ -87,6 +104,7 @@ class QAOA:
         precision=None,
         shots=1024,
         cvar=1,
+        memory = False
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -129,6 +147,7 @@ class QAOA:
         self.precision = precision
         self.stat = Statistic(cvar=cvar)
         self.cvar = cvar
+        self.memory = memory
 
         self.usebarrier = False
         self.isQNSPSA = False
@@ -143,8 +162,11 @@ class QAOA:
         self.Var_sampled_p1 = None
         self.MaxCost_sampled_p1 = None
         self.MinCost_sampled_p1 = None
+        self.AllCost_sampled_p1 = None
 
         self.optimization_results = {}
+        self.memory_lists = []
+
 
     def exp_landscape(self):
         ### at depth p = 1
@@ -183,6 +205,35 @@ class QAOA:
         if depth > self.current_depth + 1:
             raise ValueError
         return self.optimization_results[depth].get_best_angles()
+    
+    def get_all_values(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_all_vals()
+    
+    def get_all_solutions(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_all_sols()
+    
+    def get_all_angles(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_all_angles()
+    
+    def get_best_indices(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_best_index()
+    
+    def get_memory_lists(self):
+        return self.memory_lists
+
+
+    
+
+
+
 
 
     def createParameterizedCircuit(self, depth):
@@ -271,6 +322,7 @@ class QAOA:
                 shots=self.shots,
                 parameter_binds=[parameters],
                 optimization_level=0,
+                memory = self.memory
             )
             logger.info("Done execute")
             self.measurementStatistics(job)
@@ -289,34 +341,103 @@ class QAOA:
         :return: expectation and variance, if the job is a list
         """
         jres = job.result()
-        counts_list = jres.get_counts()
+        if (self.memory):
+            counts_list = jres.get_memory(self.parameterized_circuit)
+            #make this shit at the right point output dictionary like get_counts and feed it
+            print(counts_list)
+
+            if isinstance(counts_list, list):
+                expectations = []
+                variances = []
+                maxcosts = []
+                mincosts = []
+                allcosts = []
+                for i, counts in enumerate(counts_list):
+                    self.stat.reset()
+                    # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
+                    print('string index or whatever', counts[::-1])
+                    cost = self.problem.cost(counts[::-1])
+                    self.stat.add_sample(cost, 1, counts[::-1])
+                expectations.append(self.stat.get_CVaR())
+                variances.append(self.stat.get_Variance())
+                maxcosts.append(self.stat.get_max())
+                mincosts.append(self.stat.get_min())
+                allcosts.append(self.stat.get_all_vals())
+                angles = self.landscape_p1_angles
+                self.Exp_sampled_p1 = -np.array(expectations).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                )
+                self.Var_sampled_p1 = np.array(variances).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                ) 
+                self.MaxCost_sampled_p1 = -np.array(maxcosts).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                )
+                self.MinCost_sampled_p1 = -np.array(mincosts).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                )
+                self.AllCost_sampled_p1 = np.array(allcosts, dtype=object).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                )
+            else:
+                for string in counts_list:
+                    print('string:',string)
+                    # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
+                    cost = self.problem.cost(string[::-1])
+                    self.stat.add_sample(cost, counts_list[string], string[::-1])
+        else:
+            counts_list = jres.get_counts()
+            print(counts_list)
+        
+
+        """         
+            if (self.memory):
+            if isinstance(memory_counts, list):
+                self.stat.reset()
+                for bitstring in memory_counts:
+                    print(bitstring)
+                    cost = self.problem.cost(bitstring[::-1])
+                    self.stat.add_sample(cost, memory_counts[bitstring], bitstring[::-1])
+                    #self.stat.add_memory(bitstring[::-1]) #gotta [::-1] for every memory entry to reverse the order
+                expectations.append(self.stat.get_CVaR())
+                variances.append(self.stat.get_Variance())
+                maxcosts.append(self.stat.get_max())
+                mincosts.append(self.stat.get_min())
+                allcosts.append(self.stat.get_all_vals()) """
 
         if isinstance(counts_list, list):
             expectations = []
             variances = []
             maxcosts = []
             mincosts = []
+            allcosts = []
             for i, counts in enumerate(counts_list):
+                print('counts', counts)
                 self.stat.reset()
                 for string in counts:
                     # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
                     cost = self.problem.cost(string[::-1])
+                    print('counts string', counts[string])
                     self.stat.add_sample(cost, counts[string], string[::-1])
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
                 maxcosts.append(self.stat.get_max())
                 mincosts.append(self.stat.get_min())
+                allcosts.append(self.stat.get_all_vals())
             angles = self.landscape_p1_angles
             self.Exp_sampled_p1 = -np.array(expectations).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
             self.Var_sampled_p1 = np.array(variances).reshape(
                 angles["beta"][2], angles["gamma"][2]
-            )
+            ) 
             self.MaxCost_sampled_p1 = -np.array(maxcosts).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
             self.MinCost_sampled_p1 = -np.array(mincosts).reshape(
+                angles["beta"][2], angles["gamma"][2]
+            )
+            self.AllCost_sampled_p1 = np.array(allcosts, dtype=object).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
         else:
@@ -326,7 +447,7 @@ class QAOA:
                 self.stat.add_sample(cost, counts_list[string], string[::-1])
 
     def optimize(self, depth):
-        ## run local optimization by iteratively increasing the depth until depth p is reached
+        ## run local optimzation by iteratively increasing the depth until depth p is reached
         while self.current_depth < depth:
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:
@@ -407,6 +528,7 @@ class QAOA:
                     shots=shots,
                     parameter_binds=[params],
                     optimization_level=0,
+                    memory = self.memory
                 )
             else:
                 raise NotImplementedError
@@ -474,7 +596,8 @@ class QAOA:
                 shots=shots,
                 parameter_binds=[params],
                 optimization_level=0,
-            )
+                memory = self.memory
+            )   
         else:
             raise NotImplementedError
 
