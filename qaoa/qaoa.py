@@ -104,7 +104,7 @@ class QAOA:
         precision=None,
         shots=1024,
         cvar=1,
-        memory = False
+        memorysize = -1
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -147,7 +147,8 @@ class QAOA:
         self.precision = precision
         self.stat = Statistic(cvar=cvar)
         self.cvar = cvar
-        self.memory = memory
+        self.memorysize = memorysize
+        self.memory = (self.memorysize > 0)
 
         self.usebarrier = False
         self.isQNSPSA = False
@@ -228,11 +229,6 @@ class QAOA:
     
     def get_memory_lists(self):
         return self.memory_lists
-
-
-    
-
-
 
 
 
@@ -341,83 +337,32 @@ class QAOA:
         :return: expectation and variance, if the job is a list
         """
         jres = job.result()
-        if (self.memory):
-            counts_list = jres.get_memory(self.parameterized_circuit)
-            #make this shit at the right point output dictionary like get_counts and feed it
-            print(counts_list)
+        counts_list = jres.get_counts()
 
-            if isinstance(counts_list, list):
-                expectations = []
-                variances = []
-                maxcosts = []
-                mincosts = []
-                allcosts = []
-                for i, counts in enumerate(counts_list):
-                    self.stat.reset()
-                    # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                    print('string index or whatever', counts[::-1])
-                    cost = self.problem.cost(counts[::-1])
-                    self.stat.add_sample(cost, 1, counts[::-1])
-                expectations.append(self.stat.get_CVaR())
-                variances.append(self.stat.get_Variance())
-                maxcosts.append(self.stat.get_max())
-                mincosts.append(self.stat.get_min())
-                allcosts.append(self.stat.get_all_vals())
-                angles = self.landscape_p1_angles
-                self.Exp_sampled_p1 = -np.array(expectations).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                )
-                self.Var_sampled_p1 = np.array(variances).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                ) 
-                self.MaxCost_sampled_p1 = -np.array(maxcosts).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                )
-                self.MinCost_sampled_p1 = -np.array(mincosts).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                )
-                self.AllCost_sampled_p1 = np.array(allcosts, dtype=object).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                )
-            else:
-                for string in counts_list:
-                    print('string:',string)
-                    # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                    cost = self.problem.cost(string[::-1])
-                    self.stat.add_sample(cost, counts_list[string], string[::-1])
-        else:
-            counts_list = jres.get_counts()
-            print(counts_list)
+        if self.memorysize > 0:
+            memory_list = jres.get_memory(self.parameterized_circuit)
         
-
-        """         
-            if (self.memory):
-            if isinstance(memory_counts, list):
-                self.stat.reset()
-                for bitstring in memory_counts:
-                    print(bitstring)
-                    cost = self.problem.cost(bitstring[::-1])
-                    self.stat.add_sample(cost, memory_counts[bitstring], bitstring[::-1])
-                    #self.stat.add_memory(bitstring[::-1]) #gotta [::-1] for every memory entry to reverse the order
-                expectations.append(self.stat.get_CVaR())
-                variances.append(self.stat.get_Variance())
-                maxcosts.append(self.stat.get_max())
-                mincosts.append(self.stat.get_min())
-                allcosts.append(self.stat.get_all_vals()) """
-
         if isinstance(counts_list, list):
             expectations = []
             variances = []
             maxcosts = []
             mincosts = []
             allcosts = []
+
+            if self.memorysize > 0:
+                for memory in memory_list:
+                    if self.memorysize > 0:
+                        memory_cost = self.problem.cost(memory[::-1])
+                        self.memory_lists.append([memory[::-1], memory_cost])
+                        self.memorysize -= 1
+                    else:
+                        break
+
             for i, counts in enumerate(counts_list):
-                print('counts', counts)
                 self.stat.reset()
                 for string in counts:
                     # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
                     cost = self.problem.cost(string[::-1])
-                    print('counts string', counts[string])
                     self.stat.add_sample(cost, counts[string], string[::-1])
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
@@ -441,6 +386,16 @@ class QAOA:
                 angles["beta"][2], angles["gamma"][2]
             )
         else:
+
+            if self.memorysize > 0:
+                for memory in memory_list:
+                    if self.memorysize > 0:
+                        memory_cost = self.problem.cost(memory[::-1])
+                        self.memory_lists.append([memory[::-1], memory_cost])
+                        self.memorysize -= 1
+                    else:
+                        break
+
             for string in counts_list:
                 # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
                 cost = self.problem.cost(string[::-1])
@@ -596,7 +551,7 @@ class QAOA:
                 shots=shots,
                 parameter_binds=[params],
                 optimization_level=0,
-                memory = self.memory
+                memorysize = self.memorysize
             )   
         else:
             raise NotImplementedError
