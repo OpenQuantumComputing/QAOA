@@ -28,7 +28,7 @@ class OptResult:
         self.Var = []
         self.WorstCost = []
         self.BestCost = []
-        self.BestSols = [] 
+        self.BestSols = []
         self.shots = []
 
         self.index_Exp_min = -1
@@ -45,6 +45,9 @@ class OptResult:
     def compute_best_index(self):
         self.index_Exp_min = self.Exp.index(min(self.Exp))
 
+    def get_best_index(self):
+        return self.Exp.index(min(self.Exp))
+
     def get_best_Exp(self):
         return self.Exp[self.index_Exp_min]
 
@@ -53,12 +56,16 @@ class OptResult:
 
     def get_best_angles(self):
         return self.angles[self.index_Exp_min]
+    
+    def get_all_angles(self):
+        return self.angles
 
     def num_fval(self):
         return len(self.Exp)
 
     def num_shots(self):
         return sum(self.shots)
+    
 
     def get_best_solution(self):
         best_cost = np.min(self.BestCost)
@@ -87,6 +94,7 @@ class QAOA:
         precision=None,
         shots=1024,
         cvar=1,
+        memorysize = -1
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -129,6 +137,8 @@ class QAOA:
         self.precision = precision
         self.stat = Statistic(cvar=cvar)
         self.cvar = cvar
+        self.memorysize = memorysize
+        self.memory = (self.memorysize > 0)
 
         self.usebarrier = False
         self.isQNSPSA = False
@@ -145,6 +155,8 @@ class QAOA:
         self.MinCost_sampled_p1 = None
 
         self.optimization_results = {}
+        self.memory_lists = []
+
 
     def exp_landscape(self):
         ### at depth p = 1
@@ -183,6 +195,30 @@ class QAOA:
         if depth > self.current_depth + 1:
             raise ValueError
         return self.optimization_results[depth].get_best_angles()
+    
+    def get_all_values(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_all_vals()
+    
+    def get_all_solutions(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_all_sols()
+    
+    def get_all_angles(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_all_angles()
+    
+    def get_best_indices(self, depth):
+        if depth > self.current_depth + 1:
+            raise ValueError
+        return self.optimization_results[depth].get_best_index()
+    
+    def get_memory_lists(self):
+        return self.memory_lists
+
 
 
     def createParameterizedCircuit(self, depth):
@@ -271,6 +307,7 @@ class QAOA:
                 shots=self.shots,
                 parameter_binds=[parameters],
                 optimization_level=0,
+                memory = self.memory
             )
             logger.info("Done execute")
             self.measurementStatistics(job)
@@ -291,6 +328,16 @@ class QAOA:
         jres = job.result()
         counts_list = jres.get_counts()
 
+        if self.memorysize > 0:
+            for i,_ in enumerate(jres.results):
+                memory_list = jres.get_memory(experiment=i)
+                if self.memorysize > 0:
+                    for measurement in memory_list:
+                        self.memory_lists.append([measurement, self.problem.cost(measurement[::-1])])
+                        self.memorysize -= 1
+                        if self.memorysize < 1:
+                            break
+        
         if isinstance(counts_list, list):
             expectations = []
             variances = []
@@ -312,7 +359,7 @@ class QAOA:
             )
             self.Var_sampled_p1 = np.array(variances).reshape(
                 angles["beta"][2], angles["gamma"][2]
-            )
+            ) 
             self.MaxCost_sampled_p1 = -np.array(maxcosts).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
@@ -326,7 +373,7 @@ class QAOA:
                 self.stat.add_sample(cost, counts_list[string], string[::-1])
 
     def optimize(self, depth):
-        ## run local optimization by iteratively increasing the depth until depth p is reached
+        ## run local optimzation by iteratively increasing the depth until depth p is reached
         while self.current_depth < depth:
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:
@@ -407,6 +454,7 @@ class QAOA:
                     shots=shots,
                     parameter_binds=[params],
                     optimization_level=0,
+                    memory = self.memory
                 )
             else:
                 raise NotImplementedError
@@ -474,7 +522,8 @@ class QAOA:
                 shots=shots,
                 parameter_binds=[params],
                 optimization_level=0,
-            )
+                memory = self.memory
+            )   
         else:
             raise NotImplementedError
 
