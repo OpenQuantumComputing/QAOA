@@ -29,8 +29,6 @@ class OptResult:
         self.WorstCost = []
         self.BestCost = []
         self.BestSols = []
-        self.AllSols = []
-        self.AllVals = [] 
         self.shots = []
 
         self.index_Exp_min = -1
@@ -42,8 +40,6 @@ class OptResult:
         self.BestCost.append(-stat.get_max())
         self.WorstCost.append(-stat.get_min())
         self.BestSols.append(stat.get_max_sols())
-        self.AllVals.append(stat.get_all_vals())
-        self.AllSols.append(stat.get_all_sols())
         self.shots.append(shots)
 
     def compute_best_index(self):
@@ -69,12 +65,6 @@ class OptResult:
 
     def num_shots(self):
         return sum(self.shots)
-    
-    def get_all_vals(self):
-        return self.AllVals
-    
-    def get_all_sols(self):
-        return self.AllSols
     
 
     def get_best_solution(self):
@@ -163,7 +153,6 @@ class QAOA:
         self.Var_sampled_p1 = None
         self.MaxCost_sampled_p1 = None
         self.MinCost_sampled_p1 = None
-        self.AllCost_sampled_p1 = None
 
         self.optimization_results = {}
         self.memory_lists = []
@@ -340,24 +329,20 @@ class QAOA:
         counts_list = jres.get_counts()
 
         if self.memorysize > 0:
-            memory_list = jres.get_memory(self.parameterized_circuit)
+            for i,_ in enumerate(jres.results):
+                memory_list = jres.get_memory(experiment=i)
+                if self.memorysize > 0:
+                    for measurement in memory_list:
+                        self.memory_lists.append([measurement, self.problem.cost(measurement[::-1])])
+                        self.memorysize -= 1
+                        if self.memorysize < 1:
+                            break
         
         if isinstance(counts_list, list):
             expectations = []
             variances = []
             maxcosts = []
             mincosts = []
-            allcosts = []
-
-            if self.memorysize > 0:
-                for memory in memory_list:
-                    if self.memorysize > 0:
-                        memory_cost = self.problem.cost(memory[::-1])
-                        self.memory_lists.append([memory[::-1], memory_cost])
-                        self.memorysize -= 1
-                    else:
-                        break
-
             for i, counts in enumerate(counts_list):
                 self.stat.reset()
                 for string in counts:
@@ -368,7 +353,6 @@ class QAOA:
                 variances.append(self.stat.get_Variance())
                 maxcosts.append(self.stat.get_max())
                 mincosts.append(self.stat.get_min())
-                allcosts.append(self.stat.get_all_vals())
             angles = self.landscape_p1_angles
             self.Exp_sampled_p1 = -np.array(expectations).reshape(
                 angles["beta"][2], angles["gamma"][2]
@@ -382,20 +366,7 @@ class QAOA:
             self.MinCost_sampled_p1 = -np.array(mincosts).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
-            self.AllCost_sampled_p1 = np.array(allcosts, dtype=object).reshape(
-                angles["beta"][2], angles["gamma"][2]
-            )
         else:
-
-            if self.memorysize > 0:
-                for memory in memory_list:
-                    if self.memorysize > 0:
-                        memory_cost = self.problem.cost(memory[::-1])
-                        self.memory_lists.append([memory[::-1], memory_cost])
-                        self.memorysize -= 1
-                    else:
-                        break
-
             for string in counts_list:
                 # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
                 cost = self.problem.cost(string[::-1])
@@ -551,7 +522,7 @@ class QAOA:
                 shots=shots,
                 parameter_binds=[params],
                 optimization_level=0,
-                memorysize = self.memorysize
+                memory = self.memory
             )   
         else:
             raise NotImplementedError

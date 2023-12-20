@@ -16,8 +16,6 @@ class Statistic:
         self.minval = float("inf")
         self.minSols = []
         self.maxSols = []
-        self.allSols = []
-        self.allVals = []
         self.E = 0
         self.S = 0
         self.all_values = np.array([])
@@ -26,9 +24,6 @@ class Statistic:
     def add_sample(self, value, weight, string):
         self.W += weight
         tmp_E = self.E
-
-        self.allVals.append(value)
-        self.allSols.append(string)
 
         if value >= self.maxval:
             if value == self.maxval:
@@ -68,17 +63,11 @@ class Statistic:
     def get_min(self):
         return self.minval
     
-    def get_all_vals(self):
-        return self.allVals
-    
     def get_max_sols(self):
         return self.maxSols
     
     def get_min_sols(self):
         return self.minSols
-    
-    def get_all_sols(self):
-        return self.allSols
     
     def get_memory(self):
         return self.memorylist
