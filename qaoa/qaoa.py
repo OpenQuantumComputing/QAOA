@@ -45,9 +45,6 @@ class OptResult:
     def compute_best_index(self):
         self.index_Exp_min = self.Exp.index(min(self.Exp))
 
-    def get_best_index(self):
-        return self.Exp.index(min(self.Exp))
-
     def get_best_Exp(self):
         return self.Exp[self.index_Exp_min]
 
@@ -57,15 +54,11 @@ class OptResult:
     def get_best_angles(self):
         return self.angles[self.index_Exp_min]
     
-    def get_all_angles(self):
-        return self.angles
-
     def num_fval(self):
         return len(self.Exp)
 
     def num_shots(self):
-        return sum(self.shots)
-    
+        return sum(self.shots)    
 
     def get_best_solution(self):
         best_cost = np.min(self.BestCost)
@@ -353,7 +346,7 @@ class QAOA:
                 self.stat.add_sample(cost, counts_list[string], string[::-1])
 
     def optimize(self, depth):
-        ## run local optimzation by iteratively increasing the depth until depth p is reached
+        ## run local optimization by iteratively increasing the depth until depth p is reached
         while self.current_depth < depth:
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:
