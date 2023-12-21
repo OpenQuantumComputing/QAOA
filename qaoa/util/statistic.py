@@ -19,12 +19,10 @@ class Statistic:
         self.E = 0
         self.S = 0
         self.all_values = np.array([])
-        self.memorylist = []
 
     def add_sample(self, value, weight, string):
         self.W += weight
         tmp_E = self.E
-
         if value >= self.maxval:
             if value == self.maxval:
                 self.maxSols.append(string)
@@ -47,9 +45,6 @@ class Statistic:
             self.all_values = np.insert(
                 self.all_values, idx, np.ones(int(weight)) * value
             )
-            
-    def add_memory(self, list):
-        self.memorylist.append(list)
 
     def get_E(self):
         return self.E
@@ -68,9 +63,6 @@ class Statistic:
     
     def get_min_sols(self):
         return self.minSols
-    
-    def get_memory(self):
-        return self.memorylist
 
     def get_CVaR(self):
         if self.cvar < 1:

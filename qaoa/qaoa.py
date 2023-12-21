@@ -196,26 +196,6 @@ class QAOA:
             raise ValueError
         return self.optimization_results[depth].get_best_angles()
     
-    def get_all_values(self, depth):
-        if depth > self.current_depth + 1:
-            raise ValueError
-        return self.optimization_results[depth].get_all_vals()
-    
-    def get_all_solutions(self, depth):
-        if depth > self.current_depth + 1:
-            raise ValueError
-        return self.optimization_results[depth].get_all_sols()
-    
-    def get_all_angles(self, depth):
-        if depth > self.current_depth + 1:
-            raise ValueError
-        return self.optimization_results[depth].get_all_angles()
-    
-    def get_best_indices(self, depth):
-        if depth > self.current_depth + 1:
-            raise ValueError
-        return self.optimization_results[depth].get_best_index()
-    
     def get_memory_lists(self):
         return self.memory_lists
 
