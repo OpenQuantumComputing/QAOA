@@ -28,7 +28,7 @@ class OptResult:
         self.Var = []
         self.WorstCost = []
         self.BestCost = []
-        self.BestSols = [] 
+        self.BestSols = []
         self.shots = []
 
         self.index_Exp_min = -1
@@ -63,7 +63,7 @@ class OptResult:
     def get_best_solution(self):
         best_cost = np.min(self.BestCost)
         iterations_with_best_cost = np.where(self.BestCost == best_cost)[0]
-        
+
         all_best_sols = []
         for i in iterations_with_best_cost:
             all_best_sols.append(self.BestSols[i])
@@ -87,6 +87,7 @@ class QAOA:
         precision=None,
         shots=1024,
         cvar=1,
+        memorysize=-1,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -129,6 +130,8 @@ class QAOA:
         self.precision = precision
         self.stat = Statistic(cvar=cvar)
         self.cvar = cvar
+        self.memorysize = memorysize
+        self.memory = self.memorysize > 0
 
         self.usebarrier = False
         self.isQNSPSA = False
@@ -145,6 +148,7 @@ class QAOA:
         self.MinCost_sampled_p1 = None
 
         self.optimization_results = {}
+        self.memory_lists = []
 
     def exp_landscape(self):
         ### at depth p = 1
@@ -184,6 +188,8 @@ class QAOA:
             raise ValueError
         return self.optimization_results[depth].get_best_angles()
 
+    def get_memory_lists(self):
+        return self.memory_lists
 
     def createParameterizedCircuit(self, depth):
         if self.parameterized_circuit_depth == depth:
@@ -271,6 +277,7 @@ class QAOA:
                 shots=self.shots,
                 parameter_binds=[parameters],
                 optimization_level=0,
+                memory=self.memory,
             )
             logger.info("Done execute")
             self.measurementStatistics(job)
@@ -290,6 +297,18 @@ class QAOA:
         """
         jres = job.result()
         counts_list = jres.get_counts()
+
+        if self.memorysize > 0:
+            for i, _ in enumerate(jres.results):
+                memory_list = jres.get_memory(experiment=i)
+                if self.memorysize > 0:
+                    for measurement in memory_list:
+                        self.memory_lists.append(
+                            [measurement, self.problem.cost(measurement[::-1])]
+                        )
+                        self.memorysize -= 1
+                        if self.memorysize < 1:
+                            break
 
         if isinstance(counts_list, list):
             expectations = []
@@ -338,7 +357,7 @@ class QAOA:
                     (self.gamma_grid[ind_Emin[1]], self.beta_grid[ind_Emin[0]])
                 )
             else:
-                gamma = self.get_gamma(self.current_depth) 
+                gamma = self.get_gamma(self.current_depth)
                 beta = self.get_beta(self.current_depth)
 
                 gamma_interp = self.interp(gamma)
@@ -407,6 +426,7 @@ class QAOA:
                     shots=shots,
                     parameter_binds=[params],
                     optimization_level=0,
+                    memory=self.memory,
                 )
             else:
                 raise NotImplementedError
@@ -474,6 +494,7 @@ class QAOA:
                 shots=shots,
                 parameter_binds=[params],
                 optimization_level=0,
+                memory=self.memory,
             )
         else:
             raise NotImplementedError
@@ -499,12 +520,12 @@ class QAOA:
         initial[0::2] = gamma_list
         initial[1::2] = beta_list
         return initial
-    
+
     def get_optimal_solutions(self):
         """
         Iterates through all optimization result objects looking for the bit-string(s)
         that gave optimal cost value.
-        :return: list with the obtained best bit-strings 
+        :return: list with the obtained best bit-strings
         """
         best_sols = []
         best_costs = []
@@ -512,12 +533,10 @@ class QAOA:
             best_sols_i, best_cost_i = self.optimization_results[i].get_best_solution()
             best_sols.append(best_sols_i)
             best_costs.append(best_cost_i)
-        
+
         best_iterations = np.where(best_costs == np.min(best_costs))[0]
         opt_sols = []
         for i in best_iterations:
             opt_sols.append(best_sols[i])
-        opt_sols = [item for sublist in opt_sols for item in sublist] 
+        opt_sols = [item for sublist in opt_sols for item in sublist]
         return np.unique(opt_sols)
-
-

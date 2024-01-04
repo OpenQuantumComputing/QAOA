@@ -57,10 +57,10 @@ class Statistic:
 
     def get_min(self):
         return self.minval
-    
+
     def get_max_sols(self):
         return self.maxSols
-    
+
     def get_min_sols(self):
         return self.minSols
 
