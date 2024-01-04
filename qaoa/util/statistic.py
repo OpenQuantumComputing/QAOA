@@ -39,7 +39,7 @@ class Statistic:
         self.maxval = max(value, self.maxval)
         self.minval = min(value, self.minval)
         self.E += weight / self.W * (value - self.E)
-        self.S += weight * (value - tmp_E) * (value - self.E)        
+        self.S += weight * (value - tmp_E) * (value - self.E)
         if self.cvar < 1:
             idx = np.searchsorted(self.all_values, value)
             self.all_values = np.insert(
@@ -57,10 +57,10 @@ class Statistic:
 
     def get_min(self):
         return self.minval
-    
+
     def get_max_sols(self):
         return self.maxSols
-    
+
     def get_min_sols(self):
         return self.minSols
 
