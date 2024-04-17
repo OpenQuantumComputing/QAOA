@@ -4,10 +4,12 @@ LOG = structlog.get_logger(file=__name__)
 
 import numpy as np
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute, Aer
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter
 from qiskit.primitives import Sampler
-from qiskit.algorithms.optimizers import COBYLA
+from qiskit_algorithms.optimizers import COBYLA
+
+from qiskit_aer import Aer
 
 from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
@@ -271,9 +273,8 @@ class QAOA:
 
             logger.info("Executing sample_cost_landscape")
             logger.info(f"parameters: {len(parameters)}")
-            job = execute(
+            job = self.backend.run(
                 self.parameterized_circuit,
-                self.backend,
                 shots=self.shots,
                 parameter_binds=[parameters],
                 optimization_level=0,
@@ -419,9 +420,8 @@ class QAOA:
                 params = self.getParametersToBind(
                     angles, self.parametrized_circuit_depth, asList=True
                 )
-                job = execute(
+                job = self.backend.run(
                     self.parameterized_circuit,
-                    backend=self.backend,
                     noise_model=self.noisemodel,
                     shots=shots,
                     parameter_binds=[params],
@@ -488,9 +488,8 @@ class QAOA:
 
         params = self.getParametersToBind(angles, depth, asList=True)
         if self.backend.configuration().local:
-            job = execute(
+            job = self.backend.run(
                 self.parameterized_circuit,
-                self.backend,
                 shots=shots,
                 parameter_binds=[params],
                 optimization_level=0,

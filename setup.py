@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="qaoa",
-    version="1.0.2",
+    version="1.0.4",
     license="GNU General Public License v3.0",
     author="Franz Georg Fuchs",
     author_email="franzgeorgfuchs@gmail.com",
@@ -18,7 +18,7 @@ setup(
         "matplotlib",
         "networkx",
         "jupyter",
-        "qiskit",
+        "qiskit>=1.0",
         "qiskit-aer",
         "qiskit-algorithms",
         "qiskit-finance",
