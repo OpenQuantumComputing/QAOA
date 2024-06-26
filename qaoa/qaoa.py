@@ -90,6 +90,7 @@ class QAOA:
         shots=1024,
         cvar=1,
         memorysize=-1,
+        interp=True,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -134,6 +135,7 @@ class QAOA:
         self.cvar = cvar
         self.memorysize = memorysize
         self.memory = self.memorysize > 0
+        self.interp = interp
 
         self.usebarrier = False
         self.isQNSPSA = False
@@ -361,8 +363,12 @@ class QAOA:
                 gamma = self.get_gamma(self.current_depth)
                 beta = self.get_beta(self.current_depth)
 
-                gamma_interp = self.interp(gamma)
-                beta_interp = self.interp(beta)
+                if self.interp:
+                    gamma_interp = self.interp(gamma)
+                    beta_interp = self.interp(beta)
+                else:
+                    gamma_interp = np.append(gamma, 0)
+                    beta_interp = np.append(beta, 0)
                 angles0 = np.zeros(2 * (self.current_depth + 1))
                 angles0[::2] = gamma_interp
                 angles0[1::2] = beta_interp
