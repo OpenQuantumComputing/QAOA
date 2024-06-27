@@ -4,7 +4,7 @@ LOG = structlog.get_logger(file=__name__)
 
 import numpy as np
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit.circuit import Parameter
 from qiskit.primitives import Sampler
 from qiskit_algorithms.optimizers import COBYLA
@@ -90,7 +90,7 @@ class QAOA:
         shots=1024,
         cvar=1,
         memorysize=-1,
-        interp=True,
+        interpolate=True,
         flip=False,
         post=False,
     ) -> None:
@@ -137,7 +137,7 @@ class QAOA:
         self.cvar = cvar
         self.memorysize = memorysize
         self.memory = self.memorysize > 0
-        self.interp = interp
+        self.interpolate = interpolate
 
         self.usebarrier = False
         self.isQNSPSA = False
@@ -248,17 +248,18 @@ class QAOA:
             )
             self.parameterized_circuit.compose(tmp_circuit, inplace=True)
 
-            if self.flip and (d != (depth-1)):
-                    self.parameterized_circuit.barrier()
-                    self.flipper.create_circuit(self.bitflips[d])
-                    self.parameterized_circuit.compose(self.flipper.circuit, inplace=True)
-                    self.parameterized_circuit.barrier()
+            if self.flip and (d != (depth - 1)):
+                self.parameterized_circuit.barrier()
+                self.flipper.create_circuit(self.bitflips[d])
+                self.parameterized_circuit.compose(self.flipper.circuit, inplace=True)
+                self.parameterized_circuit.barrier()
 
             if self.usebarrier:
                 self.circuit.barrier()
 
         self.parameterized_circuit.barrier()
         self.parameterized_circuit.measure(q, c)
+        self.parameterized_circuit = transpile(self.parameterized_circuit, self.backend)
         self.parametrized_circuit_depth = depth
 
     def sample_cost_landscape(
@@ -383,7 +384,7 @@ class QAOA:
                 gamma = self.get_gamma(self.current_depth)
                 beta = self.get_beta(self.current_depth)
 
-                if self.interp:
+                if self.interpolate:
                     gamma_interp = self.interp(gamma)
                     beta_interp = self.interp(beta)
                 else:
