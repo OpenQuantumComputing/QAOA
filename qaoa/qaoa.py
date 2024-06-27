@@ -14,7 +14,7 @@ from qiskit_aer import Aer
 from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
 from qaoa.problems import Problem
-from qaoa.util import Statistic
+from qaoa.util import Statistic, BitFlip, post_processing
 
 
 class OptResult:
@@ -91,6 +91,8 @@ class QAOA:
         cvar=1,
         memorysize=-1,
         interp=True,
+        flip=False,
+        post=False,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -153,6 +155,16 @@ class QAOA:
 
         self.optimization_results = {}
         self.memory_lists = []
+
+        self.flip = flip
+        self.flipper = BitFlip(self.problem.N_qubits)
+        self.bitflips = []
+
+        self.post = post
+        self.Exp_post_processed = None
+        self.Var_post_processed = None
+        self.samplecount_hists = {}
+        self.last_hist = {}
 
     def exp_landscape(self):
         ### at depth p = 1
@@ -236,6 +248,12 @@ class QAOA:
             )
             self.parameterized_circuit.compose(tmp_circuit, inplace=True)
 
+            if self.flip and (d != (depth-1)):
+                    self.parameterized_circuit.barrier()
+                    self.flipper.create_circuit(self.bitflips[d])
+                    self.parameterized_circuit.compose(self.flipper.circuit, inplace=True)
+                    self.parameterized_circuit.barrier()
+
             if self.usebarrier:
                 self.circuit.barrier()
 
@@ -313,6 +331,8 @@ class QAOA:
                         if self.memorysize < 1:
                             break
 
+        self.last_hist = counts_list
+
         if isinstance(counts_list, list):
             expectations = []
             variances = []
@@ -381,6 +401,8 @@ class QAOA:
 
             res = self.local_opt(angles0)
 
+            self.samplecount_hists[self.current_depth + 1] = self.last_hist
+
             self.optimization_results[self.current_depth + 1].compute_best_index()
 
             LOG.info(
@@ -388,7 +410,23 @@ class QAOA:
                 func=self.optimize.__name__,
             )
 
+            if self.flip:
+                hist = self.samplecount_hists[self.current_depth + 1]
+                string = max(hist, key=hist.get)
+                boosted = self.flipper.boost_samples(
+                    problem=self.problem,
+                    string=string,
+                )
+                string_xor = self.flipper.xor(string, boosted)
+                self.bitflips.append(string_xor)
+
             self.current_depth += 1
+
+        if self.post:
+            samples = self.samplecount_hists[self.current_depth]
+            post_processing(self, samples=samples, K=self.post)
+            self.Exp_post_processed = -self.stat.get_CVaR()
+            self.Var_post_processed = self.stat.get_Variance()
 
     def local_opt(self, angles0):
         """
