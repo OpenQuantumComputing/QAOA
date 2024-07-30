@@ -4,7 +4,7 @@ LOG = structlog.get_logger(file=__name__)
 
 import numpy as np
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, AncillaRegister, transpile
 from qiskit.circuit import Parameter
 from qiskit.primitives import Sampler
 from qiskit_algorithms.optimizers import COBYLA
@@ -93,6 +93,7 @@ class QAOA:
         interpolate=True,
         flip=False,
         post=False,
+        anc = 0,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -166,6 +167,8 @@ class QAOA:
         self.samplecount_hists = {}
         self.last_hist = {}
 
+        self.anc = anc
+
     def exp_landscape(self):
         ### at depth p = 1
         return self.Exp_sampled_p1
@@ -218,9 +221,13 @@ class QAOA:
         self.mixer.create_circuit()
         self.initialstate.create_circuit()
 
+        if self.anc:
+            self.anc = self.problem.num_aux
+
+        a = AncillaRegister(self.anc)
         q = QuantumRegister(self.problem.N_qubits)
         c = ClassicalRegister(self.problem.N_qubits)
-        self.parameterized_circuit = QuantumCircuit(q, c)
+        self.parameterized_circuit = QuantumCircuit(q, c, a)
 
         self.gamma_params = [None] * depth
         self.beta_params = [None] * depth
