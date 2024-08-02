@@ -4,7 +4,13 @@ LOG = structlog.get_logger(file=__name__)
 
 import numpy as np
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, AncillaRegister, transpile
+from qiskit import (
+    QuantumCircuit,
+    QuantumRegister,
+    ClassicalRegister,
+    AncillaRegister,
+    transpile,
+)
 from qiskit.circuit import Parameter
 from qiskit.primitives import Sampler
 from qiskit_algorithms.optimizers import COBYLA
@@ -93,7 +99,7 @@ class QAOA:
         interpolate=True,
         flip=False,
         post=False,
-        anc = 0,
+        anc=0,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -375,12 +381,16 @@ class QAOA:
                 cost = self.problem.cost(string[::-1])
                 self.stat.add_sample(cost, counts_list[string], string[::-1])
 
-    def optimize(self, depth):
+    def optimize(
+        self,
+        depth,
+        angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
+    ):
         ## run local optimization by iteratively increasing the depth until depth p is reached
         while self.current_depth < depth:
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:
-                    self.sample_cost_landscape()
+                    self.sample_cost_landscape(angles=angles)
                 ind_Emin = np.unravel_index(
                     np.argmin(self.Exp_sampled_p1, axis=None), self.Exp_sampled_p1.shape
                 )

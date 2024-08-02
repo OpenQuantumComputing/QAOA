@@ -92,12 +92,10 @@ def getBlock1(n, k, l):
 
     if first != 0:
         index = index[first:]
-        qc.id(qr[:first])
 
     if last != 0:
         index = index[:-last]
         qc.append(getSCS(l, k), index)
-        qc.id(qr[-last:])
     else:
         qc.append(getSCS(l, k), index)
 
@@ -126,7 +124,6 @@ def getBlock2(n, k, l):
     if last != 0:
         index = index[:-last]
         qc.append(getSCS(l, l - 1), index)
-        qc.id(qr[-last:])
     else:
         qc.append(getSCS(l, l - 1), index)
 
