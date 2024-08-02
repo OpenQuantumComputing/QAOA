@@ -38,7 +38,7 @@ class XY(Constrained):
         print("Its now computing the feasible subspace")
         self.B.clear()
         for combination in itertools.combinations(range(self.N_qubits), self.k):
-            current_state = ["0"] * selfN_qubits
+            current_state = ["0"] * self.N_qubits
             for index in combination:
                 current_state[index] = "1"
             self.B.append("".join(current_state))
@@ -49,7 +49,7 @@ class XY(Constrained):
         return math.isclose(constraint, 0, abs_tol=1e-7)
 
     def __XYMixerTerms(self):
-        logical_X_operators = [None] * (selfN_qubits - 1)
+        logical_X_operators = [None] * (self.N_qubits - 1)
         mixer_terms = {}
         scale = 0.5  # 1/size, size of stabilizer space
         for i in range(self.params["N_qubits"] - 2):
