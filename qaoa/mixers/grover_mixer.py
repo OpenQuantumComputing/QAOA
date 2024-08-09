@@ -33,7 +33,7 @@ class Grover(Mixer):
         else:
             self.circuit.x(range(self.subcircuit.N_qubits))
             phase_gate = PhaseGate(-self.mixer_param).control(self.subcircuit.N_qubits - 1)
-            self.circuit.append(phase_gate, [1, 2, 0])
+            self.circuit.append(phase_gate, self.circuit.qubits)
             self.circuit.x(range(self.subcircuit.N_qubits))
         self.circuit.barrier()
 
