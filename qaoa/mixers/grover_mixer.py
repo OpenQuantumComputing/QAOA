@@ -1,10 +1,5 @@
-import math
-import numpy as np
-
-from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
-from qiskit.quantum_info import Operator
-from qiskit.circuit.library import RXGate, PhaseGate
+from qiskit.circuit.library import PhaseGate
 
 from qaoa.mixers.base_mixer import Mixer
 from qaoa.initialstates.base_initialstate import InitialState
