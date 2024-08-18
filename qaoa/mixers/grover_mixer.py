@@ -19,18 +19,10 @@ class Grover(Mixer):
         US = self.subcircuit.circuit
 
         self.circuit = US.inverse()
-        self.circuit.barrier()
 
-        if self.subcircuit.N_qubits == 2:
-            self.circuit.x(range(self.subcircuit.N_qubits))
-            self.circuit.crz(-self.mixer_param, -2, -1)
-            self.circuit.x(range(self.subcircuit.N_qubits))
-        else:
-            self.circuit.x(range(self.subcircuit.N_qubits))
-            phase_gate = PhaseGate(-self.mixer_param).control(self.subcircuit.N_qubits - 1)
-            self.circuit.append(phase_gate, self.circuit.qubits)
-            self.circuit.x(range(self.subcircuit.N_qubits))
-        self.circuit.barrier()
+        self.circuit.x(range(self.subcircuit.N_qubits))
+        phase_gate = PhaseGate(-self.mixer_param).control(self.subcircuit.N_qubits - 1)
+        self.circuit.append(phase_gate, self.circuit.qubits)
+        self.circuit.x(range(self.subcircuit.N_qubits))
 
         self.circuit.compose(US, range(self.subcircuit.N_qubits), inplace=True)
-        self.circuit.barrier()
