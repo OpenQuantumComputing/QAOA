@@ -1,10 +1,5 @@
-import math
-import numpy as np
-
-from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
-from qiskit.quantum_info import Operator
-from qiskit.circuit.library import RXGate
+from qiskit.circuit.library import PhaseGate
 
 from qaoa.mixers.base_mixer import Mixer
 from qaoa.initialstates.base_initialstate import InitialState
@@ -20,24 +15,21 @@ class Grover(Mixer):
         self.mixer_param = Parameter("x_beta")
 
     def create_circuit(self):
+        # given feasibel states f \in F,
+        # Let US the circuit that prepares US = 1/|F| \sum_{f\inF} |f>
+        # The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US,
+
         self.subcircuit.create_circuit()
         US = self.subcircuit.circuit
 
+        # US^\dagger
         self.circuit = US.inverse()
-        self.circuit.barrier()
-
-        if self.subcircuit.N_qubits == 2:
-            self.circuit.x(range(self.subcircuit.N_qubits))
-            self.circuit.crz(-self.mixer_param, -2, -1)
-            self.circuit.x(range(self.subcircuit.N_qubits))
-        else:
-            self.circuit.x(range(self.subcircuit.N_qubits))
-            self.circuit.h(-1)
-            mrx = RXGate(-self.mixer_param).control(self.subcircuit.N_qubits - 1)
-            self.circuit.append(mrx, self.circuit.qubits)
-            self.circuit.h(-1)
-            self.circuit.x(range(self.subcircuit.N_qubits))
-        self.circuit.barrier()
-
+        # X^n
+        self.circuit.x(range(self.subcircuit.N_qubits))
+        # C^{n-1}Phase
+        phase_gate = PhaseGate(-self.mixer_param).control(self.subcircuit.N_qubits - 1)
+        self.circuit.append(phase_gate, self.circuit.qubits)
+        # X^n
+        self.circuit.x(range(self.subcircuit.N_qubits))
+        # US
         self.circuit.compose(US, range(self.subcircuit.N_qubits), inplace=True)
-        self.circuit.barrier()
