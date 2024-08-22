@@ -121,3 +121,8 @@ Additionally, for each depth every time the loss function is called, the **angle
 ### Example usage
 
 See [examples here](examples/).
+
+
+***
+### Acknowledgement
+We would like to thank for funding of the work by the Research Council of Norway through project number 33202.
