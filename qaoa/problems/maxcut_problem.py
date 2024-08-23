@@ -6,6 +6,7 @@ from .base_problem import Problem
 
 class MaxCut(Problem):
     def __init__(self, G) -> None:
+        super().__init__()
         self.G = G
         self.N_qubits = self.G.number_of_nodes()
 

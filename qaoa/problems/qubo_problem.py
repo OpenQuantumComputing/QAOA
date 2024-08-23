@@ -9,6 +9,7 @@ from .base_problem import Problem
 
 class QUBO(Problem):
     def __init__(self, Q=None, c=None, b=None) -> None:
+        super().__init__()
         """
         Implements the mapping from the parameters in params to the QUBO problem.
         Is expected to be called by the child class.

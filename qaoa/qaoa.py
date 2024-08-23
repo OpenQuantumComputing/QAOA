@@ -99,7 +99,6 @@ class QAOA:
         interpolate=True,
         flip=False,
         post=False,
-        anc=0,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -173,8 +172,6 @@ class QAOA:
         self.samplecount_hists = {}
         self.last_hist = {}
 
-        self.anc = anc
-
     def exp_landscape(self):
         ### at depth p = 1
         return self.Exp_sampled_p1
@@ -227,10 +224,7 @@ class QAOA:
         self.mixer.create_circuit()
         self.initialstate.create_circuit()
 
-        if self.anc:
-            self.anc = self.problem.num_aux
-
-        a = AncillaRegister(self.anc)
+        a = AncillaRegister(self.problem.N_qubits_auxillary)
         q = QuantumRegister(self.problem.N_qubits)
         c = ClassicalRegister(self.problem.N_qubits)
         self.parameterized_circuit = QuantumCircuit(q, c, a)
