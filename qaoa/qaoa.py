@@ -99,6 +99,7 @@ class QAOA:
         interpolate=True,
         flip=False,
         post=False,
+        number_trottersteps_mixer=1,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -171,6 +172,7 @@ class QAOA:
         self.Var_post_processed = None
         self.samplecount_hists = {}
         self.last_hist = {}
+        self.number_trottersteps_mixer = number_trottersteps_mixer
 
     def exp_landscape(self):
         ### at depth p = 1
@@ -250,10 +252,14 @@ class QAOA:
 
             self.beta_params[d] = Parameter("beta_" + str(d))
             tmp_circuit = self.mixer.circuit.assign_parameters(
-                {self.mixer.circuit.parameters[0]: self.beta_params[d]},
+                {
+                    self.mixer.circuit.parameters[0]: self.beta_params[d]
+                    / self.number_trottersteps_mixer
+                },
                 inplace=False,
             )
-            self.parameterized_circuit.compose(tmp_circuit, inplace=True)
+            for _ in range(0, self.number_trottersteps_mixer):
+                self.parameterized_circuit.compose(tmp_circuit, inplace=True)
 
             if self.flip and (d != (depth - 1)):
                 self.parameterized_circuit.barrier()
