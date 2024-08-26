@@ -21,6 +21,7 @@ class BaseProblem(ABC):
         assigned a quantum circuit later.
         """
         self.circuit = None
+        self.N_qubits_auxillary = 0
 
 
 class Problem(BaseProblem):

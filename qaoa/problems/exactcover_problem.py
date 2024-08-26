@@ -15,8 +15,9 @@ class ExactCover(Problem):
         weights=None,
         penalty_factor=1,
     ) -> None:
-        self.columns = columns 
-        self.weights = weights 
+        super().__init__()
+        self.columns = columns
+        self.weights = weights
         self.penalty_factor = penalty_factor
 
         colSize = columns.shape[0]  ### Size per column
@@ -41,11 +42,16 @@ class ExactCover(Problem):
         self.circuit = QuantumCircuit(q)
         cost_param = Parameter("x_gamma")
 
-        colSize, numColumns = np.shape(self.columns) 
+        colSize, numColumns = np.shape(self.columns)
 
         ### cost Hamiltonian
         for col in range(numColumns):
-            hr = self.penalty_factor * 0.5 * self.columns[:, col] @ (np.sum(self.columns, axis=1) - 2)
+            hr = (
+                self.penalty_factor
+                * 0.5
+                * self.columns[:, col]
+                @ (np.sum(self.columns, axis=1) - 2)
+            )
             if not self.weights is None:
                 hr += 0.5 * self.weights[col]
 
@@ -53,7 +59,12 @@ class ExactCover(Problem):
                 self.circuit.rz(cost_param * hr, q[col])
 
             for col_ in range(col + 1, numColumns):
-                Jrr_ = self.penalty_factor * 0.5 * self.columns[:, col] @ self.columns[:, col_]
+                Jrr_ = (
+                    self.penalty_factor
+                    * 0.5
+                    * self.columns[:, col]
+                    @ self.columns[:, col_]
+                )
 
                 if not math.isclose(Jrr_, 0, abs_tol=1e-7):
                     self.circuit.cx(q[col], q[col_])
