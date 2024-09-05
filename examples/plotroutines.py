@@ -5,9 +5,9 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 
 from qaoa import QAOA
-from qaoa.mixers.constrained_mixer import Constrained
 
 from qaoa.util import Statistic
+
 
 def __plot_landscape(A, extent, fig):
     if not fig:
@@ -75,9 +75,7 @@ def plot_ApproximationRatio(
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 
 
-def plot_successprob(
-    qaoa_instance, maxdepth, label, style="", fig=None, shots=10**4
-):
+def plot_successprob(qaoa_instance, maxdepth, label, style="", fig=None, shots=10**4):
     successp = []
     for p in range(1, qaoa_instance.current_depth + 1):
         ar, sp = __apprrat_successprob(qaoa_instance, p, shots=shots)
@@ -125,7 +123,7 @@ def __apprrat_successprob(qaoa_instance, depth, shots=10**4):
 
 
 def plot_angles(qaoa_instance, depth, label, style="", fig=None):
-    angles=qaoa_instance.optimization_results[depth].get_best_angles()
+    angles = qaoa_instance.optimization_results[depth].get_best_angles()
 
     if not fig:
         ax = pl.figure().gca()
@@ -135,13 +133,13 @@ def plot_angles(qaoa_instance, depth, label, style="", fig=None):
     pl.plot(
         np.arange(1, depth + 1),
         angles[::2],
-        "--"+style,
+        "--" + style,
         label=r"$\gamma$ " + label,
     )
     pl.plot(
         np.arange(1, depth + 1),
         angles[1::2],
-        "-"+style,
+        "-" + style,
         label=r"$\beta$ " + label,
     )
     pl.xlim(1 - 0.25, depth + 0.25)

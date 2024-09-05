@@ -291,7 +291,6 @@ class QAOA:
         self.beta_grid = np.linspace(tmp[0], tmp[1], tmp[2])
 
         if self.backend.configuration().local:
-            print(depth, self.current_depth)
             self.createParameterizedCircuit(depth)
             gamma = [None] * angles["beta"][2] * angles["gamma"][2]
             beta = [None] * angles["beta"][2] * angles["gamma"][2]
