@@ -308,7 +308,6 @@ class QAOA:
                         params = self.getParametersToBind(
                             [gamma, beta], self.parametrized_circuit_depth, asList=True
                         )
-                        print(params)
 
                         job = self.backend.run(
                             self.parameterized_circuit,
