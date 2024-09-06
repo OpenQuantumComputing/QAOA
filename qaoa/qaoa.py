@@ -100,6 +100,7 @@ class QAOA:
         flip=False,
         post=False,
         number_trottersteps_mixer=1,
+        sequential=False,
     ) -> None:
         """
         A QAO-Ansatz consist of these parts:
@@ -145,6 +146,8 @@ class QAOA:
         self.memorysize = memorysize
         self.memory = self.memorysize > 0
         self.interpolate = interpolate
+
+        self.sequential = sequential
 
         self.usebarrier = False
         self.isQNSPSA = False
@@ -276,8 +279,7 @@ class QAOA:
         self.parametrized_circuit_depth = depth
 
     def sample_cost_landscape(
-        self,
-        angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]},
+        self, angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]}
     ):
         self.landscape_p1_angles = angles
         logger = LOG.bind(func=self.sample_cost_landscape.__name__)
@@ -291,32 +293,88 @@ class QAOA:
         self.beta_grid = np.linspace(tmp[0], tmp[1], tmp[2])
 
         if self.backend.configuration().local:
-            print(depth, self.current_depth)
-            self.createParameterizedCircuit(depth)
-            gamma = [None] * angles["beta"][2] * angles["gamma"][2]
-            beta = [None] * angles["beta"][2] * angles["gamma"][2]
+            if self.sequential:
+                expectations = []
+                variances = []
+                maxcosts = []
+                mincosts = []
 
-            counter = 0
-            for b in range(angles["beta"][2]):
-                for g in range(angles["gamma"][2]):
-                    gamma[counter] = self.gamma_grid[g]
-                    beta[counter] = self.beta_grid[b]
-                    counter += 1
+                self.createParameterizedCircuit(depth)
+                logger.info("Executing sample_cost_landscape")
+                for b in range(angles["beta"][2]):
+                    for g in range(angles["gamma"][2]):
+                        gamma = self.gamma_grid[g]
+                        beta = self.beta_grid[b]
+                        params = self.getParametersToBind(
+                            [gamma, beta], self.parametrized_circuit_depth, asList=True
+                        )
 
-            parameters = {self.gamma_params[0]: gamma, self.beta_params[0]: beta}
+                        job = self.backend.run(
+                            self.parameterized_circuit,
+                            noise_model=self.noisemodel,
+                            shots=self.shots,
+                            parameter_binds=[params],
+                            optimization_level=0,
+                            memory=self.memory,
+                        )
 
-            logger.info("Executing sample_cost_landscape")
-            logger.info(f"parameters: {len(parameters)}")
-            job = self.backend.run(
-                self.parameterized_circuit,
-                shots=self.shots,
-                parameter_binds=[parameters],
-                optimization_level=0,
-                memory=self.memory,
-            )
-            logger.info("Done execute")
-            self.measurementStatistics(job)
-            logger.info("Done measurement")
+                        jres = job.result()
+                        counts_list = jres.get_counts()
+
+                        self.stat.reset()
+                        for string in counts_list:
+                            # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
+                            cost = self.problem.cost(string[::-1])
+                            self.stat.add_sample(
+                                cost, counts_list[string], string[::-1]
+                            )
+
+                        expectations.append(self.stat.get_CVaR())
+                        variances.append(self.stat.get_Variance())
+                        maxcosts.append(self.stat.get_max())
+                        mincosts.append(self.stat.get_min())
+
+                angles = self.landscape_p1_angles
+                self.Exp_sampled_p1 = -np.array(expectations).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                )
+                self.Var_sampled_p1 = np.array(variances).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                )
+                self.MaxCost_sampled_p1 = -np.array(maxcosts).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                )
+                self.MinCost_sampled_p1 = -np.array(mincosts).reshape(
+                    angles["beta"][2], angles["gamma"][2]
+                )
+                logger.info("Done measurement")
+            else:
+                self.createParameterizedCircuit(depth)
+                gamma = [None] * angles["beta"][2] * angles["gamma"][2]
+                beta = [None] * angles["beta"][2] * angles["gamma"][2]
+
+                counter = 0
+                for b in range(angles["beta"][2]):
+                    for g in range(angles["gamma"][2]):
+                        gamma[counter] = self.gamma_grid[g]
+                        beta[counter] = self.beta_grid[b]
+                        counter += 1
+
+                parameters = {self.gamma_params[0]: gamma, self.beta_params[0]: beta}
+
+                logger.info("Executing sample_cost_landscape")
+                logger.info(f"parameters: {len(parameters)}")
+                job = self.backend.run(
+                    self.parameterized_circuit,
+                    noise_model=self.noisemodel,
+                    shots=self.shots,
+                    parameter_binds=[parameters],
+                    optimization_level=0,
+                    memory=self.memory,
+                )
+                logger.info("Done execute")
+                self.measurementStatistics(job)
+                logger.info("Done measurement")
 
         else:
             raise NotImplementedError
