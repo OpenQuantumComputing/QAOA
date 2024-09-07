@@ -29,7 +29,6 @@ class QUBO(Problem):
         n = Q.shape[0]
 
         self.N_qubits = n
-        self.N_qubits_auxillary = 0
 
         # Check if Q is lower triangular
         self.lower_triangular_Q = np.allclose(Q, np.tril(Q))
