@@ -7,7 +7,7 @@ class BitFlip:
         self.circuit = None
         self.N_qubits = n
 
-    def boost_samples(self, problem, string, K = 5):
+    def boost_samples(self, problem, string, K=5):
         """
         Random bitflips on string/list of strings to increase cost.
 
@@ -22,13 +22,13 @@ class BitFlip:
         old_string = string
         cost = problem.cost(string[::-1])
 
-        for _ in range (K):
+        for _ in range(K):
             shuffled_indices = np.arange(self.N_qubits)
             np.random.shuffle(shuffled_indices)
 
             for i in shuffled_indices:
                 string_arr_altered = np.copy(string_arr)
-                string_arr_altered[i] = not(string_arr[i])
+                string_arr_altered[i] = not (string_arr[i])
                 string_altered = "".join(map(str, string_arr_altered))
                 new_cost = problem.cost(string_altered[::-1])
 
