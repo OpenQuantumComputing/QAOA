@@ -13,6 +13,7 @@ class Grover(Mixer):
         """
         self.subcircuit = subcircuit
         self.mixer_param = Parameter("x_beta")
+        self.N_qubits = subcircuit.N_qubits
 
     def create_circuit(self):
         # given feasibel states f \in F,
