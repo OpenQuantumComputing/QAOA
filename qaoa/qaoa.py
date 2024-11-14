@@ -288,9 +288,9 @@ class QAOA:
         depth = 1
 
         tmp = angles["gamma"]
-        self.gamma_grid = np.linspace(tmp[0], tmp[1], tmp[2])
+        self.gamma_grid = np.linspace(tmp[0], tmp[1], tmp[2], endpoint=False)
         tmp = angles["beta"]
-        self.beta_grid = np.linspace(tmp[0], tmp[1], tmp[2])
+        self.beta_grid = np.linspace(tmp[0], tmp[1], tmp[2], endpoint=False)
 
         if self.backend.configuration().local:
             if self.sequential:

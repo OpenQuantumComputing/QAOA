@@ -1,13 +1,14 @@
 import statistics as stat
 import numpy as np
 
+
 def post_processing(instance, samples, K=5):
     """Performs classical post-processing on bitstrings by applying random bit flips.
     Resets and updates self.stat
 
     input:
         instance: instance to perform function on
-        samples (dict or list or str): The bitstring(s) to be processed. 
+        samples (dict or list or str): The bitstring(s) to be processed.
             The acceptable formats are:
             - dict{bitstring: count}: A dictionary with bitstrings as keys and their counts as values.
             - list(bitstring, bitstring, ...): A list of bitstrings.
@@ -15,7 +16,7 @@ def post_processing(instance, samples, K=5):
         K (int): The number of times to iterate through each bitstring and apply random bit flips.
 
     returns:
-        dict: A dictionary with the altered bitstrings as keys and their counts as values. 
+        dict: A dictionary with the altered bitstrings as keys and their counts as values.
         If no better bitstring is found, the original bitstring is the key.
     """
     instance.stat.reset()
@@ -26,18 +27,19 @@ def post_processing(instance, samples, K=5):
 
     for string in samples:
         boosted = instance.flipper.boost_samples(
-            problem=instance.problem,
-            string=string,
-            K=K            
+            problem=instance.problem, string=string, K=K
         )
         try:
             count = samples[string]
         except:
             count = 1
 
-        instance.stat.add_sample(instance.problem.cost(boosted[::-1]), count, boosted[::-1])
+        instance.stat.add_sample(
+            instance.problem.cost(boosted[::-1]), count, boosted[::-1]
+        )
         hist_post[boosted] = hist_post.get(boosted, 0) + count
     return hist_post
+
 
 def post_process_all_depths(instance, K=5):
     """Performs post-processing of job.result().get_counts() 100 times after each layer.
@@ -56,7 +58,7 @@ def post_process_all_depths(instance, K=5):
         for i in range(100):
             post_processing(
                 instance=instance,
-                samples=hist, 
+                samples=hist,
                 K=K,
             )
             exp_in_layers[d] = exp_in_layers.get(d, []) + [-instance.stat.get_CVaR()]
