@@ -1,7 +1,7 @@
 from qiskit.circuit import Parameter
 from qiskit.circuit.library import PhaseGate
 
-from qaoa.mixers.base_mixer import Mixer
+from .base_mixer import Mixer
 from qaoa.initialstates.base_initialstate import InitialState
 
 

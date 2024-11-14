@@ -2,7 +2,7 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 from qiskit.circuit.library import XXPlusYYGate
 
-from qaoa.mixers import Mixer
+from .base_mixer import Mixer
 
 import math
 import itertools
