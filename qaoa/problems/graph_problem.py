@@ -83,15 +83,6 @@ class GraphProblem(Problem):
 
     # the code below might go into BaseMaxKCut(GraphProblem)
 
-    @staticmethod
-    def is_power_of_two(k) -> bool:
-        """
-        Return True if k is a power of two, False otherwise.
-        """
-        if k > 0 and (k & (k - 1)) == 0:
-            return True
-        return False
-
     def same_color(self, str1: str, str2: str) -> bool:
         """Check if two strings map to the same color."""
         return self.bitstring_to_color.get(str1) == self.bitstring_to_color.get(str2)

@@ -7,7 +7,7 @@ from qiskit.circuit.library import PhaseGate
 
 from qiskit.circuit.library import PauliEvolutionGate
 
-from .maxkcut_binary_PauliBasis import getPauliOperator
+from qiskit.quantum_info import SparsePauliOp, Pauli
 
 from .graph_problem import GraphProblem
 
@@ -29,14 +29,23 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
         super().__init__(G, N_qubits_per_node, fix_one_node)
 
         if self.method == "PauliBasis":
-            self.op, self.ophalf = getPauliOperator(self.k_cuts, "all")
+            self.op, self.ophalf = self.getPauliOperator(self.k_cuts, "all")
 
         self.construct_colors()
 
     @staticmethod
+    def is_power_of_two(k) -> bool:
+        """
+        Return True if k is a power of two, False otherwise.
+        """
+        if k > 0 and (k & (k - 1)) == 0:
+            return True
+        return False
+
+    @staticmethod
     def validate_parameters(k, method) -> None:
         ### 1) k_cuts must be a power of 2
-        if not GraphProblem.is_power_of_two(k):
+        if not MaxKCutBinaryPowerOfTwo.is_power_of_two(k):
             raise ValueError("k_cuts must be a power of two")
 
         ### 2) k_cuts needs to be between 2 and 8
@@ -116,3 +125,55 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
             qc.append(phase_gate, qc.qubits)
             qc.x(qc.qubits)
         return qc
+
+    def getPauliOperator(self, k_cuts, color_encoding):
+        # flip Pauli strings, because of qiskit's little endian encoding
+        if k_cuts == 2:
+            P = [
+                [2 / (2**1), Pauli("ZZ")],
+            ]
+            Phalf = [
+                [2 / (2**1), Pauli("Z")],
+            ]
+        elif k_cuts == 4:
+            P = [
+                [-8 / (2**4), Pauli("IIII"[::-1])],
+                [+8 / (2**4), Pauli("IZIZ"[::-1])],
+                [+8 / (2**4), Pauli("ZIZI"[::-1])],
+                [+8 / (2**4), Pauli("ZZZZ"[::-1])],
+            ]
+            Phalf = [
+                [-8 / (2**4), Pauli("II"[::-1])],
+                [+8 / (2**4), Pauli("IZ"[::-1])],
+                [+8 / (2**4), Pauli("ZI"[::-1])],
+                [+8 / (2**4), Pauli("ZZ"[::-1])],
+            ]
+        else:
+            P = [
+                [-48 / (2**6), Pauli("IIIIII"[::-1])],
+                [+16 / (2**6), Pauli("IIZIIZ"[::-1])],
+                [+16 / (2**6), Pauli("IZIIZI"[::-1])],
+                [+16 / (2**6), Pauli("IZZIZZ"[::-1])],
+                [+16 / (2**6), Pauli("ZIIZII"[::-1])],
+                [+16 / (2**6), Pauli("ZIZZIZ"[::-1])],
+                [+16 / (2**6), Pauli("ZZIZZI"[::-1])],
+                [+16 / (2**6), Pauli("ZZZZZZ"[::-1])],
+            ]
+            Phalf = [
+                [-48 / (2**6), Pauli("III"[::-1])],
+                [+16 / (2**6), Pauli("IIZ"[::-1])],
+                [+16 / (2**6), Pauli("IZI"[::-1])],
+                [+16 / (2**6), Pauli("IZZ"[::-1])],
+                [+16 / (2**6), Pauli("ZII"[::-1])],
+                [+16 / (2**6), Pauli("ZIZ"[::-1])],
+                [+16 / (2**6), Pauli("ZZI"[::-1])],
+                [+16 / (2**6), Pauli("ZZZ"[::-1])],
+            ]
+
+        # devide coefficients by 2, since:
+        # "The evolution gates are related to the Pauli rotation gates by a factor of 2"
+        op = SparsePauliOp([item[1] for item in P], coeffs=[item[0] / 2 for item in P])
+        ophalf = SparsePauliOp(
+            [item[1] for item in Phalf], coeffs=[item[0] / 2 for item in Phalf]
+        )
+        return op, ophalf

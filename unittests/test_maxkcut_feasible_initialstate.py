@@ -9,7 +9,6 @@ from qiskit.quantum_info import Statevector
 sys.path.append("../")
 
 from qaoa.initialstates import MaxKCutFeasible
-from qaoa.problems import MaxKCutBinary
 
 
 class TestMaxKCutFeasibleInitialstate(unittest.TestCase):
@@ -34,14 +33,6 @@ class TestMaxKCutFeasibleInitialstate(unittest.TestCase):
                 if (color_encoding == "Dicke1_2") and (k != 6):
                     continue
 
-                problem = MaxKCutBinary(
-                    self.G,
-                    k,
-                    force_power_of_two_Hamiltonian=False,
-                    color_encoding=color_encoding,
-                    direct=False,
-                )
-
                 k_bits = int(np.ceil(np.log2(k)))
                 initialstate = MaxKCutFeasible(
                     k, "binary", color_encoding=color_encoding
@@ -54,7 +45,7 @@ class TestMaxKCutFeasibleInitialstate(unittest.TestCase):
                 sample_counts = statevector.sample_counts(shots=100000)
                 for string in sample_counts:
                     string = string[::-1]
-                    self.assertTrue(problem.is_feasible(string))
+                    self.assertTrue(string not in initialstate.infeasible)
 
     def test_feasible_initialstate_onehot(self):
         """

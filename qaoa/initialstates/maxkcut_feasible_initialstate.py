@@ -14,6 +14,7 @@ class MaxKCutFeasible(InitialState):
     ) -> None:
         self.k_cuts = k_cuts
         self.problem_encoding = problem_encoding
+        self.color_encoding = color_encoding
 
         if not problem_encoding in ["onehot", "binary"]:
             raise ValueError('case must be in ["onehot", "binary"]')
@@ -21,6 +22,21 @@ class MaxKCutFeasible(InitialState):
             if k_cuts == 6 and (color_encoding not in ["Dicke1_2", "LessThanK"]):
                 raise ValueError('color_encoding must be in ["LessThanK", "Dicke1_2"]')
             self.color_encoding = color_encoding
+
+        if self.k_cuts == 3:
+            self.infeasible = ["11"]
+        elif self.k_cuts == 5:
+            if self.color_encoding == "max_balanced":
+                self.infeasible = ["100", "111", "101"]
+            else:
+                self.infeasible = ["101", "110", "111"]
+        elif self.k_cuts == 6:
+            if self.color_encoding in ["Dicke1_2", "max_balanced"]:
+                self.infeasible = ["000", "111"]
+            else:
+                self.infeasible = ["110", "111"]
+        elif self.k_cuts == 7:
+            self.infeasible = ["111"]
 
     def create_circuit(self) -> None:
         if self.problem_encoding == "binary":

@@ -5,5 +5,4 @@ from .exactcover_problem import ExactCover
 from .portfolio_problem import PortfolioOptimization
 from .maxkcut_binary_powertwo import MaxKCutBinaryPowerOfTwo
 from .maxkcut_binary_fullH import MaxKCutBinaryFullH
-from .maxkcut_binary_PauliBasis import getPauliOperator
 from .maxkcut_one_hot_problem import MaxKCutOneHot
