@@ -229,7 +229,7 @@ class QAOA:
         self.mixer.create_circuit()
         self.initialstate.create_circuit()
 
-        a = AncillaRegister(self.problem.N_qubits_auxillary)
+        a = AncillaRegister(self.problem.N_ancilla_qubits)
         q = QuantumRegister(self.problem.N_qubits)
         c = ClassicalRegister(self.problem.N_qubits)
         self.parameterized_circuit = QuantumCircuit(q, c, a)
