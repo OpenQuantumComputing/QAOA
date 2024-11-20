@@ -1,7 +1,7 @@
 from qiskit.quantum_info import SparsePauliOp, Pauli
 
 
-def getDirectPauliOpertor(k_cuts, color_encoding):
+def getPauliOperator(k_cuts, color_encoding):
     # flip Pauli strings, because of qiskit's little endian encoding
     if k_cuts == 2:
         P = [
@@ -45,50 +45,46 @@ def getDirectPauliOpertor(k_cuts, color_encoding):
         ]
     elif k_cuts == 5:
         if color_encoding == "max_balanced":
-            # ((0,), (1, 4), (2, 7), (3, 5), (6,))
+            # ((0, 1), (2,), (3,), (4,5), (6,7,)):
             P = [
                 [-36 / (2**6), Pauli("IIIIII"[::-1])],
-                [-4 / (2**6), Pauli("IIIIIZ"[::-1])],
-                [-4 / (2**6), Pauli("IIIZZI"[::-1])],
-                [-4 / (2**6), Pauli("IIIZZZ"[::-1])],
-                [-4 / (2**6), Pauli("IIZIII"[::-1])],
-                [12 / (2**6), Pauli("IIZIIZ"[::-1])],
-                [12 / (2**6), Pauli("IIZZZI"[::-1])],
+                [4 / (2**6), Pauli("IIIIZI"[::-1])],
+                [-4 / (2**6), Pauli("IIIZII"[::-1])],
+                [4 / (2**6), Pauli("IIIZZI"[::-1])],
+                [4 / (2**6), Pauli("IIZIIZ"[::-1])],
+                [-4 / (2**6), Pauli("IIZIZZ"[::-1])],
+                [4 / (2**6), Pauli("IIZZIZ"[::-1])],
                 [-4 / (2**6), Pauli("IIZZZZ"[::-1])],
-                [20 / (2**6), Pauli("IZIIZI"[::-1])],
-                [4 / (2**6), Pauli("IZIIZZ"[::-1])],
+                [4 / (2**6), Pauli("IZIIII"[::-1])],
+                [28 / (2**6), Pauli("IZIIZI"[::-1])],
                 [4 / (2**6), Pauli("IZIZII"[::-1])],
-                [-12 / (2**6), Pauli("IZIZIZ"[::-1])],
-                [4 / (2**6), Pauli("IZZIZI"[::-1])],
+                [-4 / (2**6), Pauli("IZIZZI"[::-1])],
+                [-4 / (2**6), Pauli("IZZIIZ"[::-1])],
                 [4 / (2**6), Pauli("IZZIZZ"[::-1])],
-                [4 / (2**6), Pauli("IZZZII"[::-1])],
-                [4 / (2**6), Pauli("IZZZIZ"[::-1])],
+                [-4 / (2**6), Pauli("IZZZIZ"[::-1])],
+                [4 / (2**6), Pauli("IZZZZZ"[::-1])],
+                [-4 / (2**6), Pauli("ZIIIII"[::-1])],
                 [4 / (2**6), Pauli("ZIIIZI"[::-1])],
-                [4 / (2**6), Pauli("ZIIIZZ"[::-1])],
-                [4 / (2**6), Pauli("ZIIZII"[::-1])],
-                [4 / (2**6), Pauli("ZIIZIZ"[::-1])],
-                [-12 / (2**6), Pauli("ZIZIZI"[::-1])],
-                [4 / (2**6), Pauli("ZIZIZZ"[::-1])],
-                [4 / (2**6), Pauli("ZIZZII"[::-1])],
-                [20 / (2**6), Pauli("ZIZZIZ"[::-1])],
-                [-4 / (2**6), Pauli("ZZIIII"[::-1])],
-                [12 / (2**6), Pauli("ZZIIIZ"[::-1])],
-                [12 / (2**6), Pauli("ZZIZZI"[::-1])],
-                [-4 / (2**6), Pauli("ZZIZZZ"[::-1])],
-                [-4 / (2**6), Pauli("ZZZIII"[::-1])],
+                [28 / (2**6), Pauli("ZIIZII"[::-1])],
+                [4 / (2**6), Pauli("ZIIZZI"[::-1])],
+                [4 / (2**6), Pauli("ZIZIIZ"[::-1])],
+                [-4 / (2**6), Pauli("ZIZIZZ"[::-1])],
+                [4 / (2**6), Pauli("ZIZZIZ"[::-1])],
+                [-4 / (2**6), Pauli("ZIZZZZ"[::-1])],
+                [4 / (2**6), Pauli("ZZIIII"[::-1])],
+                [-4 / (2**6), Pauli("ZZIIZI"[::-1])],
+                [4 / (2**6), Pauli("ZZIZII"[::-1])],
+                [28 / (2**6), Pauli("ZZIZZI"[::-1])],
                 [-4 / (2**6), Pauli("ZZZIIZ"[::-1])],
-                [-4 / (2**6), Pauli("ZZZZZI"[::-1])],
-                [28 / (2**6), Pauli("ZZZZZZ"[::-1])],
+                [4 / (2**6), Pauli("ZZZIZZ"[::-1])],
+                [-4 / (2**6), Pauli("ZZZZIZ"[::-1])],
+                [4 / (2**6), Pauli("ZZZZZZ"[::-1])],
             ]
             Phalf = [
-                [-48 / (2**6), Pauli("III"[::-1])],
-                [16 / (2**6), Pauli("IIZ"[::-1])],
-                [16 / (2**6), Pauli("ZZI"[::-1])],
-                [16 / (2**6), Pauli("ZZZ"[::-1])],
-                [16 / (2**6), Pauli("IZI"[::-1])],
-                [16 / (2**6), Pauli("IZZ"[::-1])],
-                [16 / (2**6), Pauli("ZII"[::-1])],
-                [16 / (2**6), Pauli("ZIZ"[::-1])],
+                [-32 / (2**6), Pauli("III"[::-1])],
+                [32 / (2**6), Pauli("IZI"[::-1])],
+                [32 / (2**6), Pauli("ZII"[::-1])],
+                [32 / (2**6), Pauli("ZZI"[::-1])],
             ]
         elif color_encoding == "LessThanK":
             P = [
@@ -122,24 +118,24 @@ def getDirectPauliOpertor(k_cuts, color_encoding):
         else:
             raise ValueError("invalid or unspecified color_encoding")
     elif k_cuts == 6:
-        if color_encoding in ["max_balanced", "Dicke1_2"]:
-            # ((0,1), (2), (3), (4,), (5,), (6,7))
+        if color_encoding in ["max_balanced"]:
+            # ((0,1), (2), (3), (4,5), (6), (7))
             P = [
                 [-40 / (2**6), Pauli("IIIIII"[::-1])],
-                [8 / (2**6), Pauli("IIIZZI"[::-1])],
+                [8 / (2**6), Pauli("IIIIZI"[::-1])],
                 [8 / (2**6), Pauli("IIZIIZ"[::-1])],
-                [-8 / (2**6), Pauli("IIZZZZ"[::-1])],
+                [-8 / (2**6), Pauli("IIZIZZ"[::-1])],
+                [8 / (2**6), Pauli("IZIIII"[::-1])],
                 [24 / (2**6), Pauli("IZIIZI"[::-1])],
-                [8 / (2**6), Pauli("IZIZII"[::-1])],
+                [-8 / (2**6), Pauli("IZZIIZ"[::-1])],
                 [8 / (2**6), Pauli("IZZIZZ"[::-1])],
-                [-8 / (2**6), Pauli("IZZZIZ"[::-1])],
-                [8 / (2**6), Pauli("ZIIIZI"[::-1])],
                 [24 / (2**6), Pauli("ZIIZII"[::-1])],
-                [-8 / (2**6), Pauli("ZIZIZZ"[::-1])],
+                [8 / (2**6), Pauli("ZIIZZI"[::-1])],
                 [8 / (2**6), Pauli("ZIZZIZ"[::-1])],
-                [8 / (2**6), Pauli("ZZIIII"[::-1])],
+                [-8 / (2**6), Pauli("ZIZZZZ"[::-1])],
+                [8 / (2**6), Pauli("ZZIZII"[::-1])],
                 [24 / (2**6), Pauli("ZZIZZI"[::-1])],
-                [-8 / (2**6), Pauli("ZZZIIZ"[::-1])],
+                [-8 / (2**6), Pauli("ZZZZIZ"[::-1])],
                 [8 / (2**6), Pauli("ZZZZZZ"[::-1])],
             ]
             Phalf = [
