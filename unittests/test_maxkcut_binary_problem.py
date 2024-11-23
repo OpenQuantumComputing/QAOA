@@ -245,7 +245,7 @@ class TestMaxKCutBinaryProblem(unittest.TestCase):
     def test_MaxKCutBinaryPowerTwo_PauliBasisequalDiffusion(self):
         # This tests if the Hamiltonians of "method=PauliBasis" is equal to "method=Diffusion" is equal to "method="PowerOfTwo"
 
-        theta = np.pi  # -1.92748
+        theta = -1.92748
 
         for k in [3, 5, 6, 7]:
             if k in [3, 7]:
