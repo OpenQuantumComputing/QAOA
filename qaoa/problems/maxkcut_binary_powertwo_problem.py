@@ -9,10 +9,10 @@ from qiskit.circuit.library import PauliEvolutionGate
 
 from qiskit.quantum_info import SparsePauliOp, Pauli
 
-from .graph_problem import GraphProblem
+from .maxkcut_binary_base_problem import MaxKCutBinaryBase
 
 
-class MaxKCutBinaryPowerOfTwo(GraphProblem):
+class MaxKCutBinaryPowerOfTwo(MaxKCutBinaryBase):
     def __init__(
         self,
         G: nx.Graph,
@@ -28,10 +28,11 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
         N_qubits_per_node = int(np.ceil(np.log2(self.k_cuts)))
         super().__init__(G, N_qubits_per_node, fix_one_node)
 
+        colors = self.construct_colors()
+        self.set_colors(colors)
+
         if self.method == "PauliBasis":
             self.op, self.ophalf = self.getPauliOperator(self.k_cuts, "all")
-
-        self.construct_colors()
 
     @staticmethod
     def is_power_of_two(k) -> bool:
@@ -61,16 +62,16 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
 
     def construct_colors(self):
         if self.k_cuts == 2:
-            self.colors = {"color1": ["0"], "color2": ["1"]}
+            colors = {"color1": ["0"], "color2": ["1"]}
         elif self.k_cuts == 4:
-            self.colors = {
+            colors = {
                 "color1": ["00"],
                 "color2": ["01"],
                 "color3": ["10"],
                 "color4": ["11"],
             }
         elif self.k_cuts == 8:
-            self.colors = {
+            colors = {
                 "color1": ["000"],
                 "color2": ["001"],
                 "color3": ["010"],
@@ -81,10 +82,7 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
                 "color8": ["111"],
             }
         # Create a dictionary to map each index to its corresponding set
-        self.bitstring_to_color = {}
-        for key, indices in self.colors.items():
-            for index in indices:
-                self.bitstring_to_color[index] = key
+        return colors
 
     def create_edge_circuit(self, theta):
         qc = QuantumCircuit(2 * self.N_qubits_per_node)
