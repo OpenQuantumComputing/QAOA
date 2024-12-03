@@ -17,7 +17,7 @@ class MaxKCutGrover(Mixer):
                 "k_cuts must be 2 or more, and is not implemented for k_cuts > 8"
             )
         if not problem_encoding in ["onehot", "binary"]:
-            raise ValueError('case must be in ["onehot", "binary"]')
+            raise ValueError('problem_encoding must be in ["onehot", "binary"]')
         self.k_cuts = k_cuts
         self.problem_encoding = problem_encoding
         self.color_encoding = color_encoding
