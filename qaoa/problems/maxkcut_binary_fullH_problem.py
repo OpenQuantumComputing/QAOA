@@ -9,11 +9,11 @@ from qiskit.circuit.library import PauliEvolutionGate
 
 from qiskit.quantum_info import SparsePauliOp, Pauli
 
-from .graph_problem import GraphProblem
-from .maxkcut_binary_powertwo import MaxKCutBinaryPowerOfTwo
+from .maxkcut_binary_base_problem import MaxKCutBinaryBase
+from .maxkcut_binary_powertwo_problem import MaxKCutBinaryPowerOfTwo
 
 
-class MaxKCutBinaryFullH(GraphProblem):
+class MaxKCutBinaryFullH(MaxKCutBinaryBase):
     def __init__(
         self,
         G: nx.Graph,
@@ -31,6 +31,9 @@ class MaxKCutBinaryFullH(GraphProblem):
         N_qubits_per_node = int(np.ceil(np.log2(self.k_cuts)))
         super().__init__(G, N_qubits_per_node, fix_one_node)
 
+        colors = self.construct_colors()
+        self.set_colors(colors)
+
         if self.method == "PauliBasis":
             self.op, self.ophalf = self.getPauliOperator(
                 self.k_cuts, color_encoding=self.color_encoding
@@ -44,8 +47,6 @@ class MaxKCutBinaryFullH(GraphProblem):
             self.N_ancilla_qubits = 2
         else:  # if self.method == "Diffusion":
             pass
-
-        self.construct_colors()
 
     @staticmethod
     def validate_parameters(k, method, fix_one_node) -> None:
@@ -67,7 +68,7 @@ class MaxKCutBinaryFullH(GraphProblem):
     def construct_colors(self):
         if self.k_cuts == 3:
             if self.color_encoding == "LessThanK":
-                self.colors = {
+                colors = {
                     "color1": ["00"],
                     "color2": ["01"],
                     "color3": ["10", "11"],
@@ -76,7 +77,7 @@ class MaxKCutBinaryFullH(GraphProblem):
                 raise ValueError("invalid or unspecified color_encoding")
         elif self.k_cuts == 5:
             if self.color_encoding == "LessThanK":
-                self.colors = {
+                colors = {
                     "color1": ["000"],
                     "color2": ["001"],
                     "color3": ["010"],
@@ -84,7 +85,7 @@ class MaxKCutBinaryFullH(GraphProblem):
                     "color5": ["100", "101", "110", "111"],
                 }
             elif self.color_encoding == "max_balanced":
-                self.colors = {
+                colors = {
                     "color1": ["000", "001"],
                     "color2": ["010"],
                     "color3": ["011"],
@@ -95,7 +96,7 @@ class MaxKCutBinaryFullH(GraphProblem):
                 raise ValueError("invalid or unspecified color_encoding")
         elif self.k_cuts == 6:
             if self.color_encoding == "LessThanK":
-                self.colors = {
+                colors = {
                     "color1": ["000"],
                     "color2": ["001"],
                     "color3": ["010"],
@@ -104,7 +105,7 @@ class MaxKCutBinaryFullH(GraphProblem):
                     "color6": ["101", "110", "111"],
                 }
             elif self.color_encoding in ["max_balanced"]:
-                self.colors = {
+                colors = {
                     "color1": ["000", "001"],
                     "color2": ["010"],
                     "color3": ["011"],
@@ -116,7 +117,7 @@ class MaxKCutBinaryFullH(GraphProblem):
                 raise ValueError("invalid or unspecified color_encoding")
         else:  # if self.k_cuts == 7:
             if self.color_encoding == "LessThanK":
-                self.colors = {
+                colors = {
                     "color1": ["000"],
                     "color2": ["001"],
                     "color3": ["010"],
@@ -127,11 +128,7 @@ class MaxKCutBinaryFullH(GraphProblem):
                 }
             else:
                 raise ValueError("invalid or unspecified color_encoding")
-        # Create a dictionary to map each index to its corresponding set
-        self.bitstring_to_color = {}
-        for key, indices in self.colors.items():
-            for index in indices:
-                self.bitstring_to_color[index] = key
+        return colors
 
     def apply_N(self, circuit, binary_str1, binary_str2):
         # Apply X-gates based on the first binary string

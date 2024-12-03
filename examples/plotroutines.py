@@ -24,22 +24,26 @@ def __plot_landscape(A, extent, fig):
 
 def plot_E(qaoa_instance, fig=None):
     angles = qaoa_instance.landscape_p1_angles
+    dgamma = (qaoa_instance.gamma_grid[1] - qaoa_instance.gamma_grid[0]) / 2
+    dbeta = (qaoa_instance.gamma_grid[1] - qaoa_instance.gamma_grid[0]) / 2
     extent = [
-        angles["gamma"][0],
-        angles["gamma"][1],
-        angles["beta"][0],
-        angles["beta"][1],
+        angles["gamma"][0] - dgamma,
+        angles["gamma"][1] + dgamma,
+        angles["beta"][0] - dbeta,
+        angles["beta"][1] + dbeta,
     ]
     return __plot_landscape(qaoa_instance.exp_landscape(), extent, fig=fig)
 
 
 def plot_Var(qaoa_instance, fig=None):
     angles = qaoa_instance.landscape_p1_angles
+    dgamma = (qaoa_instance.gamma_grid[1] - qaoa_instance.gamma_grid[0]) / 2
+    dbeta = (qaoa_instance.gamma_grid[1] - qaoa_instance.gamma_grid[0]) / 2
     extent = [
-        angles["gamma"][0],
-        angles["gamma"][1],
-        angles["beta"][0],
-        angles["beta"][1],
+        angles["gamma"][0] - dgamma,
+        angles["gamma"][1] + dgamma,
+        angles["beta"][0] - dbeta,
+        angles["beta"][1] + dbeta,
     ]
     return __plot_landscape(qaoa_instance.var_landscape(), extent, fig=fig)
 
