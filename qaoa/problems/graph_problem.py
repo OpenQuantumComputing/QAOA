@@ -10,20 +10,20 @@ class GraphProblem(Problem):
     """
     Graph problem.
 
-    Subclass of the `Problem` class, and it ...
+    Subclass of the `Problem` class, and it creates a quantum circuit for a general graph problem.
 
     Attributes:
         G: The graph to be used in the problem.
         N_qubits_per_node (int): Number of qubits per node.
-        fix_one_node (bool): If True, fixes the last node to "color1".
+        fix_one_node (bool): If True, fixes the last node to "color1". 
     
     Methods:
         create_edge_circuit(theta): abstract method to create circuit for an edge
         create_edge_circuit_fixed_node(theta): abstract method to create circuit for an edge where one node is fixed
-        create_circuit():
-        same_color(str1, str2):
-        slice_string(string):
-        cost(string):
+        create_circuit(): creates a circuit for the graph problem.
+        same_color(str1, str2): checks if two strings map to the same color.
+        slice_string(string): Convert a binary string to a list of labels for each node.
+        cost(string): creates a cost function for the given solution
         
     """
     def __init__(
@@ -56,6 +56,9 @@ class GraphProblem(Problem):
     def create_edge_circuit(self, theta):
         """
         Abstract method to create circuit for an edge
+        
+        Args:
+            theta: Parameter for the edge circuit.
         """
         pass
 
@@ -63,13 +66,15 @@ class GraphProblem(Problem):
     def create_edge_circuit_fixed_node(self, theta):
         """
         Abstract method to create circuit for an edge where one node is fixed
+        
+        Args:
+            theta: Parameter for the edge circuit.
         """
         pass
 
     def create_circuit(self):
         """
-        Adds a parameterized circuit for the cost part to the member variable self.parameteried_circuit
-        and a parameter to the parameter list self.gamma_params
+        Creates a quantum circuit for the graph problem.
         """
         q = QuantumRegister(self.N_qubits)
         a = AncillaRegister(self.N_ancilla_qubits)
@@ -111,6 +116,13 @@ class GraphProblem(Problem):
     def same_color(self, str1: str, str2: str) -> bool:
         """
         Check if two strings map to the same color.
+
+        Args:
+            str1 (str): First binary string.
+            str2 (str): Second binary string.
+        
+        Returns:
+            bool: True if both strings map to the same color, False otherwise.
         """
         return self.bitstring_to_color.get(str1) == self.bitstring_to_color.get(str2)
 
@@ -140,6 +152,9 @@ class GraphProblem(Problem):
         Args:
             string (str): Binary string.
 
+        Raises:
+            ValueError: If the length of the string does not match the number of qubits.
+            
         Returns:
             float | int: The cost of the given solution.
         """
