@@ -6,7 +6,9 @@ from .base_initialstate import InitialState
 
 class Plus(InitialState):
     """
-    Creates an initial plus state
+    Plus initial state.
+
+    Subclass of `InitialState` class, and it creates an initial plus state
 
     Methods:
         create_circuit(): Creates a circuit that sets up plus states for the initial states

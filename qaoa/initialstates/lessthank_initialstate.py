@@ -7,7 +7,9 @@ from .base_initialstate import InitialState  # type: ignore
 
 class LessThanK(InitialState):
     """
-    Class for creating a quantum circuit to create the initial state for the for the MAX k-CUT problem for
+    LessThanK initial state.
+
+    Subclass for the `InitialState` class, and it creates a quantum circuit that creates the initial state for the for the MAX k-CUT problem for
     different cases of k subsets.
 
     Attributes:
@@ -28,6 +30,9 @@ class LessThanK(InitialState):
         
         Args: 
             k (int): the number of subsets of the vertices in the MAX k-CUT problem
+
+        Raises: 
+            ValueError: if k is neither a power of 2 or between 2 and 8
         """
         if not LessThanK.is_power_of_two_or_between_2_and_8(k):
             raise ValueError("k must be a power of two or between 2 and 8")
@@ -55,7 +60,7 @@ class LessThanK(InitialState):
         Checks the validity of the argument k, so that k is either between 2 and 8 or a power of 2
 
         Returns:
-            False or True
+            True if k is a power of 2 or between 2 and 8, and False otherwise
         """
         # Check if k is between 2 and 8
         if 2 <= k <= 8:

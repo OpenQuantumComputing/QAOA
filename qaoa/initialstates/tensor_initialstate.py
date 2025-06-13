@@ -8,7 +8,9 @@ from .base_initialstate import InitialState
 
 class Tensor(InitialState):
     """
-    Creates a tensor out of a circuit
+    Tensor initial state.
+
+    Subclass of the `IntialState` class that creates a tensor out of a circuit
 
     Attributions:
         subcircuit (InitialState): the circuit that is to be tensorised

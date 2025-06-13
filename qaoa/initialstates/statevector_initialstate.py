@@ -6,10 +6,12 @@ from .base_initialstate import InitialState
 
 class StateVector(InitialState):
     """
-    Creates the initial statevector
+    State vector initial state. 
+
+    Subclass of the `InitialState` class, and it creates the initial statevector.
 
     Methods:
-        create_circuit(): Creates a circuit that creates the initial statevector
+        create_circuit(): Creates a circuit that creates the initial statevector.
     """
     def __init__(self, statevector) -> None:
         super().__init__()

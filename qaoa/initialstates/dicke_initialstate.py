@@ -9,7 +9,9 @@ from .base_initialstate import InitialState
 
 class Dicke(InitialState):
     """
-    Class for the Dicke state with Hamming weight k
+    Dicke initial state.
+
+    Subclass of the `InitialState` class, and it creates a circuit that creates a Dicke state with Hamming weight k
 
     Attributes: 
         k (int): The Hamming weight of the Dicke states.
