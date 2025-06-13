@@ -14,6 +14,12 @@ class MaxKCutFeasible(InitialState):
     and method for solving the special case of k = 6.
 
     Attributes: 
+        k_cuts (int):
+        problem_encoding (str): description of the type of problem, either "onehot" (which corresponds to ...) or "binary" (which corresponds to ...)
+        color_encoding (str): determines the approach to solving the MAX k-cut problem by following one of three methods, 
+                            either "Dicke1_2" (which corresponds to creating an initial state that is a superposition of the valid states that represents a color(only 6/8 possible states)),
+                            "LessThanK" (which corresponds to grouping states together and make the group represent one color),
+                            or "max_balanced" (which corresponds to the onehot case where a color corresponds to a state)
 
     Methods:
         create_circuit():
@@ -25,9 +31,10 @@ class MaxKCutFeasible(InitialState):
         Args:
             k_cuts (int):
             problem_encoding (str): description of the type of problem, either "onehot" (which corresponds to ...) or "binary" (which corresponds to ...)
-            color_encoding (str): determines the approach to solving the MAX k-cut problem by following one of two methods, 
-            either "Dicke1_2" (which corresponds to creating an initial state that is a superposition of the valid states that represents a color(only 6/8 possible states)) 
-            or "LessThanK" (which corresponds to grouping states together and make the group represent one color)
+            color_encoding (str): determines the approach to solving the MAX k-cut problem by following one of three methods, 
+                                either "Dicke1_2" (which corresponds to creating an initial state that is a superposition of the valid states that represents a color(only 6/8 possible states)),
+                                "LessThanK" (which corresponds to grouping states together and make the group represent one color),
+                                or "max_balanced" (which corresponds to the onehot case where a color corresponds to a state)
 
         """
         self.k_cuts = k_cuts
