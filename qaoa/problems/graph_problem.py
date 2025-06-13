@@ -13,13 +13,13 @@ class GraphProblem(Problem):
     Subclass of the `Problem` class, and it ...
 
     Attributes:
-        G (...):
-        N_qubits_per_node (int):
-        fix_one_node (bool):
+        G: The graph to be used in the problem.
+        N_qubits_per_node (int): Number of qubits per node.
+        fix_one_node (bool): If True, fixes the last node to "color1".
     
     Methods:
-        create_edge_circuit(theta):
-        create_edge_circuit_fixed_node(theta):
+        create_edge_circuit(theta): abstract method to create circuit for an edge
+        create_edge_circuit_fixed_node(theta): abstract method to create circuit for an edge where one node is fixed
         create_circuit():
         same_color(str1, str2):
         slice_string(string):
@@ -32,6 +32,12 @@ class GraphProblem(Problem):
         N_qubits_per_node=1,
         fix_one_node: bool = False,  # this fixes the last node to color 1, i.e., one qubit gets removed
     ) -> None:
+        """
+        Args:
+            G: The graph to be used in the problem.
+            N_qubits_per_node (int): Number of qubits per node.
+            fix_one_node (bool): If True, fixes the last node to "color1".
+        """
         super().__init__()
 
         # fixes the last node to "color1"
