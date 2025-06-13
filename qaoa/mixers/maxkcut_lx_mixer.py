@@ -13,7 +13,7 @@ class MaxKCutLX(Mixer):
     """
     Logical X (LX) mixer for the Max k-Cut problem.
 
-    Subclass of the `Mixer` class that implements the LX mixing operation for the Max k-Cut problem.
+    Subclass of the `Mixer` subclass that implements the LX mixing operation for the Max k-Cut problem.
 
     Attributes:
         k_cuts (int): The number of cuts in the Max k-Cut problem.
@@ -63,7 +63,8 @@ class MaxKCutLX(Mixer):
 
     def is_power_of_two(self) -> bool:
         """
-        Return True if self.k_cuts is a power of two, False otherwise.
+        Returns:
+            bool: True if self.k_cuts is a power of two, False otherwise.
         """
         if self.k_cuts > 0 and (self.k_cuts & (self.k_cuts - 1)) == 0:
             return True
@@ -71,7 +72,7 @@ class MaxKCutLX(Mixer):
 
     def create_SparsePauliOp(self) -> None:
         """
-        Create sparse Pauli operator for given k. Hard coded
+        Create sparse Pauli operator for given k. Hard coded.
 
         Returns:
             None

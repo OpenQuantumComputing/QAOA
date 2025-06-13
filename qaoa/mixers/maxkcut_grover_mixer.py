@@ -12,7 +12,7 @@ class MaxKCutGrover(Mixer):
     """
     Grover mixer for the Max K-Cut problem.
 
-    Subclass of the `Mixer` class that implements the Grover mixing operation for the Max k-cut problem.
+    Subclass of the `Mixer` subclass that implements the Grover mixing operation for the Max k-cut problem.
 
     Attributes:
         k_cuts (int): The number of cuts in the Max k-Cut problem.

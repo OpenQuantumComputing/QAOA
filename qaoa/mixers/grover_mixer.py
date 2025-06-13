@@ -9,12 +9,13 @@ class Grover(Mixer):
     """
     Grover mixer.
 
-    Subclass of the `Mixer` class that implements the Grover mixing operation.
+    Subclass of the `Mixer` subclass that implements the Grover mixing operation.
 
-    Attribtutes:
+    Attributes:
         subcircuit (InitialState): The initial state circuit to be tensorized.
-        mixer_param (Parameter): The parameter for the Grover mixer.
-        N_qubits (int): The number of qubits in the subcircuit.
+        circuit (QuantumCircuit): The quantum circuit representing the mixer.
+        mixer_param (Parameter): The parameter for the mixer.
+        N_qubits (int): The number of qubits in the mixer circuit.
 
     Methods:
         create_circuit(): Constructs the Grover mixer circuit using the subcircuit.
@@ -22,6 +23,8 @@ class Grover(Mixer):
 
     def __init__(self, subcircuit: InitialState) -> None:
         """
+        Initializes the Grover mixer.
+
         Args:
             subcircuit (InitialState): the circuit that is to be tensorised
         """
