@@ -9,9 +9,39 @@ from qaoa.initialstates.tensor_initialstate import Tensor
 
 
 class MaxKCutGrover(Mixer):
+    """
+    Grover mixer for the Max K-Cut problem.
+
+    Subclass of `Mixer` that implements the Grover mixing operation for the Max k-cut problem.
+
+    Attributes:
+        k_cuts (int): The number of cuts in the Max k-Cut problem.
+        problem_encoding (str): The encoding of the problem, either "onehot" or "binary".
+        color_encoding (str): The encoding of colors, can be "max_balanced", "Dicke1_2", or "LessThanK".
+        tensorized (bool): Whether to use tensorization for the mixer.
+
+    Methods:
+        is_power_of_two(): Returns True if `k_cuts` is a power of two, False otherwise.
+        set_numV(k): Sets the number of vertices based on the number of cuts.
+        create_circuit(): Constructs the Grover mixer circuit for the Max k-Cut problem.
+    """
+
     def __init__(
         self, k_cuts: int, problem_encoding: str, color_encoding: str, tensorized: bool
     ) -> None:
+        """
+        Initializes the MaxKCutGrover mixer.
+
+        Args:
+            k_cuts (int): The number of cuts in the Max k-Cut problem.
+            problem_encoding (str): The encoding of the problem, either "onehot" or "binary".
+            color_encoding (str): The encoding of colors, can be "max_balanced", "Dicke1_2", or "LessThanK".
+            tensorized (bool): Whether to use tensorization for the mixer.
+
+        Raises:
+            ValueError: If `k_cuts` is less than 2 or greater than 8, or if `problem_encoding` is not valid.
+            ValueError: If `color_encoding` is not valid for the given `k_cuts`.
+        """
         if (k_cuts < 2) or (k_cuts > 8):
             raise ValueError(
                 "k_cuts must be 2 or more, and is not implemented for k_cuts > 8"
@@ -45,6 +75,15 @@ class MaxKCutGrover(Mixer):
         return False
 
     def set_numV(self, k):
+        """
+        Set the number of vertices based on the number of cuts.
+
+        Args:
+            k (int): The number of cuts in the Max k-Cut problem.
+
+        Raises:
+            ValueError: If the total number of qubits is not a multiple of k.
+        """
         num_V = self.N_qubits / k
 
         if not num_V.is_integer():
@@ -55,6 +94,10 @@ class MaxKCutGrover(Mixer):
         self.num_V = int(num_V)
 
     def create_circuit(self) -> None:
+        """
+        Constructs the Grover mixer circuit for the Max k-Cut problem.
+        """
+
         if self.problem_encoding == "binary":
             self.k_bits = int(np.ceil(np.log2(self.k_cuts)))
             self.set_numV(self.k_bits)
