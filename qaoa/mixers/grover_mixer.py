@@ -9,7 +9,7 @@ class Grover(Mixer):
     """
     Grover mixer.
 
-    Subclass of `Mixer` that implements the Grover mixing operation.
+    Subclass of the `Mixer` class that implements the Grover mixing operation.
 
     Attribtutes:
         subcircuit (InitialState): The initial state circuit to be tensorized.
