@@ -9,9 +9,19 @@ from .tensor_initialstate import Tensor
 
 
 class MaxKCutFeasible(InitialState):
+    """
+
+    """
     def __init__(
         self, k_cuts: int, problem_encoding: str, color_encoding: str = "LessThanK"
     ) -> None:
+        """
+        Args:
+            k_cuts (int):
+            problem_encoding (str):
+            color_encoding (str):
+
+        """
         self.k_cuts = k_cuts
         self.problem_encoding = problem_encoding
         self.color_encoding = color_encoding
@@ -39,6 +49,9 @@ class MaxKCutFeasible(InitialState):
             self.infeasible = ["111"]
 
     def create_circuit(self) -> None:
+        """
+        
+        """
         if self.problem_encoding == "binary":
             self.k_bits = int(np.ceil(np.log2(self.k_cuts)))
             self.num_V = self.N_qubits / self.k_bits

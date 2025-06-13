@@ -36,7 +36,8 @@ class LessThanK(InitialState):
 
     def create_circuit(self) -> None:
         """
-        Creates a circuit by calling on the methods for different k, where k is between 2 and 8 or a power of 2
+        Creates a circuit by calling on the methods for different k, following the algorithm from https://arxiv.org/abs/2411.08594. 
+        k is between 2 and 8 or a power of 2.
         """
         if self.k == 3:
             self.circuit = self.k3()
