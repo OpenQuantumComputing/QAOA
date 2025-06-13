@@ -8,6 +8,15 @@ from .base_initialstate import InitialState
 
 
 class Dicke(InitialState):
+    """
+    Class for the Dicke state with Hamming weight k
+
+    Attributes: 
+        k (int): The Hamming weight of the Dicke states.
+
+    Methods:
+        create_circuit(): Creates the circuit to prepare the Dicke states
+    """
     def __init__(self, k) -> None:
         """
         Args:
