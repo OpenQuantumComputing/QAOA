@@ -10,8 +10,8 @@ from .tensor_initialstate import Tensor
 
 class MaxKCutFeasible(InitialState):
     """
-    Class that determines the feasible states for the type of MAX k-CUT problem with specified number of cuts, number of qubits per vertex,
-    and 
+    Class that determines the feasible states for the type of MAX k-CUT problem that is specified by the arguments. This specifies the number of cuts, number of qubits per vertex,
+    and method for solving the special case of k = 6.
 
     Attributes: 
 
@@ -58,7 +58,8 @@ class MaxKCutFeasible(InitialState):
 
     def create_circuit(self) -> None:
         """
-
+        Creates a circuit that creates the initial state (for only feasible states) for the MAX k-CUT problem given 
+        the methods and cuts given as arguments
         """
         if self.problem_encoding == "binary":
             self.k_bits = int(np.ceil(np.log2(self.k_cuts)))
