@@ -14,6 +14,28 @@ from .maxkcut_binary_powertwo import MaxKCutBinaryPowerOfTwo
 
 
 class MaxKCutBinaryFullH(GraphProblem):
+    """
+    Max k-CUT Binary Full H graph problem.
+    
+    Subclass of the `GraphProblem` class, and it is...
+
+    Attributes:
+        G (nx.Graph):
+        k_cuts (int):
+        color_encodings (str):
+        method (str): Defaults to "Diffusion".
+        fix_one_node (bool): Defaults to False.
+    
+    Methods:
+        validate_parameters(k, method, fix_one_node):
+        construct_colors():
+        apply_N(circuit, binary_str1, binary_str2): 
+        add_equalize_color(qc, bs1, bs2, theta):
+        create_edge_circuit(theta):
+        create_edge_circuit_fixed_node(theta):
+        getPauliOperator(k_cuts, color_encoding): 
+
+    """
     def __init__(
         self,
         G: nx.Graph,
@@ -22,6 +44,14 @@ class MaxKCutBinaryFullH(GraphProblem):
         method: str = "Diffusion",
         fix_one_node: bool = False,  # this fixes the last node to color 1, i.e., one qubit gets removed
     ) -> None:
+        """
+        Args:
+            G (nx.Graph):
+            k_cuts (int):
+            color_encodings (str):
+            method (str): Defaults to "Diffusion".
+            fix_one_node (bool): Defaults to False.
+        """
         MaxKCutBinaryFullH.validate_parameters(k_cuts, method, fix_one_node)
 
         self.k_cuts = k_cuts
@@ -49,6 +79,14 @@ class MaxKCutBinaryFullH(GraphProblem):
 
     @staticmethod
     def validate_parameters(k, method, fix_one_node) -> None:
+        """
+        ...
+        
+        Args:
+            k (int):
+            method (str):
+            fix_one_node (bool):
+        """
         ### 1) k_cuts needs to be 3, 5, 6, or 7
         valid_ks = [3, 5, 6, 7]
         if k not in valid_ks:
@@ -65,6 +103,15 @@ class MaxKCutBinaryFullH(GraphProblem):
             )
 
     def construct_colors(self):
+        """
+        ...
+        
+        Raise: 
+            ValueError:
+            ValueError: 
+            ValueError: 
+            ValueError:  
+        """
         if self.k_cuts == 3:
             if self.color_encoding == "LessThanK":
                 self.colors = {
@@ -134,6 +181,17 @@ class MaxKCutBinaryFullH(GraphProblem):
                 self.bitstring_to_color[index] = key
 
     def apply_N(self, circuit, binary_str1, binary_str2):
+        """
+        ...
+
+        Args:
+            circuit (...):
+            binary_str1 (str):
+            binary_str2 (str):
+
+        Returns:
+            circuit(...):
+        """
         # Apply X-gates based on the first binary string
         for i, bit in enumerate(binary_str1):
             if bit == "0":
@@ -147,6 +205,18 @@ class MaxKCutBinaryFullH(GraphProblem):
         return circuit
 
     def add_equalize_color(self, qc, bs1, bs2, theta):
+        """
+        ...
+
+        Args:
+            qc (...):
+            bs1 (...):
+            bs2 (...):
+            theta (...):
+        
+        Return:
+            qc (...):
+        """
         qc = self.apply_N(qc, bs1, bs2)
         qc.barrier()
         qc.mcx(
@@ -187,6 +257,14 @@ class MaxKCutBinaryFullH(GraphProblem):
         return qc
 
     def create_edge_circuit(self, theta):
+        """
+
+        Args:
+            theta (...):
+        
+        Return: 
+            qc (...):
+        """
         q = QuantumRegister(2 * self.N_qubits_per_node)
         if self.method == "PauliBasis":
             qc = QuantumCircuit(q)
@@ -313,6 +391,15 @@ class MaxKCutBinaryFullH(GraphProblem):
         return qc
 
     def create_edge_circuit_fixed_node(self, theta):
+        """
+        ...
+
+        Args:
+            theta (...):
+        
+        Return:
+            qc (...):
+        """
         if self.method == "PauliBasis":
             qc = QuantumCircuit(self.N_qubits_per_node)
             qc.append(PauliEvolutionGate(self.ophalf, time=theta), qc.qubits)
@@ -321,6 +408,22 @@ class MaxKCutBinaryFullH(GraphProblem):
         return qc
 
     def getPauliOperator(self, k_cuts, color_encoding):
+        """
+        ...
+
+        Args:
+            k_cuts (...):
+            color_encodings (...):
+        
+        Raise:
+            ValueError:
+            ValueError:
+        
+        Return:
+            op (...):
+            ophalf (...):
+        
+        """
         # flip Pauli strings, because of qiskit's little endian encoding
         if k_cuts == 3:
             if color_encoding == "LessThanK":

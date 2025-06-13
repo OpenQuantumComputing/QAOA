@@ -6,7 +6,33 @@ from .base_problem import Problem
 
 
 class MaxKCutOneHot(Problem):
+    """
+    Max k-CUT one hot problem.
+
+    Subclass of the `Problem` class, and it is...
+
+    Attributes:
+        G (nx.Graph):
+        k_cuts (int):
+
+    Methods:
+        is_power_of_two(k):
+        validate_parameters(k, method): 
+        construct_colors():
+        create_edge_circuit(theta):
+        create_edge_circuit_fixed_node(theta):
+        getPauliOperator(k_cuts, color_encoding):
+    """
     def __init__(self, G: nx.Graph, k_cuts: int) -> None:
+        """
+        ...
+        Args:
+            G (nx.Graph):
+            k_cuts (int):
+
+        Raise: 
+            ValueError:
+        """
         super().__init__()
         if (k_cuts < 2) or (k_cuts > 8):
             raise ValueError(
@@ -18,6 +44,18 @@ class MaxKCutOneHot(Problem):
         self.N_qubits = self.num_V * self.k_cuts
 
     def binstringToLabels(self, string: str) -> str:
+        """
+        ...
+
+        Args: 
+            string (str):
+        
+        Raise:
+            ValueError:
+        
+        Return:
+            labels (...):
+        """
         k = self.k_cuts
         labels = ""
         for v in range(self.num_V):

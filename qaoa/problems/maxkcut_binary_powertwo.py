@@ -13,6 +13,26 @@ from .graph_problem import GraphProblem
 
 
 class MaxKCutBinaryPowerOfTwo(GraphProblem):
+    """
+    Max k-CUT binary power of two graph problem.
+
+    Subclass of the `GraphProblem` class, and it is...
+
+    Attributes:
+        G (nx.Graph):
+        k_cuts (int):
+        method (str):
+        fix_one_node (bool):
+
+    Methods:
+        is_power_of_two(k):
+        validate_parameters(k, method): 
+        construct_colors():
+        create_edge_circuit(theta):
+        create_edge_circuit_fixed_node(theta):
+        getPauliOperator(k_cuts, color_encoding):
+
+    """
     def __init__(
         self,
         G: nx.Graph,
@@ -20,6 +40,14 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
         method: str = "Diffusion",
         fix_one_node: bool = False,  # this fixes the last node to color 1, i.e., one qubit gets removed
     ) -> None:
+        """
+        Args:
+            G (nx.Graph):
+            k_cuts (int):
+            method (str):
+            fix_one_node (bool):
+
+        """
         MaxKCutBinaryPowerOfTwo.validate_parameters(k_cuts, method)
 
         self.k_cuts = k_cuts
@@ -36,7 +64,10 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
     @staticmethod
     def is_power_of_two(k) -> bool:
         """
-        Return True if k is a power of two, False otherwise.
+        ...
+
+        Return:
+            True if k is a power of two, False otherwise.
         """
         if k > 0 and (k & (k - 1)) == 0:
             return True
@@ -44,6 +75,14 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
 
     @staticmethod
     def validate_parameters(k, method) -> None:
+        """
+        ...
+
+        Raise:
+            ValueError:
+            ValueError:
+            ValueError:
+        """
         ### 1) k_cuts must be a power of 2
         if not MaxKCutBinaryPowerOfTwo.is_power_of_two(k):
             raise ValueError("k_cuts must be a power of two")
@@ -60,6 +99,9 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
             raise ValueError("method must be in " + str(valid_methods))
 
     def construct_colors(self):
+        """
+        ...
+        """
         if self.k_cuts == 2:
             self.colors = {"color1": ["0"], "color2": ["1"]}
         elif self.k_cuts == 4:
@@ -87,6 +129,14 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
                 self.bitstring_to_color[index] = key
 
     def create_edge_circuit(self, theta):
+        """
+        ...
+
+        Args:
+            theta (...):
+        Return:
+            qc (...):
+        """
         qc = QuantumCircuit(2 * self.N_qubits_per_node)
         if self.method == "PauliBasis":
             qc.append(PauliEvolutionGate(self.op, time=theta), qc.qubits)
@@ -112,6 +162,14 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
         return qc
 
     def create_edge_circuit_fixed_node(self, theta):
+        """
+        ...
+
+        Args:
+            theta (...):
+        Return:
+            qc (...):
+        """
         qc = QuantumCircuit(self.N_qubits_per_node)
         if self.method == "PauliBasis":
             qc.append(PauliEvolutionGate(self.ophalf, time=-theta), qc.qubits)
@@ -127,6 +185,17 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
         return qc
 
     def getPauliOperator(self, k_cuts, color_encoding):
+        """
+        ...
+
+        Args:
+            k_cuts (...):
+            color_encoding (...):
+        
+        Return:
+            op (...):
+            ophalf (...):
+        """
         # flip Pauli strings, because of qiskit's little endian encoding
         if k_cuts == 2:
             P = [

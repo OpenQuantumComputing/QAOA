@@ -7,6 +7,25 @@ from qaoa.util import *
 
 
 class GraphProblem(Problem):
+    """
+    Graph problem.
+
+    Subclass of the `Problem` class, and it ...
+
+    Attributes:
+        G (...):
+        N_qubits_per_node (int):
+        fix_one_node (bool):
+    
+    Methods:
+        create_edge_circuit(theta):
+        create_edge_circuit_fixed_node(theta):
+        create_circuit():
+        same_color(str1, str2):
+        slice_string(string):
+        cost(string):
+        
+    """
     def __init__(
         self,
         G,
@@ -84,7 +103,9 @@ class GraphProblem(Problem):
     # the code below might go into BaseMaxKCut(GraphProblem)
 
     def same_color(self, str1: str, str2: str) -> bool:
-        """Check if two strings map to the same color."""
+        """
+        Check if two strings map to the same color.
+        """
         return self.bitstring_to_color.get(str1) == self.bitstring_to_color.get(str2)
 
     def slice_string(self, string: str) -> list:
