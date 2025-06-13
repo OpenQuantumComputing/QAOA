@@ -10,7 +10,13 @@ from .tensor_initialstate import Tensor
 
 class MaxKCutFeasible(InitialState):
     """
+    Class that determines the feasible states for the type of MAX k-CUT problem with specified number of cuts, number of qubits per vertex,
+    and 
 
+    Attributes: 
+
+    Methods:
+        create_circuit():
     """
     def __init__(
         self, k_cuts: int, problem_encoding: str, color_encoding: str = "LessThanK"
@@ -18,8 +24,10 @@ class MaxKCutFeasible(InitialState):
         """
         Args:
             k_cuts (int):
-            problem_encoding (str):
-            color_encoding (str):
+            problem_encoding (str): description of the type of problem, either "onehot" (which corresponds to ...) or "binary" (which corresponds to ...)
+            color_encoding (str): determines the approach to solving the MAX k-cut problem by following one of two methods, 
+            either "Dicke1_2" (which corresponds to creating an initial state that is a superposition of the valid states that represents a color(only 6/8 possible states)) 
+            or "LessThanK" (which corresponds to grouping states together and make the group represent one color)
 
         """
         self.k_cuts = k_cuts
@@ -50,7 +58,7 @@ class MaxKCutFeasible(InitialState):
 
     def create_circuit(self) -> None:
         """
-        
+
         """
         if self.problem_encoding == "binary":
             self.k_bits = int(np.ceil(np.log2(self.k_cuts)))

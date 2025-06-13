@@ -9,7 +9,7 @@ from .base_initialstate import InitialState
 
 class Dicke1_2(InitialState):
     """
-    Returns equal superposition Dicke 1 and Dicke 2 states. Hard Coded
+    Returns equal superposition Dicke 1 and Dicke 2 states. Hard Coded for the case of k = 6
 
     Methods:
         create_circuit(): Creates a circuit that is a superposition of Dicke 1 and Dicke 2 states
