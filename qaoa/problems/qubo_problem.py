@@ -8,6 +8,21 @@ from .base_problem import Problem
 
 
 class QUBO(Problem):
+    """
+    QUBO problem.
+
+    Subclass of the `Problem` class, and it is...
+
+    Attributes:
+        Q (...):
+        c (...):
+        b (...):
+    
+    Methods:
+        cost(string):
+        create_circuit():
+        
+    """
     def __init__(self, Q=None, c=None, b=None) -> None:
         super().__init__()
         """
@@ -16,6 +31,11 @@ class QUBO(Problem):
 
         # The QUBO will be on this form:
         # min x^T Q x + c^T x + b
+
+        Args:
+            Q (...):
+            c (...):
+            b (...):
         """
         assert type(Q) is np.ndarray, "Q needs to be a numpy ndarray, but is " + str(
             type(Q)
@@ -57,10 +77,22 @@ class QUBO(Problem):
         self.QUBO_b = b
 
     def cost(self, string):
+        """
+        ...
+
+        Args:
+            string (...):
+
+        Returns:
+            TODO???
+        """
         x = np.array(list(map(int, string)))
         return -(x.T @ self.QUBO_Q @ x + self.QUBO_c.T @ x + self.QUBO_b)
 
     def create_circuit(self):
+        """
+        ...
+        """
         if not self.lower_triangular_Q:
             LOG.error("Function not implemented!", func=self.create_circuit.__name__)
             raise NotImplementedError

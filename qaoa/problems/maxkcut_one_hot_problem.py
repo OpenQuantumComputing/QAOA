@@ -16,12 +16,10 @@ class MaxKCutOneHot(Problem):
         k_cuts (int):
 
     Methods:
-        is_power_of_two(k):
-        validate_parameters(k, method): 
-        construct_colors():
-        create_edge_circuit(theta):
-        create_edge_circuit_fixed_node(theta):
-        getPauliOperator(k_cuts, color_encoding):
+        binstringToLabels(string): 
+        cost(string):
+        create_circuit():
+        
     """
     def __init__(self, G: nx.Graph, k_cuts: int) -> None:
         """
@@ -70,6 +68,13 @@ class MaxKCutOneHot(Problem):
         return labels
 
     def cost(self, string: str) -> float | int:
+        """
+        Args:
+            string (str):
+
+        Return:
+            C (...):
+        """
         labels = self.binstringToLabels(string)
         C = 0
         for edge in self.G.edges():
@@ -83,6 +88,9 @@ class MaxKCutOneHot(Problem):
         return C
 
     def create_circuit(self) -> None:
+        """
+        ...
+        """
         q = QuantumRegister(self.N_qubits)
         c = ClassicalRegister(self.N_qubits)
         self.circuit = QuantumCircuit(q, c)
