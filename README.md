@@ -127,9 +127,6 @@ Additionally, for each depth every time the loss function is called, the **angle
 
 
 ***
-### Create graphs and draw circuits
-It is also possible to draw the quantum circuit
-***
 ### Tensorize mixers
 To tensorize a mixer, i.e. decomposing the mixer into a tensor product of unitaries that is 
 performed on each qubit, one can call the tensor class:
