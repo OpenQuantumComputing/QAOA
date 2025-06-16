@@ -135,38 +135,6 @@ performed on each qubit, one can call the tensor class:
 <!--find out the number of qubits we want here -->
 
 ***
-### Valid combinations of initial states, mixers, and problems
-The code relies on the user to choose physically valid parameters of initial state, mixer, and problem, in order to create the custom QAOA ansatz that is accepted. Examples of valid combinations for the different problems are:
-
-	- Max k-CUT binary power of two
-		- Initial state: Plus
-		- Mixer: X-mixer, XY-mixer, MaxkCut grover mixer
-	- Max k-CUT binary full H
-		- Initial state: 
-	- Max k-CUT binary one hot
-		-
-	- QUBO
-		-
-	- Exact cover
-	- Portfolio
-	- Graph
-
-
-- The following [mixer](qaoa/mixers/base_mixer.py) cases are already available:
-	- [X-mixer](qaoa/mixers/x_mixer.py)
-	- [XY-mixer](qaoa/mixers/xy_mixer.py)
-	- [Grover-mixer](qaoa/mixers/grover_mixer.py)
-	- [Max k-CUT grover](qaoa/mixers/maxkcut_grover_mixer.py)
-	- [Max k-CUT LX](qaoa/mixers/maxkcut_lx_mixer.py)
-- The following [initial state](qaoa/initialstates/base_initialstate.py) cases are already available:
-	- [Plus](qaoa/initialstates/plus_initialstate.py)
-	- [Statevector](qaoa/initialstates/statevector_initialstate.py)
-	- [Dicke](qaoa/initialstates/dicke_initialstate.py)
-	- [Dicke 1- and 2-states superposition](qaoa/initialstates/dicke1_2_initialstate.py)
-	- [Tensor](qaoa/initialstates/tensor_initialstate.py)
-	- [Less than k](qaoa/initialstates/lessthank_initialstate.py)
-	- [Max k-CUT feasible](qaoa/initialstates/maxkcut_feasible_initialstate.py)
-***
 ### Example usage
 
 See [examples here](examples/).
