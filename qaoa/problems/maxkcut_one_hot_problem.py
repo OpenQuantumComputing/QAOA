@@ -7,29 +7,30 @@ from .base_problem import Problem
 
 class MaxKCutOneHot(Problem):
     """
-    Max k-CUT one hot problem.
+    Max k-CUT problem using one-hot encoding.
 
-    Subclass of the `Problem` class, and it is...
+    Subclass of the `Problem` class. This class formulates the Max k-Cut problem for a given graph using a one-hot encoding for node colors.
+    It provides methods to convert bitstrings to color labels, compute the cut value, and construct the corresponding quantum circuit.
 
     Attributes:
-        G (nx.Graph):
-        k_cuts (int):
+        G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
+        k_cuts (int): The number of partitions (colors) to cut the graph into.
+        num_V (int): The number of nodes in the graph.
+        N_qubits (int): The total number of qubits (nodes × colors).
 
     Methods:
-        binstringToLabels(string): 
-        cost(string):
-        create_circuit():
-        
+        binstringToLabels(string): Converts a binary string in one-hot encoding to a string of color labels for each node.
+        cost(string): Computes the Max k-Cut cost for a given binary string representing a coloring.
+        create_circuit(): Creates the parameterized quantum circuit corresponding to the Max k-Cut cost function using one-hot encoding.
     """
     def __init__(self, G: nx.Graph, k_cuts: int) -> None:
         """
-        ...
         Args:
-            G (nx.Graph):
-            k_cuts (int):
+            G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
+            k_cuts (int): The number of partitions (colors) to cut the graph into.
 
-        Raise: 
-            ValueError:
+        Raises: 
+            ValueError: If k_cuts is less than 2 or greater than 8.
         """
         super().__init__()
         if (k_cuts < 2) or (k_cuts > 8):
@@ -43,16 +44,16 @@ class MaxKCutOneHot(Problem):
 
     def binstringToLabels(self, string: str) -> str:
         """
-        ...
+        Converts a binary string in one-hot encoding to a string of color labels for each node.
 
         Args: 
-            string (str):
-        
-        Raise:
-            ValueError:
-        
-        Return:
-            labels (...):
+            string (str): The binary string representing the one-hot encoding of node colors.
+
+        Raises:
+            ValueError: If a segment of the string does not represent a valid one-hot encoding.
+
+        Returns:
+            labels (str): String of color labels for each node.
         """
         k = self.k_cuts
         labels = ""
@@ -69,11 +70,13 @@ class MaxKCutOneHot(Problem):
 
     def cost(self, string: str) -> float | int:
         """
-        Args:
-            string (str):
+        Computes the Max k-Cut cost for a given binary string representing a coloring.
 
-        Return:
-            C (...):
+        Args:
+            string (str): The binary string representing the one-hot encoding of node colors.
+
+        Returns:
+            C (float or int): The total cut value for the given coloring.
         """
         labels = self.binstringToLabels(string)
         C = 0
@@ -89,7 +92,8 @@ class MaxKCutOneHot(Problem):
 
     def create_circuit(self) -> None:
         """
-        ...
+        Creates the parameterized quantum circuit corresponding to the Max k-Cut cost function using one-hot encoding.
+
         """
         q = QuantumRegister(self.N_qubits)
         c = ClassicalRegister(self.N_qubits)
