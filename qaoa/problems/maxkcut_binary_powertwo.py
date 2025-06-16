@@ -64,10 +64,13 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
     @staticmethod
     def is_power_of_two(k) -> bool:
         """
-        ...
+        Checks if the given integer k is a power of two.
 
-        Return:
-            True if k is a power of two, False otherwise.
+        Args:
+            k (int): The integer to check.
+
+        Returns:
+            bool: True if k is a power of two, False otherwise.
         """
         if k > 0 and (k & (k - 1)) == 0:
             return True
@@ -76,12 +79,16 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
     @staticmethod
     def validate_parameters(k, method) -> None:
         """
-        ...
+        Validates the input parameters for k and method.
 
-        Raise:
-            ValueError:
-            ValueError:
-            ValueError:
+        Args:
+            k (int): Number of partitions (colors).
+            method (str): Circuit construction method ("PauliBasis" or "Diffusion").
+
+        Raises:
+            ValueError: If k is not a power of two.
+            ValueError: If k is less than 2 or greater than 8.
+            ValueError: If method is not valid.
         """
         ### 1) k_cuts must be a power of 2
         if not MaxKCutBinaryPowerOfTwo.is_power_of_two(k):
@@ -100,7 +107,10 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
 
     def construct_colors(self):
         """
-        ...
+        Constructs the mapping from binary strings to color classes based on k.
+
+        Raises:
+            ValueError: If k_cuts is not supported.
         """
         if self.k_cuts == 2:
             self.colors = {"color1": ["0"], "color2": ["1"]}
@@ -130,12 +140,13 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
 
     def create_edge_circuit(self, theta):
         """
-        ...
+        Creates the parameterized quantum circuit for an edge, according to the chosen method.
 
         Args:
-            theta (...):
-        Return:
-            qc (...):
+            theta (float): The phase parameter.
+
+        Returns:
+            qc (QuantumCircuit): The constructed quantum circuit for the edge.
         """
         qc = QuantumCircuit(2 * self.N_qubits_per_node)
         if self.method == "PauliBasis":
@@ -163,12 +174,13 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
 
     def create_edge_circuit_fixed_node(self, theta):
         """
-        ...
+        Creates the parameterized quantum circuit for an edge when one node is fixed.
 
         Args:
-            theta (...):
-        Return:
-            qc (...):
+            theta (float): The phase parameter.
+
+        Returns:
+            qc (QuantumCircuit): The constructed quantum circuit for the edge with a fixed node.
         """
         qc = QuantumCircuit(self.N_qubits_per_node)
         if self.method == "PauliBasis":
@@ -186,15 +198,15 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
 
     def getPauliOperator(self, k_cuts, color_encoding):
         """
-        ...
+        Returns the Pauli operators for the cost Hamiltonian for the given k and encoding.
 
         Args:
-            k_cuts (...):
-            color_encoding (...):
-        
-        Return:
-            op (...):
-            ophalf (...):
+            k_cuts (int): Number of partitions (colors).
+            color_encoding (str): The encoding scheme for colors.
+
+        Returns:
+            op (SparsePauliOp): The full Pauli operator for the cost Hamiltonian.
+            ophalf (SparsePauliOp): The half Pauli operator for the fixed-node case.
         """
         # flip Pauli strings, because of qiskit's little endian encoding
         if k_cuts == 2:
