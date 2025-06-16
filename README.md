@@ -1,6 +1,6 @@
 # QAOA
 
-This package is a flexible python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) **aimed at researchers** to readily test the performance of a new ansatz, a new classical optimizers <!-- optimizer? (without s)-->, etc. By default it uses qiskit as a backend.
+This package is a flexible python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) **aimed at researchers** to readily test the performance of a new ansatz, a new classical optimizer, etc. By default it uses qiskit as a backend.
 
 Install with `pip install qaoa` or `pip install -e .`.
 
@@ -13,7 +13,7 @@ one defines a **problem Hamiltonian** $H_P$ through the action on computational 
 $$ H_P |x\rangle = c(x) |x\rangle,$$
 
 which means that ground states minimize the cost function $c$.
-Given a parametrized ansatz $ | \gamma, \beta \rangle$, a classical optimizer is used to minimize the energy <!-- $ | \gamma, \beta \rangle$ doesn't show up correctly, suspect we need to delete a space => $| \gamma, \beta \rangle$-->
+Given a parametrized ansatz $| \gamma, \beta \rangle$, a classical optimizer is used to minimize the energy
 
 $$ \langle \gamma, \beta | H_P | \gamma, \beta \rangle.$$
 
@@ -59,7 +59,7 @@ This library already contains several standard implementations.
 	- [Tensor](qaoa/initialstates/tensor_initialstate.py)
 	- [Less than k](qaoa/initialstates/lessthank_initialstate.py)
 	- [Max k-CUT feasible](qaoa/initialstates/maxkcut_feasible_initialstate.py)
-<!--added all of the files for initial state, problem, mixer.. Need to remove some if not all of them are supposed to be there (for example the tensor one?)-->
+
 It is **very easy to extend this list** by providing  an implementation of a circuit/cost of the base classes mentioned above. Feel free to fork the repo and create a pull request :-)
 
 To make an ansatz for the MaxCut problem, the X-mixer and the initial state $|+\rangle^{\otimes n}$  one can create an instance like this: 
@@ -134,6 +134,37 @@ performed on each qubit, one can call the tensor class:
 	qaoa.tensor(mixers.X(), number_of_qubits_of_subpart)
 <!--find out the number of qubits we want here -->
 
+***
+### Valid combinations of initial states, mixers, and problems
+The code relies on the user to choose physically valid parameters of initial state, mixer, and problem, in order to create the custom QAOA ansatz that is accepted. Examples of valid combinations for the different problems are:
+
+	- Max k-CUT binary power of two
+		- Initial state: Plus, Mixer: X-mixer, XY-mixer, Max k-CUT LX
+	- Max k-CUT binary full H
+		- Initial state: 
+	- Max k-CUT binary one hot
+		-
+	- QUBO
+		-
+	- Exact cover
+	- Portfolio
+	- Graph
+
+
+- The following [mixer](qaoa/mixers/base_mixer.py) cases are already available:
+	- [X-mixer](qaoa/mixers/x_mixer.py)
+	- [XY-mixer](qaoa/mixers/xy_mixer.py)
+	- [Grover-mixer](qaoa/mixers/grover_mixer.py)
+	- [Max k-CUT grover](qaoa/mixers/maxkcut_grover_mixer.py)
+	- [Max k-CUT LX](qaoa/mixers/maxkcut_lx_mixer.py)
+- The following [initial state](qaoa/initialstates/base_initialstate.py) cases are already available:
+	- [Plus](qaoa/initialstates/plus_initialstate.py)
+	- [Statevector](qaoa/initialstates/statevector_initialstate.py)
+	- [Dicke](qaoa/initialstates/dicke_initialstate.py)
+	- [Dicke 1- and 2-states superposition](qaoa/initialstates/dicke1_2_initialstate.py)
+	- [Tensor](qaoa/initialstates/tensor_initialstate.py)
+	- [Less than k](qaoa/initialstates/lessthank_initialstate.py)
+	- [Max k-CUT feasible](qaoa/initialstates/maxkcut_feasible_initialstate.py)
 ***
 ### Example usage
 
