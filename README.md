@@ -1,6 +1,6 @@
 # QAOA
 
-This package is a flexible python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) **aimed at researchers** to readily test the performance of a new ansatz, a new classical optimizers, etc. By default it uses qiskit as a backend.
+This package is a flexible python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) **aimed at researchers** to readily test the performance of a new ansatz, a new classical optimizers <!-- optimizer? (without s)-->, etc. By default it uses qiskit as a backend.
 
 Install with `pip install qaoa` or `pip install -e .`.
 

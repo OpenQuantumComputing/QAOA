@@ -16,21 +16,21 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
     """
     Max k-CUT binary power of two graph problem.
 
-    Subclass of the `GraphProblem` class, and it is...
+    Subclass of the `GraphProblem` class. This class implements the Max k-Cut problem for graphs where the number of colors (k) is a power of two, using a binary encoding for node colors. It provides methods for constructing color mappings, generating quantum circuits for edges, and building the corresponding cost Hamiltonian in the Pauli basis.
 
     Attributes:
-        G (nx.Graph):
-        k_cuts (int):
-        method (str):
-        fix_one_node (bool):
+        G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
+        k_cuts (int): The number of partitions (colors) to cut the graph into (must be a power of two).
+        method (str): The method used for circuit construction ("PauliBasis" or "Diffusion").
+        fix_one_node (bool): If True, fixes the last node to a specific color, reducing the number of variables.
 
     Methods:
-        is_power_of_two(k):
-        validate_parameters(k, method): 
-        construct_colors():
-        create_edge_circuit(theta):
-        create_edge_circuit_fixed_node(theta):
-        getPauliOperator(k_cuts, color_encoding):
+        is_power_of_two(k): Checks if the given integer k is a power of two.
+        validate_parameters(k, method): Validates the input parameters for k and method.
+        construct_colors(): Constructs the mapping from binary strings to color classes based on k.
+        create_edge_circuit(theta): Creates the parameterized quantum circuit for an edge, according to the chosen method.
+        create_edge_circuit_fixed_node(theta): Creates the parameterized quantum circuit for an edge when one node is fixed.
+        getPauliOperator(k_cuts, color_encoding): Returns the Pauli operators for the cost Hamiltonian for the given k and encoding.
 
     """
     def __init__(
@@ -42,11 +42,13 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
     ) -> None:
         """
         Args:
-            G (nx.Graph):
-            k_cuts (int):
-            method (str):
-            fix_one_node (bool):
+            G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
+            k_cuts (int): The number of partitions (colors) to cut the graph into (must be a power of two).
+            method (str): The method used for circuit construction ("PauliBasis" or "Diffusion").
+            fix_one_node (bool): If True, fixes the last node to a specific color, reducing the number of variables.
 
+        Raises:
+            ValueError: If k_cuts is not a power of two, is less than 2, greater than 8, or if method is not valid.
         """
         MaxKCutBinaryPowerOfTwo.validate_parameters(k_cuts, method)
 
