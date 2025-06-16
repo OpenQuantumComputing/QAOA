@@ -9,19 +9,25 @@ from .base_problem import Problem
 
 class QUBO(Problem):
     """
-    QUBO problem.
+    Quadratic Unconstrained Binary Optimization (QUBO) problem.
 
-    Subclass of the `Problem` class, and it is...
+    Subclass of the `Problem` class. This class represents a generic QUBO problem, which can be used as a base for more specific QUBO-based problems.
+    The QUBO problem is defined as minimizing a quadratic function over binary variables.
 
     Attributes:
-        Q (...):
-        c (...):
-        b (...):
-    
+        Q (np.ndarray): A 2-dimensional numpy ndarray representing the quadratic coefficients.
+        c (np.ndarray): A 1-dimensional numpy ndarray representing the linear coefficients.
+        b (float): Scalar offset term.
+        N_qubits (int): Number of binary variables/qubits in the problem.
+        lower_triangular_Q (bool): Whether Q is lower triangular.
+        QUBO_Q (np.ndarray): The quadratic coefficient matrix.
+        QUBO_c (np.ndarray): The linear coefficient vector.
+        QUBO_b (float): The scalar offset.
+
     Methods:
-        cost(string):
-        create_circuit():
-        
+        cost(string): Computes the cost of a given binary string according to the QUBO formulation.
+        create_circuit(): Creates a parametrized quantum circuit corresponding to the cost function of the QUBO problem.
+        createParameterizedCostCircuitTril(): Creates a parameterized circuit of the triangularized QUBO problem.
     """
     def __init__(self, Q=None, c=None, b=None) -> None:
         super().__init__()
@@ -33,9 +39,14 @@ class QUBO(Problem):
         # min x^T Q x + c^T x + b
 
         Args:
-            Q (...):
-            c (...):
-            b (...):
+            Q (np.ndarray): A 2-dimensional numpy ndarray representing the quadratic coefficients.
+            c (np.ndarray): A 1-dimensional numpy ndarray representing the linear coefficients. Defaults to None.
+            b (float): Scalar offset term. Defaults to None.
+
+        Raises:
+            AssertionError: If Q is not a square 2D numpy ndarray.
+            AssertionError: If c is not a 1D numpy ndarray of compatible size.
+            AssertionError: If b is not a scalar.
         """
         assert type(Q) is np.ndarray, "Q needs to be a numpy ndarray, but is " + str(
             type(Q)
@@ -78,20 +89,23 @@ class QUBO(Problem):
 
     def cost(self, string):
         """
-        ...
+        Computes the cost of a given binary string according to the QUBO formulation.
 
         Args:
-            string (...):
+            string (str): Binary string representing a candidate solution to the QUBO problem.
 
         Returns:
-            TODO???
+            float: The cost of the solution.
         """
         x = np.array(list(map(int, string)))
         return -(x.T @ self.QUBO_Q @ x + self.QUBO_c.T @ x + self.QUBO_b)
 
     def create_circuit(self):
         """
-        ...
+        Creates a parametrized quantum circuit corresponding to the cost function of the QUBO problem.
+
+        Raises:
+            NotImplementedError: If Q is not lower triangular.
         """
         if not self.lower_triangular_Q:
             LOG.error("Function not implemented!", func=self.create_circuit.__name__)
