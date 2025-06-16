@@ -9,32 +9,30 @@ class PortfolioOptimization(QUBO):
     """
     Portfolio optimization QUBO.
 
-    Subclass of the `QUBO` class, and it is ...
+    Subclass of the `QUBO` class. It reformulates the portfolio optimization problem as a QUBO problem, where the goal is to maximize the expected return while minimizing the risk, subject to a budget constraint.
 
     Attributes:
-        risk (...):
-        budget (...):
-        cov_matrix (...):
-        exp_return (...):
-        penalty (...): Defaults to 0.
+        risk (float): Risk aversion parameter (weight for the risk term).
+        budget (int): The total number of assets to select (budget constraint).
+        cov_matrix (np.ndarray): Covariance matrix of asset returns.
+        exp_return (np.ndarray): Expected returns for each asset.
+        penalty (float): Penalty parameter for enforcing the budget constraint. Defaults to 0.
+        N_qubits (int): Number of assets/qubits in the problem.
 
     Methods:
-        cost_nonQUBO(string, penalize):
-        cost_nonQUBO(string, penalize):
-        isFeasible(string):
-        __str2np(s):
-
-
+        cost_nonQUBO(string, penalize): Computes the cost of a given portfolio bitstring, optionally including the penalty term.
+        isFeasible(string): Checks if a given bitstring satisfies the budget constraint.
+        __str2np(s): Converts a bitstring to a numpy array of integers.
     """
     def __init__(self, risk, budget, cov_matrix, exp_return, penalty=0) -> None:
         """
-        ...
+        
         Args:
-            risk (...):
-            budget (...):
-            cov_matrix (...):
-            exp_return (...):
-            penalty (...): Defaults to 0.
+            risk (float): Risk aversion parameter (weight for the risk term).
+            budget (int): The total number of assets to select (budget constraint).
+            cov_matrix (np.ndarray): Covariance matrix of asset returns.
+            exp_return (np.ndarray): Expected returns for each asset.
+            penalty (float): Penalty parameter for enforcing the budget constraint. Defaults to 0.
         """
         self.risk = risk
         self.budget = budget
@@ -61,13 +59,14 @@ class PortfolioOptimization(QUBO):
 
     def cost_nonQUBO(self, string, penalize=True):
         """
-        ...
+        Computes the cost of a given portfolio bitstring, optionally including the penalty term for the budget constraint.
+
         Args:
-            string (...):
-            penalize (...):
+            string (str): Bitstring representing the selected assets (portfolio).
+            penalize (bool): Whether to include the penalty term for violating the budget constraint.
 
         Returns:
-            -cost (...):
+            cost (float): The negative of the portfolio objective value.
         """
         # risk = self.params.get("risk")
         # budget = self.params.get("budget")
@@ -84,13 +83,13 @@ class PortfolioOptimization(QUBO):
 
     def isFeasible(self, string):
         """
-        ...
+        Checks if a given bitstring satisfies the budget constraint.
 
         Args:
-            string (...):
+            string (str): Bitstring representing the selected assets (portfolio).
         
         Returns:
-            float(TODO ????):
+            bool: True if the bitstring satisfies the budget constraint, False otherwise.
         """
         x = self.__str2np(string)
         constraint = np.sum(x) - self.budget
@@ -98,13 +97,13 @@ class PortfolioOptimization(QUBO):
 
     def __str2np(self, s):
         """
-        ...
+        Converts a bitstring to a numpy array of integers.
 
         Args:
-            s (...):
+            s (str): Bitstring representing the selected assets (portfolio).
         
         Returns:
-            x (...):
+            x (np.ndarray): Numpy array of integers corresponding to the bitstring.
         """
         x = np.array(list(map(int, s)))
         assert len(x) == len(self.exp_return), (
