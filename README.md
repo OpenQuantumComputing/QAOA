@@ -139,7 +139,8 @@ performed on each qubit, one can call the tensor class:
 The code relies on the user to choose physically valid parameters of initial state, mixer, and problem, in order to create the custom QAOA ansatz that is accepted. Examples of valid combinations for the different problems are:
 
 	- Max k-CUT binary power of two
-		- Initial state: Plus, Mixer: X-mixer, XY-mixer, Max k-CUT LX
+		- Initial state: Plus
+		- Mixer: X-mixer, XY-mixer, MaxkCut grover mixer
 	- Max k-CUT binary full H
 		- Initial state: 
 	- Max k-CUT binary one hot
