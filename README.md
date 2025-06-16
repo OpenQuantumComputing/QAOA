@@ -13,7 +13,7 @@ one defines a **problem Hamiltonian** $H_P$ through the action on computational 
 $$ H_P |x\rangle = c(x) |x\rangle,$$
 
 which means that ground states minimize the cost function $c$.
-Given a parametrized ansatz $ | \gamma, \beta \rangle$, a classical optimizer is used to minimize the energy
+Given a parametrized ansatz $ | \gamma, \beta \rangle$, a classical optimizer is used to minimize the energy <!-- $ | \gamma, \beta \rangle$ doesn't show up correctly, suspect we need to delete a space => $| \gamma, \beta \rangle$-->
 
 $$ \langle \gamma, \beta | H_P | \gamma, \beta \rangle.$$
 
@@ -59,7 +59,7 @@ This library already contains several standard implementations.
 	- [Tensor](qaoa/initialstates/tensor_initialstate.py)
 	- [Less than k](qaoa/initialstates/lessthank_initialstate.py)
 	- [Max k-CUT feasible](qaoa/initialstates/maxkcut_feasible_initialstate.py)
-
+<!--added all of the files for initial state, problem, mixer.. Need to remove some if not all of them are supposed to be there (for example the tensor one?)-->
 It is **very easy to extend this list** by providing  an implementation of a circuit/cost of the base classes mentioned above. Feel free to fork the repo and create a pull request :-)
 
 To make an ansatz for the MaxCut problem, the X-mixer and the initial state $|+\rangle^{\otimes n}$  one can create an instance like this: 
@@ -125,6 +125,17 @@ Additionally, for each depth every time the loss function is called, the **angle
 
 	qaoa.optimization_results[i]
 
+
+***
+### Create graphs and draw circuits
+It is also possible to draw the quantum circuit
+***
+### Tensorize mixers
+To tensorize a mixer, i.e. decomposing the mixer into a tensor product of unitaries that is 
+performed on each qubit, one can call the tensor class:
+
+	qaoa.tensor(mixers.X(), number_of_qubits_of_subpart)
+<!--find out the number of qubits we want here -->
 
 ***
 ### Example usage
