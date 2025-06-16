@@ -38,18 +38,27 @@ In order to create a custom QAOA ansatz, one needs to specify a [problem](qaoa/p
 This library already contains several standard implementations.
 
 - The following [problem](qaoa/problems/base_problem.py) cases are already available:
-	- [MaxCut](qaoa/problems/maxcut_problem.py)
+	- [Max k-CUT binary power of two](qaoa/problems/maxkcut_binary_powertwo.py)
+	- [Max k-CUT binary full H](qaoa/problems/maxkcut_binary_fullH.py)
+	- [Max k-CUT binary one hot](qaoa/problems/maxkcut_binary_one_hot.py)
 	- [QUBO](qaoa/problems/qubo_problem.py)
 	- [Exact cover](qaoa/problems/exactcover_problem.py)
 	- [Portfolio](qaoa/problems/portfolio_problem.py)
+	- [Graph](qaoa/problems/graph_problem.py)
 - The following [mixer](qaoa/mixers/base_mixer.py) cases are already available:
 	- [X-mixer](qaoa/mixers/x_mixer.py)
 	- [XY-mixer](qaoa/mixers/xy_mixer.py)
 	- [Grover-mixer](qaoa/mixers/grover_mixer.py)
+	- [Max k-CUT grover](qaoa/mixers/maxkcut_grover_mixer.py)
+	- [Max k-CUT LX](qaoa/mixers/maxkcut_lx_mixer.py)
 - The following [initial state](qaoa/initialstates/base_initialstate.py) cases are already available:
 	- [Plus](qaoa/initialstates/plus_initialstate.py)
 	- [Statevector](qaoa/initialstates/statevector_initialstate.py)
 	- [Dicke](qaoa/initialstates/dicke_initialstate.py)
+	- [Dicke 1- and 2-states superposition](qaoa/initialstates/dicke1_2_initialstate.py)
+	- [Tensor](qaoa/initialstates/tensor_initialstate.py)
+	- [Less than k](qaoa/initialstates/lessthank_initialstate.py)
+	- [Max k-CUT feasible](qaoa/initialstates/maxkcut_feasible_initialstate.py)
 
 It is **very easy to extend this list** by providing  an implementation of a circuit/cost of the base classes mentioned above. Feel free to fork the repo and create a pull request :-)
 

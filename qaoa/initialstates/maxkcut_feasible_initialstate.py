@@ -16,7 +16,7 @@ class MaxKCutFeasible(InitialState):
     and method for solving the special case of k = 6.
 
     Attributes: 
-        k_cuts (int):
+        k_cuts (int): The number of cuts (or "colors") of the vertices in the MAX k-CUT problem is separated into.
         problem_encoding (str): description of the type of problem, either "onehot" (which corresponds to ...) or "binary" (which corresponds to ...)
         color_encoding (str): determines the approach to solving the MAX k-cut problem by following one of three methods, 
                             either "Dicke1_2" (which corresponds to creating an initial state that is a superposition of the valid states that represents a color(only 6/8 possible states)),
