@@ -268,12 +268,13 @@ class MaxKCutBinaryFullH(GraphProblem):
 
     def create_edge_circuit(self, theta):
         """
+        Creates the parameterized quantum circuit for a graph edge according to the chosen method and color encoding.
 
         Args:
-            theta (...):
-        
-        Return: 
-            qc (...):
+            theta (float): The phase parameter for the circuit.
+
+        Returns:
+            qc (QuantumCircuit): The constructed quantum circuit for the edge.
         """
         q = QuantumRegister(2 * self.N_qubits_per_node)
         if self.method == "PauliBasis":
