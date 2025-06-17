@@ -17,12 +17,6 @@ class LessThanK(InitialState):
 
     Methods:
         create_circuit(): creates a circuit that can create the wanted initial state for the special k
-        is_power_of_two_or_between_2_and_8(): checks that the k is either to the power of 2 or between 2 and 8
-        power_of_two(): creates a circuit for k is to the power of 2
-        k3(): creates a circuit for k = 3
-        k5(): creates a circuit for k = 5
-        k6(): creates a circuit for k = 6
-        k7(): creates a circuit for k = 7
     """
     def __init__(self, k: int) -> None:
         """
