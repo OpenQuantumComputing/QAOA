@@ -129,9 +129,11 @@ Additionally, for each depth every time the loss function is called, the **angle
 ***
 ### Tensorize mixers
 To tensorize a mixer, i.e. decomposing the mixer into a tensor product of unitaries that is 
-performed on each qubit, one can call the tensor class:
+performed on each qubit, one can call the tensor class with the arguments of mixer and number of qubits in subpart.
 
-	qaoa.tensor(mixers.X(), number_of_qubits_of_subpart)
+For example, for the standard MaxCut problem above where the X mixer was used, one could find the tensor by writing:
+
+	tensorized_mixer = Tensor(mixer.X(), number_of_qubits_of_subpart)
 <!--find out the number of qubits we want here -->
 
 ***
