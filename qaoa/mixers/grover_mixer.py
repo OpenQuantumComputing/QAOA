@@ -6,8 +6,25 @@ from qaoa.initialstates.base_initialstate import InitialState
 
 
 class Grover(Mixer):
+    """
+    Grover mixer.
+
+    Subclass of the `Mixer` subclass that implements the Grover mixing operation.
+
+    Attributes:
+        subcircuit (InitialState): The initial state circuit to be tensorized.
+        circuit (QuantumCircuit): The quantum circuit representing the mixer.
+        mixer_param (Parameter): The parameter for the mixer.
+        N_qubits (int): The number of qubits in the mixer circuit.
+
+    Methods:
+        create_circuit(): Constructs the Grover mixer circuit using the subcircuit.
+    """
+
     def __init__(self, subcircuit: InitialState) -> None:
         """
+        Initializes the Grover mixer.
+
         Args:
             subcircuit (InitialState): the circuit that is to be tensorised
         """
@@ -16,9 +33,13 @@ class Grover(Mixer):
         self.N_qubits = subcircuit.N_qubits
 
     def create_circuit(self):
-        # given feasibel states f \in F,
-        # Let US the circuit that prepares US = 1/|F| \sum_{f\inF} |f>
-        # The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US,
+        """
+        Constructs the Grover mixer circuit using the subcircuit.
+
+        Given feasible states f \in F,
+        and let US be the circuit that prepares US = 1/|F| \sum_{f\inF} |f>.
+        The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US.
+        """
 
         self.subcircuit.create_circuit()
         US = self.subcircuit.circuit

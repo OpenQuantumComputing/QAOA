@@ -10,7 +10,36 @@ from .base_mixer import Mixer
 
 
 class MaxKCutLX(Mixer):
+    """
+    Logical X (LX) mixer for the Max k-Cut problem.
+
+    Subclass of the `Mixer` subclass that implements the LX mixing operation for the Max k-Cut problem.
+
+    Attributes:
+        k_cuts (int): The number of cuts in the Max k-Cut problem.
+        color_encoding (str): The encoding of colors, can be "LessThanK", "Dicke1_2", or "max_balanced".
+        topology (str): The topology of the mixer, either "standard" or "ring".
+
+    Methods:
+        is_power_of_two(): Returns True if `k_cuts` is a power of two, False otherwise.
+        create_SparsePauliOp(): Creates the sparse Pauli operator for the given `k_cuts`.
+        create_circuit(): Constructs the LX mixer circuit for the Max k-Cut problem.
+    """
+
     def __init__(self, k_cuts: int, color_encoding: str, topology: str = "standard"):
+        """
+        Initializes the MaxKCutLX mixer.
+
+        Args:
+            k_cuts (int): The number of cuts in the Max k-Cut problem.
+            color_encoding (str): The encoding of colors, can be "LessThanK", "Dicke1_2", or "max_balanced".
+            topology (str): The topology of the mixer, either "standard" or "ring".
+
+        Raises:
+            ValueError: If `k_cuts` is a power of two.
+            ValueError: If `color_encoding` is not specified.
+            ValueError: If `k_cuts` is 3 and `topology` is not "standard" or "ring".
+        """
         if (k_cuts < 2) or (k_cuts > 8):
             raise ValueError(
                 "k_cuts must be 2 or more, and is not implemented for k_cuts > 8"
@@ -33,7 +62,8 @@ class MaxKCutLX(Mixer):
 
     def is_power_of_two(self) -> bool:
         """
-        Return True if self.k_cuts is a power of two, False otherwise.
+        Returns:
+            bool: True if self.k_cuts is a power of two, False otherwise.
         """
         if self.k_cuts > 0 and (self.k_cuts & (self.k_cuts - 1)) == 0:
             return True
@@ -41,7 +71,7 @@ class MaxKCutLX(Mixer):
 
     def create_SparsePauliOp(self) -> None:
         """
-        Create sparse Pauli operator for given k. Hard coded
+        Create sparse Pauli operator for given k. Hard coded.
 
         Returns:
             None
@@ -108,6 +138,9 @@ class MaxKCutLX(Mixer):
         self.op = SparsePauliOp(data, coeffs=coeffs)
 
     def create_circuit(self) -> None:
+        """
+        Constructs the LX mixer circuit for the Max k-Cut problem.
+        """
         self.num_V = int(self.N_qubits / self.k_bits)
         q = QuantumRegister(self.N_qubits)
         mixer_param = Parameter("x_beta")
