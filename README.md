@@ -38,7 +38,7 @@ In order to create a custom QAOA ansatz, one needs to specify a [problem](qaoa/p
 This library already contains several standard implementations.
 
 - The following [problem](qaoa/problems/base_problem.py) cases are already available:
-	- [Max k-CUT binary power of two](qaoa/problems/maxkcut_binary_powertwo.py)
+	- [Max k-CUT binary power of two](qaoa/problems/maxkcut_binary_powertwo.py) *
 	- [Max k-CUT binary full H](qaoa/problems/maxkcut_binary_fullH.py)
 	- [Max k-CUT binary one hot](qaoa/problems/maxkcut_binary_one_hot.py)
 	- [QUBO](qaoa/problems/qubo_problem.py)
@@ -70,6 +70,7 @@ To make an ansatz for the MaxCut problem, the X-mixer and the initial state $|+\
 		mixer=mixers.X()
 	)
 
+*(can be used for the standard MaxCut with argument k_cuts=2)
 ***
 ### Run optimization at depth $p$
 
