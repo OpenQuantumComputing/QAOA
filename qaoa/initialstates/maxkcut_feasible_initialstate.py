@@ -58,7 +58,7 @@ class MaxKCutFeasible(InitialState):
             else:
                 self.infeasible = ["101", "110", "111"]
         elif self.k_cuts == 6:
-            if self.color_encoding in ["Dicke1_2", "max_balanced"]: 
+            if self.color_encoding in ["Dicke1_2", "max_balanced"]:
                 self.infeasible = ["000", "111"]
             else:
                 self.infeasible = ["110", "111"]
