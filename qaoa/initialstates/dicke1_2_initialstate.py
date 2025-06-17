@@ -11,7 +11,7 @@ class Dicke1_2(InitialState):
     """
     Dicke1_2 initial state.
 
-    Subclass of the `InitialState` class, and it returns equal superposition Dicke 1 and Dicke 2 states. It is Hard Coded for the case of k = 6
+    Subclass of the `InitialState` class, and it returns equal superposition Dicke 1 and Dicke 2 states. It is Hard Coded for the case of Hamming weight k = 6
 
     Methods:
         create_circuit(): Creates a circuit that is a superposition of Dicke 1 and Dicke 2 states
