@@ -14,7 +14,7 @@ class Tensor(InitialState):
 
     Attributions:
         subcircuit (InitialState): the circuit that is to be tensorised
-        num (int): number of qubits of the subpart #subN_qubits
+        num (int): number of qubits of the subpart 
 
     Methods:
         create_circuit(): 
