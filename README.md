@@ -56,7 +56,6 @@ This library already contains several standard implementations.
 	- [Statevector](qaoa/initialstates/statevector_initialstate.py)
 	- [Dicke](qaoa/initialstates/dicke_initialstate.py)
 	- [Dicke 1- and 2-states superposition](qaoa/initialstates/dicke1_2_initialstate.py)
-	- [Tensor](qaoa/initialstates/tensor_initialstate.py)
 	- [Less than k](qaoa/initialstates/lessthank_initialstate.py)
 	- [Max k-CUT feasible](qaoa/initialstates/maxkcut_feasible_initialstate.py)
 
