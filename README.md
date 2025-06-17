@@ -65,7 +65,7 @@ To make an ansatz for the MaxCut problem, the X-mixer and the initial state $|+\
 
 	qaoa = QAOA(
 		initialstate=initialstates.Plus(),
-		problem=problems.MaxCut(G="some networkx instance"),
+		problem=problems.MaxKCutBinaryPowerOfTwo(G="some networkx instance", k_cuts=2),
 		mixer=mixers.X()
 	)
 
