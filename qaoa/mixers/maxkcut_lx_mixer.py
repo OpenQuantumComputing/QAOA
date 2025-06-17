@@ -44,7 +44,6 @@ class MaxKCutLX(Mixer):
             raise ValueError(
                 "k_cuts must be 2 or more, and is not implemented for k_cuts > 8"
             )
-
         self.k_cuts = k_cuts
         self.k_bits = int(np.ceil(np.log2(k_cuts)))
         self.color_encoding = color_encoding

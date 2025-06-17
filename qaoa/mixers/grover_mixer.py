@@ -34,11 +34,12 @@ class Grover(Mixer):
 
     def create_circuit(self):
         """
-        Construtcs the Grover mixer circuit using the subcircuit.
+        Constructs the Grover mixer circuit using the subcircuit.
+
+        Given feasible states f \in F,
+        and let US be the circuit that prepares US = 1/|F| \sum_{f\inF} |f>.
+        The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US.
         """
-        # given feasibel states f \in F,
-        # Let US the circuit that prepares US = 1/|F| \sum_{f\inF} |f>
-        # The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US,
 
         self.subcircuit.create_circuit()
         US = self.subcircuit.circuit
