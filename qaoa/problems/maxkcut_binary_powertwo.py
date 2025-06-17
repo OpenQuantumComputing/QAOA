@@ -13,6 +13,26 @@ from .graph_problem import GraphProblem
 
 
 class MaxKCutBinaryPowerOfTwo(GraphProblem):
+    """
+    Max k-CUT binary power of two graph problem.
+
+    Subclass of the `GraphProblem` class. This class implements the Max k-Cut problem for graphs where the number of colors (k) is a power of two, using a binary encoding for node colors. It provides methods for constructing color mappings, generating quantum circuits for edges, and building the corresponding cost Hamiltonian in the Pauli basis.
+
+    Attributes:
+        G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
+        k_cuts (int): The number of partitions (colors) to cut the graph into (must be a power of two).
+        method (str): The method used for circuit construction ("PauliBasis" or "Diffusion").
+        fix_one_node (bool): If True, fixes the last node to a specific color, reducing the number of variables.
+
+    Methods:
+        is_power_of_two(k): Checks if the given integer k is a power of two.
+        validate_parameters(k, method): Validates the input parameters for k and method.
+        construct_colors(): Constructs the mapping from binary strings to color classes based on k.
+        create_edge_circuit(theta): Creates the parameterized quantum circuit for an edge, according to the chosen method.
+        create_edge_circuit_fixed_node(theta): Creates the parameterized quantum circuit for an edge when one node is fixed.
+        getPauliOperator(k_cuts, color_encoding): Returns the Pauli operators for the cost Hamiltonian for the given k and encoding.
+
+    """
     def __init__(
         self,
         G: nx.Graph,
@@ -20,6 +40,16 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
         method: str = "Diffusion",
         fix_one_node: bool = False,  # this fixes the last node to color 1, i.e., one qubit gets removed
     ) -> None:
+        """
+        Args:
+            G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
+            k_cuts (int): The number of partitions (colors) to cut the graph into (must be a power of two).
+            method (str): The method used for circuit construction ("PauliBasis" or "Diffusion").
+            fix_one_node (bool): If True, fixes the last node to a specific color, reducing the number of variables.
+
+        Raises:
+            ValueError: If k_cuts is not a power of two, is less than 2, greater than 8, or if method is not valid.
+        """
         MaxKCutBinaryPowerOfTwo.validate_parameters(k_cuts, method)
 
         self.k_cuts = k_cuts
@@ -36,7 +66,13 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
     @staticmethod
     def is_power_of_two(k) -> bool:
         """
-        Return True if k is a power of two, False otherwise.
+        Checks if the given integer k is a power of two.
+
+        Args:
+            k (int): The integer to check.
+
+        Returns:
+            bool: True if k is a power of two, False otherwise.
         """
         if k > 0 and (k & (k - 1)) == 0:
             return True
@@ -44,6 +80,18 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
 
     @staticmethod
     def validate_parameters(k, method) -> None:
+        """
+        Validates the input parameters for k and method.
+
+        Args:
+            k (int): Number of partitions (colors).
+            method (str): Circuit construction method ("PauliBasis" or "Diffusion").
+
+        Raises:
+            ValueError: If k is not a power of two.
+            ValueError: If k is less than 2 or greater than 8.
+            ValueError: If method is not valid.
+        """
         ### 1) k_cuts must be a power of 2
         if not MaxKCutBinaryPowerOfTwo.is_power_of_two(k):
             raise ValueError("k_cuts must be a power of two")
@@ -60,6 +108,12 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
             raise ValueError("method must be in " + str(valid_methods))
 
     def construct_colors(self):
+        """
+        Constructs the mapping from binary strings to color classes based on k.
+
+        Raises:
+            ValueError: If k_cuts is not supported.
+        """
         if self.k_cuts == 2:
             self.colors = {"color1": ["0"], "color2": ["1"]}
         elif self.k_cuts == 4:
@@ -87,6 +141,15 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
                 self.bitstring_to_color[index] = key
 
     def create_edge_circuit(self, theta):
+        """
+        Creates the parameterized quantum circuit for an edge, according to the chosen method.
+
+        Args:
+            theta (float): The phase parameter.
+
+        Returns:
+            qc (QuantumCircuit): The constructed quantum circuit for the edge.
+        """
         qc = QuantumCircuit(2 * self.N_qubits_per_node)
         if self.method == "PauliBasis":
             qc.append(PauliEvolutionGate(self.op, time=theta), qc.qubits)
@@ -112,6 +175,15 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
         return qc
 
     def create_edge_circuit_fixed_node(self, theta):
+        """
+        Creates the parameterized quantum circuit for an edge when one node is fixed.
+
+        Args:
+            theta (float): The phase parameter.
+
+        Returns:
+            qc (QuantumCircuit): The constructed quantum circuit for the edge with a fixed node.
+        """
         qc = QuantumCircuit(self.N_qubits_per_node)
         if self.method == "PauliBasis":
             qc.append(PauliEvolutionGate(self.ophalf, time=-theta), qc.qubits)
@@ -127,6 +199,17 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
         return qc
 
     def getPauliOperator(self, k_cuts, color_encoding):
+        """
+        Returns the Pauli operators for the cost Hamiltonian for the given k and encoding.
+
+        Args:
+            k_cuts (int): Number of partitions (colors).
+            color_encoding (str): The encoding scheme for colors.
+
+        Returns:
+            op (SparsePauliOp): The full Pauli operator for the cost Hamiltonian.
+            ophalf (SparsePauliOp): The half Pauli operator for the fixed-node case.
+        """
         # flip Pauli strings, because of qiskit's little endian encoding
         if k_cuts == 2:
             P = [

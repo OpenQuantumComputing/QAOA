@@ -9,7 +9,12 @@ from .base_initialstate import InitialState
 
 class Dicke1_2(InitialState):
     """
-    Returs equal superposition Dicke 1 and Dicke 2 states. Hard Coded
+    Dicke1_2 initial state.
+
+    Subclass of the `InitialState` class, and it returns equal superposition Dicke 1 and Dicke 2 states. It is Hard Coded for the case of Hamming weight k = 6
+
+    Methods:
+        create_circuit(): Creates a circuit that is a superposition of Dicke 1 and Dicke 2 states
     """
 
     def __init__(self) -> None:
@@ -17,6 +22,9 @@ class Dicke1_2(InitialState):
         self.N_qubits = 3
 
     def create_circuit(self) -> None:
+        """
+        Circuit to prepare a superposition of Dicke 1 and Dicke 2 states
+        """
         q = QuantumRegister(self.N_qubits)
         circuit = QuantumCircuit(q)
         X = SparsePauliOp("X")

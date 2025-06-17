@@ -14,6 +14,36 @@ from .maxkcut_binary_powertwo import MaxKCutBinaryPowerOfTwo
 
 
 class MaxKCutBinaryFullH(GraphProblem):
+    """
+    Max k-CUT Binary Full H graph problem.
+    
+    Subclass of the `GraphProblem` class, and it implements the Max k-Cut problem using a binary encoding and full Hamiltonian construction for QAOA.
+    This class supports several encoding and circuit construction methods for different values of k, and allows for
+    flexible color encodings and optional node fixing.
+
+    Attributes:
+        G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
+        k_cuts (int): The number of partitions (colors) to cut the graph into.
+        color_encoding (str): The encoding scheme for colors, e.g., "LessThanK" or "max_balanced".
+        method (str): The method used for circuit construction, one of "PauliBasis", "PowerOfTwo", or "Diffusion".
+        fix_one_node (bool): If True, fixes the last node to a specific color, reducing the number of variables.
+        N_qubits_per_node (int): Number of qubits used to encode each node.
+        colors (dict): Maps color labels to lists of binary strings representing that color.
+        bitstring_to_color (dict): Maps each binary string to its corresponding color label.
+        mkcb_pot (MaxKCutBinaryPowerOfTwo): Helper instance for the "PowerOfTwo" method (if used).
+        N_ancilla_qubits (int): Number of ancilla qubits required for the "PowerOfTwo" method.
+        op (SparsePauliOp): The full Pauli operator for the cost Hamiltonian (if using "PauliBasis").
+        ophalf (SparsePauliOp): The half Pauli operator for the fixed-node case (if using "PauliBasis").
+
+    Methods:
+        validate_parameters(k, method, fix_one_node): Validates the input parameters for k, method, and fix_one_node.
+        construct_colors(): Constructs the mapping from binary strings to color classes based on k and encoding.
+        apply_N(circuit, binary_str1, binary_str2): Applies X gates to the circuit to map between two binary color encodings.
+        add_equalize_color(qc, bs1, bs2, theta): Adds gates to the circuit to equalize the phase between two color encodings.
+        create_edge_circuit(theta): Creates the parameterized quantum circuit for an edge, according to the chosen method.
+        create_edge_circuit_fixed_node(theta): Creates the parameterized quantum circuit for an edge when one node is fixed.
+        getPauliOperator(k_cuts, color_encoding): Returns the Pauli operators for the cost Hamiltonian for the given k and encoding.
+    """
     def __init__(
         self,
         G: nx.Graph,
@@ -22,6 +52,14 @@ class MaxKCutBinaryFullH(GraphProblem):
         method: str = "Diffusion",
         fix_one_node: bool = False,  # this fixes the last node to color 1, i.e., one qubit gets removed
     ) -> None:
+        """
+        Args:
+            G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
+            k_cuts (int): The number of partitions (colors) to cut the graph into.
+            color_encoding (str): The encoding scheme for colors, e.g., "LessThanK" or "max_balanced".
+            method (str): The method used for circuit construction, one of "PauliBasis", "PowerOfTwo", or "Diffusion".
+            fix_one_node (bool): If True, fixes the last node to a specific color, reducing the number of variables.
+        """
         MaxKCutBinaryFullH.validate_parameters(k_cuts, method, fix_one_node)
 
         self.k_cuts = k_cuts
@@ -49,6 +87,19 @@ class MaxKCutBinaryFullH(GraphProblem):
 
     @staticmethod
     def validate_parameters(k, method, fix_one_node) -> None:
+        """
+        Validates the input parameters for k, method, and fix_one_node.
+
+        Args:
+            k (int): Number of partitions (colors).
+            method (str): Circuit construction method ("PauliBasis", "PowerOfTwo", or "Diffusion").
+            fix_one_node (bool): Whether to fix the last node to a specific color.
+
+        Raises:
+            ValueError: If k is not in [3, 5, 6, 7].
+            ValueError: If method is not valid.
+            ValueError: If method is "PowerOfTwo" and fix_one_node is True.
+        """
         ### 1) k_cuts needs to be 3, 5, 6, or 7
         valid_ks = [3, 5, 6, 7]
         if k not in valid_ks:
@@ -65,6 +116,12 @@ class MaxKCutBinaryFullH(GraphProblem):
             )
 
     def construct_colors(self):
+        """
+        Constructs the mapping from binary strings to color classes based on k and encoding.
+
+        Raises:
+            ValueError: If color_encoding is invalid or unspecified for the given k.
+        """
         if self.k_cuts == 3:
             if self.color_encoding == "LessThanK":
                 self.colors = {
@@ -134,6 +191,17 @@ class MaxKCutBinaryFullH(GraphProblem):
                 self.bitstring_to_color[index] = key
 
     def apply_N(self, circuit, binary_str1, binary_str2):
+        """
+        Applies X gates to the circuit to map between two binary color encodings.
+
+        Args:
+            circuit (QuantumCircuit): The quantum circuit to modify.
+            binary_str1 (str): Binary string for the first color encoding.
+            binary_str2 (str): Binary string for the second color encoding.
+
+        Returns:
+            circuit (QuantumCircuit): The modified quantum circuit.
+        """
         # Apply X-gates based on the first binary string
         for i, bit in enumerate(binary_str1):
             if bit == "0":
@@ -147,6 +215,18 @@ class MaxKCutBinaryFullH(GraphProblem):
         return circuit
 
     def add_equalize_color(self, qc, bs1, bs2, theta):
+        """
+        Adds gates to the circuit to equalize the phase between two color encodings.
+
+        Args:
+            qc (QuantumCircuit): The quantum circuit to modify.
+            bs1 (str): Binary string for the first color encoding.
+            bs2 (str): Binary string for the second color encoding.
+            theta (float): The phase parameter.
+
+        Returns:
+            qc (QuantumCircuit): The modified quantum circuit.
+        """
         qc = self.apply_N(qc, bs1, bs2)
         qc.barrier()
         qc.mcx(
@@ -187,6 +267,15 @@ class MaxKCutBinaryFullH(GraphProblem):
         return qc
 
     def create_edge_circuit(self, theta):
+        """
+        Creates the parameterized quantum circuit for a graph edge according to the chosen method and color encoding.
+
+        Args:
+            theta (float): The phase parameter for the circuit.
+
+        Returns:
+            qc (QuantumCircuit): The constructed quantum circuit for the edge.
+        """
         q = QuantumRegister(2 * self.N_qubits_per_node)
         if self.method == "PauliBasis":
             qc = QuantumCircuit(q)
@@ -313,6 +402,15 @@ class MaxKCutBinaryFullH(GraphProblem):
         return qc
 
     def create_edge_circuit_fixed_node(self, theta):
+        """
+        Creates the parameterized quantum circuit for an edge when one node is fixed to a specific color.
+
+        Args:
+            theta (float): The phase parameter for the circuit.
+
+        Returns:
+            qc (QuantumCircuit): The constructed quantum circuit for the edge with a fixed node.
+        """
         if self.method == "PauliBasis":
             qc = QuantumCircuit(self.N_qubits_per_node)
             qc.append(PauliEvolutionGate(self.ophalf, time=theta), qc.qubits)
@@ -321,6 +419,20 @@ class MaxKCutBinaryFullH(GraphProblem):
         return qc
 
     def getPauliOperator(self, k_cuts, color_encoding):
+        """
+        Returns the Pauli operators for the cost Hamiltonian for the given k and encoding.
+
+        Args:
+            k_cuts (int): Number of partitions (colors).
+            color_encoding (str): The encoding scheme for colors.
+
+        Raises:
+            ValueError: If color_encoding is invalid or unspecified for the given k.
+
+        Returns:
+            op (SparsePauliOp): The full Pauli operator for the cost Hamiltonian.
+            ophalf (SparsePauliOp): The half Pauli operator for the fixed-node case.
+        """
         # flip Pauli strings, because of qiskit's little endian encoding
         if k_cuts == 3:
             if color_encoding == "LessThanK":

@@ -9,9 +9,36 @@ from .tensor_initialstate import Tensor
 
 
 class MaxKCutFeasible(InitialState):
+    """
+    MaxKCutFeasible initial state.
+
+    Subclass of the `InitialState` class, and it determines the feasible states for the type of MAX k-CUT problem that is specified by the arguments. This specifies the number of cuts, number of qubits per vertex,
+    and method for solving the special case of k = 6.
+
+    Attributes: 
+        k_cuts (int): The number of cuts (or "colors") of the vertices in the MAX k-CUT problem is separated into.
+        problem_encoding (str): description of the type of problem, either "onehot" (which corresponds to ...) or "binary" (which corresponds to ...)
+        color_encoding (str): determines the approach to solving the MAX k-cut problem by following one of three methods, 
+                            either "Dicke1_2" (which corresponds to creating an initial state that is a superposition of the valid states that represents a color(only 6/8 possible states)),
+                            "LessThanK" (which corresponds to grouping states together and make the group represent one color),
+                            or "max_balanced" (which corresponds to the onehot case where a color corresponds to a state)
+
+    Methods:
+        create_circuit(): creates a circuit that creates an initial state for only feasible initial states of the MAX k-CUT problem given constraints
+    """
     def __init__(
         self, k_cuts: int, problem_encoding: str, color_encoding: str = "LessThanK"
     ) -> None:
+        """
+        Args:
+            k_cuts (int):
+            problem_encoding (str): description of the type of problem, either "onehot" (which corresponds to ...) or "binary" (which corresponds to ...)
+            color_encoding (str): determines the approach to solving the MAX k-cut problem by following one of three methods, 
+                                either "Dicke1_2" (which corresponds to creating an initial state that is a superposition of the valid states that represents a color(only 6/8 possible states)),
+                                "LessThanK" (which corresponds to grouping states together and make the group represent one color),
+                                or "max_balanced" (which corresponds to the onehot case where a color corresponds to a state). Defaults to "LessThanK".
+
+        """
         self.k_cuts = k_cuts
         self.problem_encoding = problem_encoding
         self.color_encoding = color_encoding
@@ -39,6 +66,10 @@ class MaxKCutFeasible(InitialState):
             self.infeasible = ["111"]
 
     def create_circuit(self) -> None:
+        """
+        Creates a circuit that creates the initial state (for only feasible states) for the MAX k-CUT problem given 
+        the methods and cuts given as arguments
+        """
         if self.problem_encoding == "binary":
             self.k_bits = int(np.ceil(np.log2(self.k_cuts)))
             self.num_V = self.N_qubits / self.k_bits
