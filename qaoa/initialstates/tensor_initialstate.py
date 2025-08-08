@@ -10,11 +10,11 @@ class Tensor(InitialState):
     """
     Tensor initial state.
 
-    Subclass of the `IntialState` class that creates a tensor out of a circuit
+    Subclass of the `IntialState` class that creates a tensor out of a circuit.
 
     Attributions:
-        subcircuit (InitialState): the circuit that is to be tensorised
-        num (int): number of qubits of the subpart 
+        subcircuit (InitialState): The circuit that is to be tensorised.
+        num (int): Number of qubits of the subpart .
 
     Methods:
         create_circuit(): 
@@ -22,8 +22,8 @@ class Tensor(InitialState):
     def __init__(self, subcircuit: InitialState, num: int) -> None:
         """
         Args:
-            subcircuit (InitialState): the circuit that is to be tensorised
-            num (int): number of qubits of the subpart #subN_qubits
+            subcircuit (InitialState): The circuit that is to be tensorised.
+            num (int): Number of qubits of the subpart #subN_qubits.
         """
         self.num = num
         self.subcircuit = subcircuit
@@ -31,7 +31,7 @@ class Tensor(InitialState):
 
     def create_circuit(self) -> None:
         """
-        Creates a circuit that tensorises a given subcircuit
+        Creates a circuit that tensorises a given subcircuit.
         """
         self.subcircuit.create_circuit()
         self.circuit = self.subcircuit.circuit
