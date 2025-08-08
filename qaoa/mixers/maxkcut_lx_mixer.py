@@ -17,7 +17,7 @@ class MaxKCutLX(Mixer):
 
     Attributes:
         k_cuts (int): The number of cuts in the Max k-Cut problem.
-        color_encoding (str): The encoding of colors, can be "LessThanK", "Dicke1_2", or "max_balanced".
+        color_encoding (str): The encoding of colors, can be "LessThanK", "Dicke1_2" or "max_balanced".
         topology (str): The topology of the mixer, either "standard" or "ring".
 
     Methods:
@@ -32,7 +32,7 @@ class MaxKCutLX(Mixer):
 
         Args:
             k_cuts (int): The number of cuts in the Max k-Cut problem.
-            color_encoding (str): The encoding of colors, can be "LessThanK", "Dicke1_2", or "max_balanced".
+            color_encoding (str): The encoding of colors, can be "LessThanK", "Dicke1_2" or "max_balanced".
             topology (str): The topology of the mixer, either "standard" or "ring".
 
         Raises:

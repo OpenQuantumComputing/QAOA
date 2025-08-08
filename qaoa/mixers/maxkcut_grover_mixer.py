@@ -17,7 +17,7 @@ class MaxKCutGrover(Mixer):
     Attributes:
         k_cuts (int): The number of cuts in the Max k-Cut problem.
         problem_encoding (str): The encoding of the problem, either "onehot" or "binary".
-        color_encoding (str): The encoding of colors, can be "max_balanced", "Dicke1_2", or "LessThanK".
+        color_encoding (str): The encoding of colors, can be "max_balanced", "Dicke1_2" or "LessThanK".
         tensorized (bool): Whether to use tensorization for the mixer.
 
     Methods:
@@ -35,7 +35,7 @@ class MaxKCutGrover(Mixer):
         Args:
             k_cuts (int): The number of cuts in the Max k-Cut problem.
             problem_encoding (str): The encoding of the problem, either "onehot" or "binary".
-            color_encoding (str): The encoding of colors, can be "max_balanced", "Dicke1_2", or "LessThanK".
+            color_encoding (str): The encoding of colors, can be "max_balanced", "Dicke1_2" or "LessThanK".
             tensorized (bool): Whether to use tensorization for the mixer.
 
         Raises:

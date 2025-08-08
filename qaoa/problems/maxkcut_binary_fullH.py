@@ -17,15 +17,16 @@ class MaxKCutBinaryFullH(GraphProblem):
     """
     Max k-CUT Binary Full H graph problem.
     
-    Subclass of the `GraphProblem` class, and it implements the Max k-Cut problem using a binary encoding and full Hamiltonian construction for QAOA.
+    Subclass of the `GraphProblem` class. Implements the Max k-Cut problem using a binary encoding and full Hamiltonian construction for QAOA.
+    Mainly used when k not a power of two and excess states must be grouped together to represent the same color.
     This class supports several encoding and circuit construction methods for different values of k, and allows for
     flexible color encodings and optional node fixing.
 
     Attributes:
         G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
         k_cuts (int): The number of partitions (colors) to cut the graph into.
-        color_encoding (str): The encoding scheme for colors, e.g., "LessThanK" or "max_balanced".
-        method (str): The method used for circuit construction, one of "PauliBasis", "PowerOfTwo", or "Diffusion".
+        color_encoding (str): The encoding scheme for colors, e.g. "LessThanK" or "max_balanced".
+        method (str): The method used for circuit construction, one of "PauliBasis", "PowerOfTwo" or "Diffusion".
         fix_one_node (bool): If True, fixes the last node to a specific color, reducing the number of variables.
         N_qubits_per_node (int): Number of qubits used to encode each node.
         colors (dict): Maps color labels to lists of binary strings representing that color.

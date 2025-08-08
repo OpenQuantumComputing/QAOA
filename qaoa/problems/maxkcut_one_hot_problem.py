@@ -10,7 +10,7 @@ class MaxKCutOneHot(Problem):
     Max k-CUT problem using one-hot encoding.
 
     Subclass of the `Problem` class. This class formulates the Max k-Cut problem for a given graph using a one-hot encoding for node colors.
-    It provides methods to convert bitstrings to color labels, compute the cut value, and construct the corresponding quantum circuit.
+    It provides methods to convert bitstrings to color labels, compute the cut value and construct the corresponding quantum circuit.
 
     Attributes:
         G (nx.Graph): The input graph on which the Max k-Cut problem is defined.

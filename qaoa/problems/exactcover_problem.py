@@ -12,7 +12,7 @@ class ExactCover(Problem):
     """
     Exact cover problem.
 
-    Subclass of the `Problem` class, and it contains the methods to create the exact cover problem, which is the problem of whether 
+    Subclass of the `Problem` class. Contains the methods to create the exact cover problem, which is the problem of whether 
     it is possible to cover all elements of a set exactly once by using some subsets.
 
     Attributes:
@@ -22,9 +22,9 @@ class ExactCover(Problem):
 
     Methods:
         cost(): Calculates the cost of a given solution.
-        create_circuit(): creates a parameterized circuit corresponding to the cost function.
-        isFeasible(): checks if a given bitstring represents a feasible solution to the problem.
-        _exactCover(): computes the penalty for a given solution vector x, measuring how far it is from being an exact cover.
+        create_circuit(): Creates a parameterized circuit corresponding to the cost function.
+        isFeasible(): Checks if a given bitstring represents a feasible solution to the problem.
+        _exactCover(): Computes the penalty for a given solution vector x, measuring how far it is from being an exact cover.
     """
     def __init__(
         self,

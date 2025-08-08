@@ -16,8 +16,9 @@ class MaxKCutBinaryPowerOfTwo(GraphProblem):
     """
     Max k-CUT binary power of two graph problem.
 
-    Subclass of the `GraphProblem` class. This class implements the Max k-Cut problem for graphs where the number of colors (k) is a power of two, using a binary encoding for node colors. It provides methods for constructing color mappings, generating quantum circuits for edges, and building the corresponding cost Hamiltonian in the Pauli basis.
-
+    Subclass of the `GraphProblem` class. This class uses binary encoding for the problem when k is a power of two,
+    or when k has been rounded up to the nearest power of two. 
+    
     Attributes:
         G (nx.Graph): The input graph on which the Max k-Cut problem is defined.
         k_cuts (int): The number of partitions (colors) to cut the graph into (must be a power of two).

@@ -6,9 +6,9 @@ from .base_initialstate import InitialState
 
 class StateVector(InitialState):
     """
-    State vector initial state. 
+    State vector initial state. For custom initial states.
 
-    Subclass of the `InitialState` class, and it creates the initial statevector.
+    Subclass of the `InitialState` class.
 
     Attributes:
         statevector (list): The statevector to initialize the circuit with.

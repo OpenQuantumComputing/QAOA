@@ -9,14 +9,14 @@ class LessThanK(InitialState):
     """
     LessThanK initial state.
 
-    Subclass for the `InitialState` class, and it creates a quantum circuit that creates the initial state for the for the MAX k-CUT problem for
-    different cases of k subsets.
+    Subclass for the `InitialState` class. Creates a quantum circuit representing the initial state for the for the MAX k-CUT problem.
+    For k not a power of two, the initial state is a superposition of k feasible states from the computational basis.
 
     Attributes:
-        k (int): subsets (or "colors") of the vertices in the MAX k-CUT problem is seperated into
+        k (int): subsets (or "colors") of the vertices in the MAX k-CUT problem is seperated into.
 
     Methods:
-        create_circuit(): creates a circuit that can create the wanted initial state for the special k
+        create_circuit(): Generates a circuit that creates the initial state from the |0> state.
     """
     def __init__(self, k: int) -> None:
         """
@@ -69,10 +69,10 @@ class LessThanK(InitialState):
 
     def power_of_two(self) -> QuantumCircuit:
         """
-        Creates a circuit for the case k = a power of 2
+        Creates a circuit for the case where k is a power of two.
 
         Returns:
-            QuantumCircuit: circuit that creates the initial state for k = a power of 2
+            QuantumCircuit: Quantum circuit. 
         """
         q = QuantumRegister(self.N_qubits)
         circuit = QuantumCircuit(q)
@@ -81,10 +81,10 @@ class LessThanK(InitialState):
 
     def k3(self) -> QuantumCircuit:
         """
-        Creates a circuit for the case k = 3
+        Creates a circuit for the case k = 3.
 
         Returns:
-            QuantumCircuit: circuit that creates the initial state for k = 3
+            QuantumCircuit: Quantum circuit.
         """
         q = QuantumRegister(self.N_qubits)
         circuit = QuantumCircuit(q)
@@ -98,10 +98,10 @@ class LessThanK(InitialState):
 
     def k5(self) -> QuantumCircuit:
         """
-        Creates a circuit for the case k = 5
+        Creates a circuit for the case k = 5.
 
         Returns:
-            QuantumCircuit: circuit that creates the initial state for k = 5
+            QuantumCircuit: Quantum circuit. 
         """
         q = QuantumRegister(self.N_qubits)
         circuit = QuantumCircuit(q)
@@ -112,10 +112,10 @@ class LessThanK(InitialState):
 
     def k6(self) -> QuantumCircuit:
         """
-        Creates a circuit for the case k = 6
+        Creates a circuit for the case k = 6.
 
         Returns:
-            QuantumCircuit: circuit that creates the initial state for k = 6
+            QuantumCircuit: Quantum circuit.
         """
         q = QuantumRegister(self.N_qubits)
         circuit = QuantumCircuit(q)
@@ -131,10 +131,10 @@ class LessThanK(InitialState):
 
     def k7(self) -> QuantumCircuit:
         """
-        Creates a circuit for the case k = 7
+        Creates a circuit for the case k = 7.
 
         Returns:
-            QuantumCircuit: circuit that creates the initial state for k = 7
+            QuantumCircuit: uantum circuit.
         """
         q = QuantumRegister(self.N_qubits)
         circuit = QuantumCircuit(q)

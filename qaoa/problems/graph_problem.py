@@ -10,7 +10,7 @@ class GraphProblem(Problem):
     """
     Graph problem.
 
-    Subclass of the `Problem` class, and it creates a quantum circuit for a general graph problem.
+    Subclass of the `Problem` class. Creates a quantum circuit for a general graph problem.
 
     Attributes:
         G: The graph to be used in the problem.
@@ -18,12 +18,12 @@ class GraphProblem(Problem):
         fix_one_node (bool): If True, fixes the last node to "color1". 
     
     Methods:
-        create_edge_circuit(theta): abstract method to create circuit for an edge
-        create_edge_circuit_fixed_node(theta): abstract method to create circuit for an edge where one node is fixed
-        create_circuit(): creates a circuit for the graph problem.
-        same_color(str1, str2): checks if two strings map to the same color.
+        create_edge_circuit(theta): Abstract method to create circuit for an edge
+        create_edge_circuit_fixed_node(theta): Abstract method to create circuit for an edge where one node is fixed
+        create_circuit(): Creates a circuit for the graph problem.
+        same_color(str1, str2): Checks if two strings map to the same color.
         slice_string(string): Convert a binary string to a list of labels for each node.
-        cost(string): creates a cost function for the given solution
+        cost(string): Creates a cost function for the given solution.
         
     """
     def __init__(
@@ -55,7 +55,7 @@ class GraphProblem(Problem):
     @abstractmethod
     def create_edge_circuit(self, theta):
         """
-        Abstract method to create circuit for an edge
+        Abstract method to create circuit for an edge.
         
         Args:
             theta: Parameter for the edge circuit.
@@ -65,7 +65,7 @@ class GraphProblem(Problem):
     @abstractmethod
     def create_edge_circuit_fixed_node(self, theta):
         """
-        Abstract method to create circuit for an edge where one node is fixed
+        Abstract method to create circuit for an edge where one node is fixed.
         
         Args:
             theta: Parameter for the edge circuit.
