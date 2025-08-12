@@ -106,7 +106,6 @@ celerybeat.pid
 .venv
 env/
 venv/
-.venv_langchain/
 ENV/
 env.bak/
 venv.bak/
@@ -137,5 +136,4 @@ dmypy.json
 *.sh
 
 # Embedding for agent 
-agent_embedding
 embeddings/
