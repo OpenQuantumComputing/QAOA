@@ -1,0 +1,5 @@
+The valid initial states are Dicke, Dicke1_2, Plus, LessThanK, StateVector
+
+The valid mixers are X, XY, Groover, MaxKCutGrover, MaxKCutLX
+
+The valid problems are ExactCover, GraphProblem, MaxKCutOneHot, MaxKCutBinaryPowerOfTwo, MaxKCutBinaryFullH, PortifolioOptimization
