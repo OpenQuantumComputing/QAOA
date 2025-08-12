@@ -16,10 +16,10 @@ from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 
 # ----- Helper imports -----
-from embeddings import SaveEmbedding
+from saveembedding import SaveEmbedding
 
-repo_root = Path(__file__).resolve().parent
-DEFAULT_CONTEXT = [repo_root+"/examples/MaxCut/KCutExamples.ipynb", repo_root+"/qaoa/qaoa.py"]
+repo_root = Path(__file__).resolve().parent.parent  # Go up to QAOA_Sanne root
+DEFAULT_CONTEXT = [repo_root / "examples" / "MaxCut" / "KCutExamples.ipynb", repo_root / "qaoa" / "qaoa.py"]
 
 class Coder:
     """
