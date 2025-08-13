@@ -26,8 +26,8 @@ class Explainer:
         if embedding is not None:
             # Making paths where the embeddings are saved and getting the directory of the current file
             current_dir = Path(__file__).resolve().parent
-            persist_path = current_dir / "embeddings" / "Explainer_embedding"
-            cache_path = current_dir / "embeddings" / "Explainer_cache"
+            persist_path = str(current_dir / "embeddings" / "Explainer_embedding")
+            cache_path = str(current_dir / "embeddings" / "Explainer_cache")
             
 
             # Create or extract an embedding that is saved in the persist_path
