@@ -2,7 +2,6 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain, LLMChain
 from langchain.memory import ConversationBufferMemory
 from langchain.chat_models import init_chat_model
-import os
 
 # ----- Helper imports -----
 from saveembedding import SaveEmbedding
@@ -25,12 +24,8 @@ class Explainer:
         self.context = ""
 
         if embedding is not None:
-            # Making paths where the embeddings are saved
-            # Get the directory of the current file
-            # Get the directory of the current file
+            # Making paths where the embeddings are saved and getting the directory of the current file
             current_dir = Path(__file__).resolve().parent
-
-            # Join it with the subfolder 'explainer_embedding'
             persist_path = current_dir / "embeddings" / "Explainer_embedding"
             cache_path = current_dir / "embeddings" / "Explainer_cache"
             
