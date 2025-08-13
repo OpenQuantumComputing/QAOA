@@ -137,6 +137,23 @@ For example, for the standard MaxCut problem above where the X mixer was used, o
 <!--find out the number of qubits we want here -->
 
 ***
+### Talk to an agent
+In the code, there is also included an "agent" folder, which has implemented a specialized QAOA agent. It is possible to ask the agent for either code that implements, or explanations about, the QAOA package.
+
+There are two ways to run the agents. Either one can run the agent in the terminal, or run an interface.
+
+To run the agent directly from the terminal, one can simply open the agent folder and run the file planner.py. It is then possible to ask it questions as inputs from the terminal.
+
+To run the interface, open the agent folder, and run streamlit by typing: streamlit run interface.py
+The following window will pop up:
+
+<img src="images\interface.png" alt="QAOA Agent interface startup page" width=500/>
+<br><br>
+It is then possible to ask questions in the text box. An example could be:
+<img src="images\interface_output.png" alt="QAOA Agent interface with question page" width=500/>
+
+For the agent application the following dependencies are needed: langchain, langchain_community, langchain_chroma, langchain_openai and optionally streamlit (for the interface). Additionally, an API-KEY is needed. 
+***
 ### Example usage
 
 See [examples here](examples/).
