@@ -27,11 +27,13 @@ class Explainer:
         if embedding is not None:
             # Making paths where the embeddings are saved
             # Get the directory of the current file
-            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # Get the directory of the current file
+            current_dir = Path(__file__).resolve().parent
 
             # Join it with the subfolder 'explainer_embedding'
-            persist_path = os.path.join(current_dir, "embeddings\Explainer_embedding")
-            cache_path = os.path.join(current_dir, "embeddings\Explainer_cache")
+            persist_path = current_dir / "embeddings" / "Explainer_embedding"
+            cache_path = current_dir / "embeddings" / "Explainer_cache"
+            
 
             # Create or extract an embedding that is saved in the persist_path
             make_or_get_embedding = SaveEmbedding(
