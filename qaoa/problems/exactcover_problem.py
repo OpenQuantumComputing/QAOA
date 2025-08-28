@@ -31,6 +31,7 @@ class ExactCover(Problem):
         columns,
         weights=None,
         penalty_factor=1,
+        allow_infeasible = False
     ) -> None:
         """
         Args:
@@ -42,6 +43,7 @@ class ExactCover(Problem):
         self.columns = columns
         self.weights = weights
         self.penalty_factor = penalty_factor
+        self.allow_infeasible = allow_infeasible
 
         colSize = columns.shape[0]  ### Size per column
         numColumns = columns.shape[1]  ### number of columns/qubits
@@ -60,7 +62,7 @@ class ExactCover(Problem):
         c_e = self.__exactCover(x)
 
         if self.weights is None:
-            return -c_e
+            return -self.penalty_factor * c_e
         else:
             return -(self.weights @ x + self.penalty_factor * c_e)
 
@@ -110,7 +112,7 @@ class ExactCover(Problem):
         """
         x = np.array(list(map(int, string)))
         c_e = self.__exactCover(x)
-        return math.isclose(c_e, 0, abs_tol=1e-7)
+        return math.isclose(c_e, 0, abs_tol=1e-7) or self.allow_infeasible
 
     def __exactCover(self, x):
         """
