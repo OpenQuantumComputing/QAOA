@@ -28,7 +28,8 @@ def __plot_landscape(A, extent, fig):
     im = ax.imshow(A, interpolation="bicubic", origin="lower", extent=extent)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    _ = plt.colorbar(im, cax=cax)
+    _ = pl.colorbar(im, cax=cax)
+    return fig, ax
 
 
 def plot_E(qaoa_instance, fig=None):
@@ -278,6 +279,26 @@ def plot_optimalHitRatios(qaoa, optimal_solution, shots=1024, fig=None, label=No
     pl.legend()
     pl.xlabel("depth")
     pl.ylabel("Hit ratio for optimal solution")
+    if title:
+        pl.title(title)
+
+
+def plot_feasibleHitRatios(qaoa, shots=1024, fig=None, label=None, style="", title=None, **kwargs):
+
+    # Compute the rate at which the best angles gives us feasible solutions
+    hit_rates = np.zeros(qaoa.current_depth)
+    for d in range(qaoa.current_depth):
+        hist = qaoa.hist(qaoa.optimization_results[d+1].get_best_angles(), shots)
+        num_hits = 0
+        for bitstring, hits in hist.items():
+            if qaoa.problem.isFeasible(bitstring):
+                num_hits += hits        
+        hit_rates[d] = num_hits/shots
+    
+    pl.plot(np.arange(1, qaoa.current_depth+1), hit_rates, style, label=label, **kwargs)
+    pl.legend()
+    pl.xlabel("depth")
+    pl.ylabel("Hit ratio for feasible solutions")
     if title:
         pl.title(title)
 
