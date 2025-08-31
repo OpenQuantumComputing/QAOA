@@ -30,7 +30,6 @@ class Grover(Mixer):
         """
         self.subcircuit = subcircuit
         self.mixer_param = Parameter("x_beta")
-        self.N_qubits = subcircuit.N_qubits
 
     def create_circuit(self):
         """
@@ -41,6 +40,7 @@ class Grover(Mixer):
         The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US.
         """
 
+        self.subcircuit.setNumQubits(self.N_qubits)
         self.subcircuit.create_circuit()
         US = self.subcircuit.circuit
 
