@@ -28,7 +28,7 @@ def __plot_landscape(A, extent, fig):
     im = ax.imshow(A, interpolation="bicubic", origin="lower", extent=extent)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    _ = pl.colorbar(im, cax=cax)
+    _ = plt.colorbar(im, cax=cax)
     return fig, ax
 
 
@@ -207,9 +207,9 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
     Consept taken from Figure 1 a) and b) in https://arxiv.org/pdf/2209.11348.pdf 
     """
     maxdepth = qaoa.current_depth
-    fig, axs = pl.subplots(2, 2, figsize=figsize, constrained_layout=False, sharex=True)
+    fig, axs = plt.subplots(2, 2, figsize=figsize, constrained_layout=False, sharex=True)
     axs = [None]*4
-    axs[0] = pl.subplot(2, 2, 1)
+    axs[0] = plt.subplot(2, 2, 1)
     labelsLeft = []
     for p in range(1, maxdepth+1):
         labelsLeft.append("p = "+str(p))
@@ -217,7 +217,7 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
     axs[0].set_ylabel(r'$\gamma_j$')
     axs[0].grid()
 
-    axs[1] = pl.subplot(2, 2, 3)
+    axs[1] = plt.subplot(2, 2, 3)
     for p in range(1, maxdepth+1):
         axs[1].plot(np.arange(1, p+1), qaoa.get_beta(p), linestyle='-', marker='o')
     axs[1].grid()
@@ -226,14 +226,14 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
 
 
 
-    pl.xticks(np.arange(1,maxdepth+1))
+    plt.xticks(np.arange(1,maxdepth+1))
     fig.subplots_adjust(bottom=0.15)   ##  Need to play with this number.
 
     fig.legend(labels=labelsLeft, loc='upper left', bbox_to_anchor=(0.08, 1.08), ncol=int(np.ceil(maxdepth/2)))
 
 
 
-    axs[2] = pl.subplot(2, 2, 2)
+    axs[2] = plt.subplot(2, 2, 2)
     labelsRight = []
     allGammas = [qaoa.get_gamma(p) for p in range(1, maxdepth+1)]
     allBetas = [qaoa.get_beta(p) for p in range(1, maxdepth+1)]
@@ -245,7 +245,7 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
     axs[2].set_ylabel(r'$\gamma_j$')
     axs[2].grid()
 
-    axs[3] = pl.subplot(2, 2, 4)
+    axs[3] = plt.subplot(2, 2, 4)
     for p in range(1, maxdepth+1):
         indexDevelopment = [allBetas[i][p-1] for i in range(p-1, maxdepth)]
         axs[3].plot(np.arange(p, maxdepth+1), indexDevelopment, label=labelsRight[-1], linestyle='-', marker='o')
@@ -254,7 +254,7 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
     axs[3].set_xlabel('Circuit depth, $p$')
 
 
-    pl.xticks(np.arange(1,maxdepth+1))
+    plt.xticks(np.arange(1,maxdepth+1))
     fig.subplots_adjust(bottom=0.15)   ##  Need to play with this number.
 
     fig.legend(labels=labelsRight, loc='upper right', bbox_to_anchor=(0.95, 1.08), ncol=int(np.ceil(maxdepth/2)))
@@ -275,12 +275,12 @@ def plot_optimalHitRatios(qaoa, optimal_solution, shots=1024, fig=None, label=No
             num_hits = hist[optimal_sol]
             hit_rates[d] = num_hits/shots
     
-    pl.plot(np.arange(1, qaoa.current_depth+1), hit_rates, style, label=label, **kwargs)
-    pl.legend()
-    pl.xlabel("depth")
-    pl.ylabel("Hit ratio for optimal solution")
+    plt.plot(np.arange(1, qaoa.current_depth+1), hit_rates, style, label=label, **kwargs)
+    plt.legend()
+    plt.xlabel("depth")
+    plt.ylabel("Hit ratio for optimal solution")
     if title:
-        pl.title(title)
+        plt.title(title)
 
 
 def plot_feasibleHitRatios(qaoa, shots=1024, fig=None, label=None, style="", title=None, **kwargs):
@@ -295,30 +295,32 @@ def plot_feasibleHitRatios(qaoa, shots=1024, fig=None, label=None, style="", tit
                 num_hits += hits        
         hit_rates[d] = num_hits/shots
     
-    pl.plot(np.arange(1, qaoa.current_depth+1), hit_rates, style, label=label, **kwargs)
-    pl.legend()
-    pl.xlabel("depth")
-    pl.ylabel("Hit ratio for feasible solutions")
+    plt.plot(np.arange(1, qaoa.current_depth+1), hit_rates, style, label=label, **kwargs)
+    plt.legend()
+    plt.xlabel("depth")
+    plt.ylabel("Hit ratio for feasible solutions")
     if title:
-        pl.title(title)
+        plt.title(title)
 
 
 
 def printBestHistogramEntries( qaoa, classical_solution = None, num_solutions=10, shots=1024):
 
+    best_classical_sol = None
+    if classical_solution is not None:
+        best_classical_sol = np2str(classical_solution)
+        print("Classical best result: ", (best_classical_sol, qaoa.problem.cost(best_classical_sol)))
+        print(" --> points to the classical solution ")
+    print("   * marks feasible solutions ")
     for p in range(1, qaoa.current_depth+1):
         hist = qaoa.hist(qaoa.optimization_results[p].get_best_angles(), shots=shots)
 
         sorted_hist = dict(sorted(hist.items(), key=lambda item: item[1], reverse=True))
 
-        best_classical_sol = None
-        if classical_solution is not None:
-            best_classical_sol = np2str(classical_solution)
-            print("Classical best result: ", (best_classical_sol, qaoa.problem.cost(best_classical_sol)))
-
         i = 1
         best_classical_sol_freq = None
         best_classical_sol_i = None
+        print("Results for depth "+str(p)+" using best angles:")
         for s, freq in sorted_hist.items():
             cost = qaoa.problem.cost(s)
             if i == 1:
