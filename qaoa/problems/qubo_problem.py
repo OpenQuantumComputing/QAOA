@@ -97,8 +97,17 @@ class QUBO(Problem):
         Returns:
             float: The cost of the solution.
         """
+        return self.qubo_cost(string)
+
+    def qubo_cost(self, string):
+        """
+        For other other problems that are mapped to a QUBO, it is often useful to compare that the 
+        original cost function is equivalent to the qubo-transformed cost function.
+        This wrapper enables that validation check
+        """
         x = np.array(list(map(int, string)))
         return -(x.T @ self.QUBO_Q @ x + self.QUBO_c.T @ x + self.QUBO_b)
+
 
     def create_circuit(self):
         """
@@ -141,3 +150,54 @@ class QUBO(Problem):
                     # LOG.info("Adding rzz gate between qubits "+str(i)+" and "+str(j)+" with parameter Q[i,j] = "+str(Q[i, j]))
                     self.circuit.rzz(2*2*0.25*Q[i,j]*gamma, i, j)        
 
+    def validate_circuit(self, t=1, flip=True, atol=1e-8, rtol=1e-8):
+        """
+        Validates two elements:
+
+        1) That the QUBO cost function (self.qubo_cost) is equivalent to the problem-specific 
+        cost function (self.cost) 
+
+        2) Exact check that the problem's circuit represents the problem's cost function.
+        This tests checks that the unitary operator represented by the quantum circuit is
+        equal to the excepted matrix with diagonal elements 
+        exp(-j*t*cost(e)),
+        where e is the corresponding binary state, up to a global phase.
+        
+        Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).
+        Returns: (ok: bool, report: dict)
+        """
+
+        # Validate cost function transformation:
+        qubo_mapping_errors = 0
+        max_abs_error = 0
+        mismatches = []
+        n = self.N_qubits
+        for i in range(2**n):
+            bitstring = format(i, f'0{n}b')
+            cost = self.cost(bitstring)
+            qubo_cost = self.qubo_cost(bitstring)
+            abs_error = np.abs(cost - qubo_cost)
+            if (abs_error > atol):
+                qubo_mapping_errors += 1
+                max_abs_error = max(max_abs_error, abs_error)
+                if qubo_mapping_errors < 9:
+                    mismatches.append({
+                        "bitstring": list(bitstring),
+                        "cost": cost,
+                        "qubo_cost": qubo_cost,
+                        "abs_error": abs_error
+                    })
+
+        # If this first test fails, there is no need to check the circuit --> return a report
+        if qubo_mapping_errors > 0:
+            report = {
+                "n_qubits": self.N_qubits,
+                "max_error": abs_error,
+                "examples": mismatches
+            }
+            return False, report
+
+        # Validate mapping from cost function to quantum circuit:
+        circ_ok, circ_report = super().validate_circuit(t=t, flip=flip, atol=atol, rtol=rtol)
+        circ_report["max_qubo_cost_vs_cost_error"] = max_abs_error
+        return circ_ok, circ_report
