@@ -2,13 +2,14 @@ import math
 
 import numpy as np
 
-from .base_problem import Problem
+# from .base_problem import Problem
+from .qubo_problem import QUBO
 from qiskit import QuantumCircuit, QuantumRegister
 
 from qiskit.circuit import Parameter
 
 
-class ExactCover(Problem):
+class ExactCover(QUBO):
     """
     Exact cover problem.
 
@@ -30,16 +31,15 @@ class ExactCover(Problem):
         self,
         columns,
         weights=None,
-        penalty_factor=1,
+        penalty_factor=None,
         allow_infeasible = False
     ) -> None:
         """
         Args:
             columns (np.ndarray): Matrix where each column represents a subset.
             weights (np.ndarray or None): Optional weights for each subset. Defaults to None.
-            penalty_factor (float or int): Penalty factor for constraint violations. Defaults to 1.
+            penalty_factor (float, int or None): Penalty factor for constraint violations. If None (default) it is constructed as sum(abs(weights)).
         """
-        super().__init__()
         self.columns = columns
         self.weights = weights
         self.penalty_factor = penalty_factor
@@ -47,6 +47,28 @@ class ExactCover(Problem):
 
         colSize = columns.shape[0]  ### Size per column
         numColumns = columns.shape[1]  ### number of columns/qubits
+
+        if weights is None:
+            self.weights = np.zeros(numColumns)
+
+        if penalty_factor is None:
+            if np.all(self.weights == 0):
+                self.penalty_factor = 1
+            else:
+                # Very conservative penalty term
+                self.penalty_factor = np.sum(self.weights[self.weights > 0]) 
+
+ 
+        # Construct a QUBO for the penalized exact cover problem
+        # C(x) = x^T Q x + c^T x + b
+        c = self.weights - 2*self.penalty_factor*(np.ones(colSize) @ columns)
+        Q = self.penalty_factor * (self.columns.T @ self.columns)
+        b = self.penalty_factor*colSize
+
+        assert(Q.shape == (numColumns, numColumns))
+        assert(len(c) == numColumns)
+
+        super().__init__(Q, c, b)
 
         self.N_qubits = numColumns
 
@@ -61,47 +83,8 @@ class ExactCover(Problem):
         x = np.array(list(map(int, string)))
         c_e = self.__exactCover(x)
 
-        if self.weights is None:
-            return -self.penalty_factor * c_e
-        else:
-            return -(self.weights @ x + self.penalty_factor * c_e)
+        return -(self.weights @ x + self.penalty_factor * c_e)
 
-    def create_circuit(self):
-        """
-        Creates a parameterized quantum circuit corresponding to the cost function.
-        """
-        q = QuantumRegister(self.N_qubits)
-        self.circuit = QuantumCircuit(q)
-        cost_param = Parameter("x_gamma")
-
-        colSize, numColumns = np.shape(self.columns)
-
-        ### cost Hamiltonian
-        for col in range(numColumns):
-            hr = (
-                self.penalty_factor
-                * 0.5
-                * self.columns[:, col]
-                @ (np.sum(self.columns, axis=1) - 2)
-            )
-            if not self.weights is None:
-                hr += 0.5 * self.weights[col]
-
-            if not math.isclose(hr, 0, abs_tol=1e-7):
-                self.circuit.rz(cost_param * hr, q[col])
-
-            for col_ in range(col + 1, numColumns):
-                Jrr_ = (
-                    self.penalty_factor
-                    * 0.5
-                    * self.columns[:, col]
-                    @ self.columns[:, col_]
-                )
-
-                if not math.isclose(Jrr_, 0, abs_tol=1e-7):
-                    self.circuit.cx(q[col], q[col_])
-                    self.circuit.rz(cost_param * Jrr_, q[col_])
-                    self.circuit.cx(q[col], q[col_])
 
     def isFeasible(self, string):
         """
