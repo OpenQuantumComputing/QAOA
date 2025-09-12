@@ -23,7 +23,7 @@ from qiskit_aer import AerSimulator, Aer
 from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
 from qaoa.problems import Problem
-from qaoa.util import Statistic, BitFlip, post_processing, validation
+from qaoa.util import Statistic, BitFlip, post_processing
 
 
 class OptResult:
@@ -1207,7 +1207,7 @@ class QAOA:
         return np.unique(opt_sols)
         
 
+    
+
     def validate_circuit(self, t=1, flip=True, atol=1e-8, rtol=1e-8):
-        if self.problem.circuit is None:
-            self.problem.create_circuit()
-        return validation.check_phase_separator_exact_qaoa(self, t=t, flip=flip, atol=atol, rtol=rtol)
+        return self.problem.validate_circuit(t=t, flip=flip, atol=atol, rtol=rtol)
