@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from qaoa.util import validation
+
 
 class BaseProblem(ABC):
     """
@@ -43,6 +45,8 @@ class Problem(BaseProblem):
         isFeasible(string): Checks if a given solution string is feasible.
             This method returns True by default and can be overridden by
             subclasses to implement custom feasibility checks.
+        validate_circuit(): Checks if the implemented quantum circuit 
+            corresponds to the given cost function. 
 
     Note:
         Subclasses of `Problem` must provide implementations for the `cost`
@@ -119,3 +123,18 @@ class Problem(BaseProblem):
                 max_cost = max(max_cost, cost)
                 min_cost = min(min_cost, cost)
         return min_cost, max_cost
+
+    def validate_circuit(self, t=1, flip=True, atol=1e-8, rtol=1e-8):
+        """
+        Exact check that the problem's circuit represents the problem's cost function.
+        This tests checks that the unitary operator represented by the quantum circuit is
+        equal to the excepted matrix with diagonal elements 
+        exp(-j*t*cost(e)),
+        where e is the corresponding binary state, up to a global phase.
+        
+        Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).
+        Returns: (ok: bool, report: dict)
+        """
+        if self.circuit is None:
+            self.create_circuit()
+        return validation.check_phase_separator_exact_problem(self, t=t, flip=flip, atol=atol, rtol=rtol)

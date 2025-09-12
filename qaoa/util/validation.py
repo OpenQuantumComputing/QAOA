@@ -18,9 +18,8 @@ def check_phase_separator_exact_problem(problem, t=1, flip=True, atol=1e-8, rtol
     Exact check that the problem's circuit represents the problem's cost function.
     This tests checks that the unitary operator represented by the quantum circuit is
     equal to the excepted matrix with diagonal elements 
-    exp(*j*t*cost(e)),
+    exp(-j*t*cost(e)),
     where e is the corresponding binary state, up to a global phase.
-    uses full unitary). 
     
     Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).
     Returns: (ok: bool, report: dict)
