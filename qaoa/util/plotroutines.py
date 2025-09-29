@@ -3,6 +3,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.ticker import MaxNLocator
 
 import numpy as np
+from math import comb
 
 from qaoa import QAOA
 
@@ -349,3 +350,68 @@ def printBestHistogramEntries( qaoa, classical_solution = None, num_solutions=10
         else:
             print("Did not find best classical solution")
             print(str(best_i) +"\t" + toprint + str(best_sol) +", " + str(best_cost) + ",   " +str(best_freq) +"<-- Best obtained solution")
+
+
+def plotHitProbabilities(qaoa, opt_sol, depth=None, hist_shots=2**13, **kwargs):
+    
+    if depth is None:
+        depth = qaoa.current_depth
+    hist = qaoa.hist(qaoa.get_angles(depth), hist_shots)
+
+    plotHitProbabilities_fromHist(hist, opt_sol, **kwargs)
+
+
+def plotHitProbabilities_fromHist(hist, opt_sol,
+                         hamming_weight=None, plot_random=True, fig=None, 
+                         label="QAOA", style='o-', title=None, title_add_on="", 
+                         max_shots_base2=20):
+    """
+    Plot that shows the probability of finding the optimal solution as a 
+    function of number shots
+
+    Args:
+        qaoa (QAOA): QAOA instance for the problem at hand
+        opt_sol (str): Optimal solution
+        
+      
+    """
+
+    def prob_hit_ones(p, n):
+        return 1 - (1-p)**n
+
+    if fig is None:
+        fig = plt.figure()
+    ns = 2**np.arange(max_shots_base2)
+    
+    if plot_random:
+        state_space_size = 2**len(opt_sol)
+        p_random = 1/state_space_size
+        hit_prob_random   = [prob_hit_ones(p_random,   n) for n in ns]
+        plt.plot(ns, hit_prob_random, '.:k', label='random all')
+        
+        if hamming_weight is not None:
+            subspace_size = comb(len(opt_sol), hamming_weight)
+            p_subspace = 1/subspace_size
+            hit_prob_subspace = [prob_hit_ones(p_subspace, n) for n in ns]
+            plt.plot(ns, hit_prob_subspace, '.-.k', label='random subspace')
+    
+    hist_shots = sum(hist.values())
+    p_qaoa = 0.0
+    if opt_sol in hist.keys():
+        p_qaoa = hist[opt_sol]/hist_shots
+    hit_prob_qaoa = [prob_hit_ones(p_qaoa, n) for n in ns]
+    plt.plot(ns, hit_prob_qaoa, style, label=label)
+
+    
+
+    plt.xscale("log")
+    plt.ylabel("probability")
+    plt.xlabel("num shots")
+    if title is None:
+        plt.title("Probability for finding optimal solution " + title_add_on)
+    else:
+        plt.title(title + title_add_on)
+    plt.legend()
+    plt.grid(True, which="both", ls="--")
+
+
