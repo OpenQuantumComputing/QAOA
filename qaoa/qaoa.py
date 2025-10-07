@@ -3,6 +3,7 @@ import structlog
 LOG = structlog.get_logger(file=__name__)
 
 import numpy as np
+import time
 
 from qiskit import (
     QuantumCircuit,
@@ -37,6 +38,7 @@ class OptResult:
         BestSols (list): List of best solutions.
         shots (list): List of shots taken for each iteration.
         index_Exp_min (int): Index of the minimum expected value.
+        opt_time (float): Time used for optimization on given depth
 
     Methods:
         add_iteration(): Adds an iteration's results to the OptResult object.
@@ -67,6 +69,7 @@ class OptResult:
         self.shots = []
 
         self.index_Exp_min = -1
+        self.opt_time = -1.0
 
     def add_iteration(self, angles, stat, shots):
         """
@@ -693,6 +696,8 @@ class QAOA:
         """
         ## run local optimization by iteratively increasing the depth until depth p is reached
         while self.current_depth < depth:
+            
+            start_time = time.perf_counter()
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:
                     self.sample_cost_landscape(angles=angles)
@@ -727,6 +732,7 @@ class QAOA:
             self.samplecount_hists[self.current_depth + 1] = self.last_hist
 
             self.optimization_results[self.current_depth + 1].compute_best_index()
+            self.optimization_results[self.current_depth + 1].opt_time = time.perf_counter() - start_time
 
             LOG.info(
                 f"cost(depth { self.current_depth + 1} = {res.fun}",
