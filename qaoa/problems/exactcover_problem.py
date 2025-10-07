@@ -32,7 +32,9 @@ class ExactCover(QUBO):
         columns,
         weights=None,
         penalty_factor=None,
-        allow_infeasible = False
+        allow_infeasible = False,
+        scale_problem = False,
+        hamming_weight = None
     ) -> None:
         """
         Args:
@@ -51,17 +53,27 @@ class ExactCover(QUBO):
         if weights is None:
             self.weights = np.zeros(numColumns)
 
+        if hamming_weight is not None:
+            assert type(hamming_weight) == int, "hamming_weight must be int, but is "+str(hamming_weight)
+            assert hamming_weight > 0 and hamming_weight < numColumns, "hamming_weight must between 0 and "+str(numColumns)+", but is "+str(hamming_weight)
+
         if penalty_factor is None:
             if np.all(self.weights == 0):
                 self.penalty_factor = 1
+            elif hamming_weight:
+                sorted_w = np.sort(self.weights)
+                self.penalty_factor = np.sum(sorted_w[-hamming_weight:]) - np.sum(sorted_w[:hamming_weight])
             else:
                 # Very conservative penalty term
                 self.penalty_factor = np.sum(self.weights[self.weights > 0]) 
-
+        
+        if scale_problem:
+            # Scaling through modification of self.weights and self.penalty_factor
+            self._scale_problem(hamming_weight)
  
         # Construct a QUBO for the penalized exact cover problem
         # C(x) = x^T Q x + c^T x + b
-        c = self.weights - 2*self.penalty_factor*(np.ones(colSize) @ columns)
+        c = self.weights - 2*self.penalty_factor*(np.ones(colSize) @ self.columns)
         Q = self.penalty_factor * (self.columns.T @ self.columns)
         b = self.penalty_factor*colSize
 
@@ -105,3 +117,24 @@ class ExactCover(QUBO):
             x (np.ndarray): Binary vector representing a candidate solution.
         """
         return np.sum((1 - (self.columns @ x)) ** 2)
+
+    def _scale_problem(self, hamming_weight):
+        assert (hamming_weight is not None), "scaling currently only supported for exact problems with a given hamming_weight"
+        col_size = self.columns.shape[0]
+        
+        # Ensure lower bound of cost function is zero
+        w = np.copy(self.weights)
+        sorted_w = np.sort(w)
+        omega = w - np.sum(sorted_w[:hamming_weight])/hamming_weight
+
+        # find new penalty
+        sorted_omega = np.sort(omega)
+        omega_penalty = np.sum(sorted_omega[-hamming_weight:]) - np.sum(sorted_omega[:hamming_weight])
+
+        # conservative estimate of upper range
+        upper_range = 2*np.pi
+        scaling = upper_range/(omega_penalty*(1 + col_size*(hamming_weight - 1)**2))
+        
+        # apply scaling
+        self.weights = scaling*omega
+        self.penalty_factor = scaling*omega_penalty
