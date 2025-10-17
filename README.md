@@ -134,7 +134,7 @@ See [examples here](examples/).
 ***
 ### Minimizing depth of phase separating operator
 
-Assuming all-to-all connectivity of qubits, one can minimize the depth of the circuit of the phase separating operator by solve the problem by minimum edge colouring. This is implemtend in [GraphHandler](qaoa/util/graphutils.py) and gets automatically invoked. An example output is this
+Assuming all-to-all connectivity of qubits, one can minimize the depth of the circuit of the phase separating operator by solve the problem by minimum edge colouring. This is implemtend in [GraphHandler](qaoa/util/graphutils.py) and gets automatically invoked. An [example](examples/MaxCut/MinimalDepth.ipynb) output is this
 
 ![this graph](images/minimal_depth.png  "Edge Coloring")
 
