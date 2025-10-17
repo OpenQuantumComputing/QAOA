@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.ticker import MaxNLocator
+import networkx as nx
 
 import numpy as np
 
@@ -164,7 +165,7 @@ def draw_colored_graph(G, edge_colors):
         "yellow",
         "cyan",
     ]
-    pos = nx.spring_layout(G)  # Positions for all nodes
+    pos = nx.circular_layout(G)  # Positions for all nodes
 
     # Draw nodes
     nx.draw_networkx_nodes(G, pos, node_size=700, node_color="lightgray")
