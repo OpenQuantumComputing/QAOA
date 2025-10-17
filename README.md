@@ -125,6 +125,19 @@ Additionally, for each depth every time the loss function is called, the **angle
 
 	qaoa.optimization_results[i]
 
+***
+### Example use cases
+
+See [examples here](examples/).
+
+
+***
+### Minimizing depth of phase separating operator
+
+Assuming all-to-all connectivity of qubits, one can minimize the depth of the circuit of the phase separating operator by solve the problem by minimum edge colouring. This is implemtend in [GraphHandler](qaoa/util/graphutils.py) and gets automatically invoked. An example output is 
+
+[this graph](images/Minimal Depth.png)
+
 
 ***
 ### Tensorize mixers
@@ -153,10 +166,6 @@ It is then possible to ask questions in the text box. An example could be:
 <img src="images\interface_output.png" alt="QAOA Agent interface with question page" width=500/>
 
 For the agent application the following dependencies are needed: langchain, langchain_community, langchain_chroma, langchain_openai and optionally streamlit (for the interface). Additionally, an API-KEY is needed. 
-***
-### Example usage
-
-See [examples here](examples/).
 
 
 ***
