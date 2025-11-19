@@ -4,10 +4,8 @@ import numpy as np
 
 # from .base_problem import Problem
 from .qubo_problem import QUBO
-from qiskit import QuantumCircuit, QuantumRegister
 
-from qiskit.circuit import Parameter
-
+import itertools
 
 class ExactCover(QUBO):
     """
@@ -143,3 +141,37 @@ class ExactCover(QUBO):
         # apply scaling
         self.weights = scaling*omega
         self.penalty_factor = scaling*omega_penalty
+
+    def brute_force_solve(self, return_num_feasible=False):
+        """
+        Finding optimal solution using brute force tactics by checking all feasible solutions.
+        """
+        
+        def bitstrings_hamming_weight_generator(n, k):
+            for ones in itertools.combinations(range(n), k):
+                s = ['0'] * n
+                for i in ones:
+                    s[i] = '1'
+                yield ''.join(s)
+
+        def bitstrings_all_generator(n, k):
+            for bits in itertools.product('01', repeat=n):
+                yield "".join(bits)
+    
+        bitstrings_generator = bitstrings_all_generator
+        if self.hamming_weight is not None:
+            bitstrings_generator = bitstrings_hamming_weight_generator
+        opt_val = -np.inf
+        opt_sol = None
+        num_feasible = 0
+
+        for bs in bitstrings_generator(self.N_qubits, self.hamming_weight):
+            cost = self.cost(bs)
+            if cost > opt_val:
+                opt_val = cost
+                opt_sol = bs
+            num_feasible += self.isFeasible(bs)
+        
+        if return_num_feasible:
+            return opt_sol, num_feasible
+        return opt_sol
