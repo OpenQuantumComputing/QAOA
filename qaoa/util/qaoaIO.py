@@ -1,4 +1,4 @@
-from qaoa import QAOA
+from qaoa import QAOA, problems
 
 import json
 import numpy as np
@@ -29,10 +29,25 @@ def _list_to_numpy(obj):
     """Convert lists to numpy arrays recursively (for problem reconstruction)."""
     if isinstance(obj, dict):
         return {k: _list_to_numpy(v) for k, v in obj.items()}
-    if isinstance(obj, list) and all(isinstance(v, (int, float)) for v in obj):
-        return np.array(obj)
     if isinstance(obj, list):
-        return [_list_to_numpy(v) for v in obj]
+        # Check if this is a numeric list (1D array)
+        if all(isinstance(v, (int, float)) for v in obj):
+            return np.array(obj)
+        # Check if this is a list of lists (potential 2D+ array)
+        elif all(isinstance(v, list) for v in obj) and obj:
+            # Recursively convert inner lists first
+            converted = [_list_to_numpy(v) for v in obj]
+            # If all inner elements are numpy arrays with the same shape, stack them
+            if all(isinstance(v, np.ndarray) for v in converted):
+                try:
+                    return np.array(converted)
+                except (ValueError, TypeError):
+                    # If stacking fails, return as list
+                    return converted
+            return converted
+        # Mixed list types
+        else:
+            return [_list_to_numpy(v) for v in obj]
     return obj
 
 
@@ -167,6 +182,7 @@ class QAOAResult:
 
         return cls(problem=problem, qaoa_params=qaoa_params, metadata=data.get("metadata", {}))
 
+
     def _generate_metadata(self) -> dict:
         meta = {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
@@ -206,9 +222,9 @@ class QAOAResult:
         depths = {}
         for k in qaoa.optimization_results:
             depths[k] = DepthResult(
-                qaoa.optimization_results[k].get_best_angles(),
-                qaoa.optimization_results[k].opt_time, 
-                qaoa.hist(qaoa.optimization_results[k].get_best_angles(), hist_shots)
+                optimal_angles = qaoa.optimization_results[k].get_best_angles(),
+                histogram = qaoa.hist(qaoa.optimization_results[k].get_best_angles(), hist_shots),
+                opt_time = qaoa.optimization_results[k].opt_time
             )
 
         problem_data = ExactCoverProblemData(
@@ -246,3 +262,21 @@ class QAOAResult:
     
     # TODO: Implement
     # def generate_qaoa_object(self) -> "QAOA"
+
+    def get_problem_instance(self):
+        if isinstance(self.problem, ExactCoverProblemData):
+            return problems.ExactCover(
+                columns = self.problem.columns,
+                weights = self.problem.weights,
+                hamming_weight = self.problem.hamming_weight,
+                scale_problem = True
+            )
+        elif isinstance(self.problem, PortfolioOptimizationProblemData):
+            return problems.PortfolioOptimization(
+                risk=self.problem.risk,
+                budget=self.problem.budget,
+                cov_matrix=self.problem.cov_matrix,
+                exp_return=self.problem.exp_return
+            )
+        
+        
