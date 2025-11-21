@@ -135,7 +135,7 @@ class ExactCover(QUBO):
         omega_penalty = np.sum(sorted_omega[-hm:]) - np.sum(sorted_omega[:hm])
 
         # conservative estimate of upper range
-        upper_range = 2*np.pi
+        upper_range = 1.0
         scaling = upper_range/(omega_penalty*(1 + col_size*(hm - 1)**2))
         
         # apply scaling
