@@ -6,3 +6,5 @@ from .portfolio_problem import PortfolioOptimization
 from .maxkcut_binary_powertwo import MaxKCutBinaryPowerOfTwo
 from .maxkcut_binary_fullH import MaxKCutBinaryFullH
 from .maxkcut_one_hot_problem import MaxKCutOneHot
+from .maxcut_problem import MaxCut
+from .maxcut_orbit_problem import MaxCutOrbit
