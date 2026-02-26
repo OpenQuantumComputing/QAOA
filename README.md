@@ -51,6 +51,7 @@ This library already contains several standard implementations.
 	- [Grover-mixer](qaoa/mixers/grover_mixer.py)
 	- [Max k-CUT grover](qaoa/mixers/maxkcut_grover_mixer.py)
 	- [Max k-CUT LX](qaoa/mixers/maxkcut_lx_mixer.py)
+	- [X multi-angle mixer](qaoa/mixers/x_multiangle_mixer.py) *(one β per qubit)*
 - The following [initial state](qaoa/initialstates/base_initialstate.py) cases are already available:
 	- [Plus](qaoa/initialstates/plus_initialstate.py)
 	- [Statevector](qaoa/initialstates/statevector_initialstate.py)
@@ -58,6 +59,7 @@ This library already contains several standard implementations.
 	- [Dicke 1- and 2-states superposition](qaoa/initialstates/dicke1_2_initialstate.py)
 	- [Less than k](qaoa/initialstates/lessthank_initialstate.py)
 	- [Max k-CUT feasible](qaoa/initialstates/maxkcut_feasible_initialstate.py)
+	- [Plus parameterized](qaoa/initialstates/plus_parameterized_initialstate.py) *(|+⟩ with optimizable phase rotations)*
 
 It is **very easy to extend this list** by providing  an implementation of a circuit/cost of the base classes mentioned above. Feel free to fork the repo and create a pull request :-)
 
@@ -124,6 +126,31 @@ Once `qaoa.optimize(depth=p)` is run, one can extract, the expectation value, va
 Additionally, for each depth every time the loss function is called, the **angles, expectation value, variance, maximum cost, minimum cost, **and** number of shots** are stored in 
 
 	qaoa.optimization_results[i]
+
+***
+### Multi-Angle QAOA
+
+Multi-angle QAOA allows components to use multiple parameters per layer, increasing expressibility:
+
+- **Multi-angle mixer** (`XMultiAngle`): Each qubit gets its own independent β parameter
+- **Parameterized initial state** (`PlusParameterized`): The initial state |+⟩ with optimizable per-qubit phase rotations
+
+	qaoa = QAOA(
+		initialstate=initialstates.Plus(),
+		problem=problems.MaxKCutBinaryPowerOfTwo(G="some networkx instance", k_cuts=2),
+		mixer=mixers.XMultiAngle()  # N_qubits beta parameters per layer
+	)
+
+The flat angle array format used by `hist()`, `getParametersToBind()`, and `interp()` is:
+
+	[init_0, ..., init_{n-1},          # initial state params (0 for Plus)
+	 gamma_{0,0}, ..., beta_{0,n-1},   # layer 0 params
+	 gamma_{1,0}, ..., beta_{1,n-1},   # layer 1 params
+	 ...]
+
+For the standard single-parameter case, this reduces to `[gamma_0, beta_0, gamma_1, beta_1, ...]`.
+
+Implement `get_num_parameters()` in a custom component to enable multi-angle support. See [examples/MultiAngle](examples/MultiAngle/) for a complete example.
 
 ***
 ### Example use cases

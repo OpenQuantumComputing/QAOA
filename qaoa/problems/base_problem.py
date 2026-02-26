@@ -105,6 +105,15 @@ class Problem(BaseProblem):
         """
         return True
 
+    def get_num_parameters(self):
+        """
+        Returns the number of parameters this problem uses per layer.
+
+        Returns:
+            int: Number of parameters per layer (default: 1).
+        """
+        return 1
+
     def computeMinMaxCosts(self):
         """
         Brute force method to compute min and max cost of feasible solution
