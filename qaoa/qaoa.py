@@ -555,8 +555,21 @@ class QAOA:
                     for g in range(angles["gamma"][2]):
                         gamma = self.gamma_grid[g]
                         beta = self.beta_grid[b]
+                        # Build angle array: init params (zeros), then first gamma gets the
+                        # grid value while remaining gammas are fixed at zero, and first beta
+                        # gets the grid value while remaining betas are fixed at zero.
+                        # This "vanilla warm-start" treats the circuit as standard single-
+                        # parameter QAOA during the grid search, keeping the search 2D
+                        # regardless of the total number of multi-angle parameters.
+                        angle_array = (
+                            [0.0] * self.n_init
+                            + [gamma]
+                            + [0.0] * (self.n_gamma - 1)
+                            + [beta]
+                            + [0.0] * (self.n_beta - 1)
+                        )
                         params = self.getParametersToBind(
-                            [gamma, beta], self.parametrized_circuit_depth, asList=True
+                            angle_array, self.parametrized_circuit_depth, asList=True
                         )
 
                         job = self.backend.run(
@@ -610,7 +623,15 @@ class QAOA:
                         beta[counter] = self.beta_grid[b]
                         counter += 1
 
-                parameters = {self.gamma_params[0]: gamma, self.beta_params[0]: beta}
+                parameters = {}
+                # First gamma parameter gets grid values; remaining gamma params get zeros
+                parameters[self.gamma_params[0][0]] = gamma
+                for i in range(1, self.n_gamma):
+                    parameters[self.gamma_params[0][i]] = np.zeros_like(gamma)
+                # First beta parameter gets grid values; remaining beta params get zeros
+                parameters[self.beta_params[0][0]] = beta
+                for i in range(1, self.n_beta):
+                    parameters[self.beta_params[0][i]] = np.zeros_like(beta)
 
                 logger.info("Executing sample_cost_landscape")
                 logger.info(f"parameters: {len(parameters)}")
@@ -738,11 +759,15 @@ class QAOA:
                     np.argmin(self.Exp_sampled_p1, axis=None), self.Exp_sampled_p1.shape
                 )
                 # Build initial angles with init params (zeros) followed by first-layer params.
-                # For multi-angle components (n_gamma > 1 or n_beta > 1), only the first
-                # parameter of each type is seeded from the landscape; others start at zero.
-                angles0 = np.zeros(n_init + n_per_layer)
-                angles0[n_init] = self.gamma_grid[ind_Emin[1]]
-                angles0[n_init + n_gamma] = self.beta_grid[ind_Emin[0]]
+                # For multi-angle QAOA (n_gamma > 1 or n_beta > 1), the best vanilla angles
+                # are broadcast to all parameters of each type as a warm-start.
+                gamma_best = self.gamma_grid[ind_Emin[1]]
+                beta_best = self.beta_grid[ind_Emin[0]]
+                angles0 = np.array(
+                    [0.0] * n_init
+                    + [gamma_best] * n_gamma
+                    + [beta_best] * n_beta
+                )
             else:
                 best_angles = self.get_angles(self.current_depth)
 
