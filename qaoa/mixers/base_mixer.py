@@ -73,3 +73,12 @@ class Mixer(MixerBase):
             QuantumCircuit: The quantum circuit representing the mixing operation.
         """
         pass
+
+    def get_num_parameters(self):
+        """
+        Returns the number of parameters this mixer uses per layer.
+
+        Returns:
+            int: Number of parameters per layer (default: 1).
+        """
+        return 1

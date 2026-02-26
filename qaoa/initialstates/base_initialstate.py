@@ -67,3 +67,12 @@ class InitialState(BaseInitialState):
             NotImplementedError: This method must be implemented by subclasses.
         """
         pass
+
+    def get_num_parameters(self):
+        """
+        Returns the number of parameters this initial state uses.
+
+        Returns:
+            int: Total number of parameters (default: 0, meaning no parameterization).
+        """
+        return 0
