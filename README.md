@@ -45,6 +45,7 @@ This library already contains several standard implementations.
 	- [Exact cover](qaoa/problems/exactcover_problem.py)
 	- [Portfolio](qaoa/problems/portfolio_problem.py)
 	- [Graph](qaoa/problems/graph_problem.py)
+	- [MaxCut Orbit](qaoa/problems/maxcut_orbit.py) (orbit-based symmetry reduction)
 - The following [mixer](qaoa/mixers/base_mixer.py) cases are already available:
 	- [X-mixer](qaoa/mixers/x_mixer.py)
 	- [XY-mixer](qaoa/mixers/xy_mixer.py)
@@ -130,6 +131,36 @@ Additionally, for each depth every time the loss function is called, the **angle
 
 See [examples here](examples/).
 
+See [MultiAngle examples](examples/MultiAngle/) for orbit-based QAOA comparisons.
+
+
+***
+### Orbit QAOA: Symmetry-Reduced Parametrization
+
+The `MaxCutOrbit` problem implements orbit-based parameter reduction using graph automorphisms.
+Edges in the same orbit are equivalent under the graph's symmetry group and share the same QAOA parameter.
+This reduces the parameter count from `|E|` (one per edge) down to the number of distinct edge orbits.
+
+Based on: [https://arxiv.org/pdf/2410.05187](https://arxiv.org/pdf/2410.05187)
+
+```python
+from qaoa import QAOA, problems, mixers, initialstates
+import networkx as nx
+
+# Create graph
+G = nx.house_graph()
+
+# Orbit-based QAOA (symmetry reduction)
+problem = problems.MaxCutOrbit(G)
+mixer = mixers.X()
+initial = initialstates.Plus()
+
+qaoa = QAOA(problem, mixer, initial)
+qaoa.optimize(depth=3)
+```
+
+See [`examples/MultiAngle/HouseGraphComparison.ipynb`](examples/MultiAngle/HouseGraphComparison.ipynb) for a detailed comparison
+of Vanilla QAOA and Orbit QAOA on the house graph MaxCut problem.
 
 ***
 ### Minimizing depth of phase separating operator
