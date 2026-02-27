@@ -83,6 +83,8 @@ class MaxCutOrbit(MaxCut):
             edge_to_idx[(v, u)] = idx
 
         # --- Enumerate automorphisms and union equivalent edges --------
+        # Note: for graphs with large automorphism groups the enumeration can
+        # be expensive.  Early exit when all edges are already merged.
         gm = GraphMatcher(G, G)
         for auto in gm.isomorphisms_iter():
             for idx, (u, v) in enumerate(edges):
@@ -91,6 +93,9 @@ class MaxCutOrbit(MaxCut):
                 mapped_idx = edge_to_idx.get((mapped_u, mapped_v))
                 if mapped_idx is not None:
                     union(idx, mapped_idx)
+            # Early exit: stop once all edges are in a single orbit
+            if len({find(i) for i in range(n_edges)}) == 1:
+                break
 
         # --- Group edges by orbit root ---------------------------------
         orbit_groups: dict[int, list[tuple[int, int]]] = defaultdict(list)
