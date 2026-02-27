@@ -2,6 +2,7 @@ from .base_mixer import Mixer
 from .xy_mixer import XY
 from .x_mixer import X
 from .x_multiangle_mixer import XMultiAngle
+from .x_orbit_mixer import XOrbit
 from .grover_mixer import Grover
 from .xy_tensor import XYTensor
 from .maxkcut_grover_mixer import MaxKCutGrover
