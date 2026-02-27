@@ -106,6 +106,55 @@ class TestMultiAngleGridSearch(unittest.TestCase):
         self.assertEqual(qaoa.current_depth, 1)
         self.assertIn(1, qaoa.optimization_results)
 
+    def test_layer_grid_search_depth2(self):
+        """
+        Layer-by-layer grid search (interpolate=False) at depth 2 should:
+          1. Complete without error.
+          2. Store results at depth 2.
+          3. Yield cost(2) ≤ cost(1) (monotonic) because the grid includes (0,0).
+        """
+        G = nx.path_graph(3)
+        problem = problems.MaxCut(G)
+
+        qaoa = QAOA(
+            problem,
+            mixers.X(),
+            initialstates.Plus(),
+            backend=self.backend,
+            sequential=True,
+            interpolate=False,
+        )
+
+        qaoa.optimize(depth=2, angles=self.angles)
+
+        self.assertEqual(qaoa.current_depth, 2)
+        self.assertIn(1, qaoa.optimization_results)
+        self.assertIn(2, qaoa.optimization_results)
+
+        cost1 = qaoa.get_Exp(depth=1)
+        cost2 = qaoa.get_Exp(depth=2)
+        # cost is negative (we minimise), so a better result is more negative.
+        # Monotonicity: cost(p) ≤ cost(p-1)  ↔  get_Exp(2) ≤ get_Exp(1).
+        self.assertLessEqual(cost2, cost1 + 1e-6)  # small tolerance for shot noise
+
+    def test_layer_grid_search_multiangle(self):
+        """Layer grid search should work for free (multi-angle) ansatz."""
+        G = nx.path_graph(3)
+
+        qaoa = QAOA(
+            problems.MaxCutFree(G),
+            mixers.XMultiAngle(),
+            initialstates.Plus(),
+            backend=self.backend,
+            sequential=True,
+            interpolate=False,
+        )
+
+        qaoa.optimize(depth=2, angles=self.angles)
+
+        self.assertEqual(qaoa.current_depth, 2)
+        self.assertIn(2, qaoa.optimization_results)
+
 
 if __name__ == "__main__":
     unittest.main()
