@@ -65,9 +65,19 @@ class TestQiskitImports(unittest.TestCase):
         self.assertIsNotNone(backend)
 
     def test_qiskit_algorithms_optimizers(self):
-        from qiskit_algorithms.optimizers import COBYLA, SPSA
+        from qiskit_algorithms.optimizers import COBYLA, SPSA, QNSPSA
         self.assertIsNotNone(COBYLA)
         self.assertIsNotNone(SPSA)
+        self.assertIsNotNone(QNSPSA)
+
+    def test_sampler_v2_for_qnspsa(self):
+        """The SamplerV2 used for QNSPSA fidelity must be a BaseSamplerV2 instance."""
+        from qiskit.primitives import BaseSamplerV2
+        try:
+            from qiskit_aer.primitives import SamplerV2 as _SamplerV2
+        except ImportError:
+            from qiskit.primitives import StatevectorSampler as _SamplerV2
+        self.assertTrue(issubclass(_SamplerV2, BaseSamplerV2))
 
     def test_qaoa_package_import(self):
         import qaoa
@@ -152,6 +162,30 @@ class TestQAOAEndToEnd(unittest.TestCase):
         self.assertGreater(len(hist), 0)
         total_shots = sum(hist.values())
         self.assertEqual(total_shots, 256)
+
+    def test_qnspsa_optimizer(self):
+        """QNSPSA optimizer must work with a BaseSamplerV2-compatible sampler.
+
+        This tests the fix for the Qiskit 2.x incompatibility where
+        QNSPSA.get_fidelity() requires a BaseSamplerV2 instance.
+        """
+        from qaoa import QAOA
+        from qaoa import problems, mixers, initialstates
+        from qiskit_algorithms.optimizers import QNSPSA
+
+        problem = problems.MaxCut(self.G)
+        qaoa_inst = QAOA(
+            problem,
+            mixers.X(),
+            initialstates.Plus(),
+            backend=self.backend,
+            optimizer=[QNSPSA, {"maxiter": 3}],
+            shots=256,
+        )
+        # Should not raise ValueError about BaseSamplerV2
+        qaoa_inst.optimize(depth=1, angles=self.angles)
+        best_exp = qaoa_inst.get_Exp(depth=1)
+        self.assertIsInstance(best_exp, float)
 
 
 class TestQAOAComponents(unittest.TestCase):
