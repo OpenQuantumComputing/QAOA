@@ -13,12 +13,12 @@ from qiskit import (
 )
 from qiskit.circuit import Parameter
 try:
-    from qiskit.primitives import Sampler
-except ImportError:
     from qiskit_aer.primitives import Sampler
+except ImportError:
+    from qiskit.primitives import StatevectorSampler as Sampler
 from qiskit_algorithms.optimizers import COBYLA
 
-from qiskit_aer import Aer
+from qiskit_aer import AerSimulator, Aer
 
 from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
@@ -198,7 +198,7 @@ class QAOA:
         problem,
         mixer,
         initialstate,
-        backend=Aer.get_backend("qasm_simulator"),
+        backend=AerSimulator(),
         noisemodel=None,
         optimizer=[COBYLA, {}],  # optimizer, options
         precision=None,

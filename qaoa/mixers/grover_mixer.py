@@ -32,7 +32,7 @@ class Grover(Mixer):
         self.mixer_param = Parameter("x_beta")
 
     def create_circuit(self):
-        """
+        r"""
         Constructs the Grover mixer circuit using the subcircuit.
 
         Given feasible states f \in F,
