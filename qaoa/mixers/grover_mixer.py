@@ -63,7 +63,7 @@ class Grover(Mixer):
         sub_label = getattr(self.subcircuit, "label", self.subcircuit.__class__.__name__)
         n = self.subcircuit.N_qubits
 
-        qr = QuantumRegister(n)
+        qr = QuantumRegister(n, name="q")
         self.circuit = QuantumCircuit(qr)
 
         # US^\dagger — shown as a labelled box (e.g. "Dicke†")

@@ -171,25 +171,36 @@ Assuming all-to-all connectivity of qubits, one can minimize the depth of the ci
 
 Components can be freely composed ("lego style") to build more complex circuits without needing to configure qubit counts manually.
 
-For example, a Grover mixer over 3 independent Dicke-2 sub-registers can be assembled like this:
+For example, a Grover mixer over 3 independent Dicke sub-registers (each with 4 qubits, Hamming weight k=2) can be assembled like this:
 
 	from qaoa import initialstates, mixers
 
-	dicke  = initialstates.Dicke(2)       # Dicke state with k=2 excitations
-	grover = mixers.Grover(dicke)          # Grover mixer over the Dicke feasible space
-	tensor = initialstates.Tensor(grover, 3)  # 3 independent copies (6 qubits total)
+	dicke  = initialstates.Dicke(2)        # Dicke state with k=2 excitations
+	dicke.setNumQubits(4)                   # 4-qubit register per block
+	grover = mixers.Grover(dicke)           # Grover mixer over the Dicke feasible space
+	tensor = initialstates.Tensor(grover, 3)  # 3 independent copies (12 qubits total)
 
 	tensor.create_circuit()
 	tensor.circuit.draw('mpl')
 
-`Dicke(k)` automatically sets `N_qubits = k` (the minimum needed register), and
-`Grover` inherits that qubit count from its sub-circuit, so no explicit
-`setNumQubits` call is required.
+`Grover` inherits the qubit count from its sub-circuit, so no extra `setNumQubits`
+call is needed for the mixer itself.
 
-![Lego circuit](images/lego_circuit.png "Lego circuit: three Grover blocks on 6 qubits")
+![Lego circuit](images/lego_circuit.png "Lego circuit: three Grover blocks on 12 qubits")
 
 Each sub-circuit is shown as a labelled block in the drawing so the "lego" structure
 is immediately visible.
+
+To inspect the internal structure of a single Grover block, draw it directly:
+
+	grover.create_circuit()
+	grover.circuit.draw('mpl')
+
+![Grover circuit](images/grover_circuit.png "Grover mixer: Dicke† – X^n – C^{n-1}Phase – X^n – Dicke")
+
+The Grover mixer is constructed as U_S† X^n C^{n-1}P X^n U_S, where the Dicke
+state-preparation circuit U_S and its inverse are each shown as a single labelled
+box (`Dicke†` / `Dicke`).
 
 ### Annotating circuits
 

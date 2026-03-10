@@ -49,6 +49,32 @@ class TestGroverMixer(unittest.TestCase):
         mixer.create_circuit()
         self.assertGreater(len(mixer.circuit.parameters), 0)
 
+    def test_grover_shows_labeled_subcircuit_instructions(self):
+        """Grover circuit should show US† and US as labeled instructions."""
+        from qaoa.mixers import Grover
+        from qaoa.initialstates import Dicke
+
+        grover = Grover(Dicke(2))
+        grover.create_circuit()
+        labels = [
+            getattr(instr.operation, "label", None)
+            for instr in grover.circuit.data
+        ]
+        # The first instruction should be US† labelled "Dicke†"
+        self.assertEqual(labels[0], "Dicke\u2020")
+        # The last instruction should be US labelled "Dicke"
+        self.assertEqual(labels[-1], "Dicke")
+
+    def test_grover_circuit_register_name(self):
+        """Grover circuit should use the register name 'q' for clean qubit labels."""
+        from qaoa.mixers import Grover
+        from qaoa.initialstates import Dicke
+
+        grover = Grover(Dicke(2))
+        grover.create_circuit()
+        reg_names = {q._register.name for q in grover.circuit.qubits}
+        self.assertEqual(reg_names, {"q"})
+
 
 class TestXMultiAngleMixer(unittest.TestCase):
     """Tests for the XMultiAngle mixer."""

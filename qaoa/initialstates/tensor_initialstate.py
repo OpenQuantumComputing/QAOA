@@ -50,7 +50,7 @@ class Tensor(InitialState):
         sub_label = getattr(self.subcircuit, "label", self.subcircuit.__class__.__name__)
         sub_instr = self.subcircuit.circuit.to_instruction(label=sub_label)
 
-        qr = QuantumRegister(self.N_qubits)
+        qr = QuantumRegister(self.N_qubits, name="q")
         self.circuit = QuantumCircuit(qr)
         n = self.subcircuit.N_qubits
         for i in range(self.num):
