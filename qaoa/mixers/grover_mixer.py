@@ -47,7 +47,11 @@ class Grover(Mixer):
         Given feasible states f \in F,
         and let US be the circuit that prepares US = 1/|F| \sum_{f\inF} |f>.
         The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US.
+
+        The subcircuit (e.g. Dicke) is shown as a labelled box in circuit drawings,
+        so the structure is immediately visible.
         """
+        from qiskit import QuantumRegister, QuantumCircuit
 
         # Only update the subcircuit's qubit count when it differs from our own,
         # preserving any N_qubits that was already set on the subcircuit.
@@ -56,19 +60,23 @@ class Grover(Mixer):
         self.subcircuit.create_circuit()
         US = self.subcircuit.circuit
 
-        # US^\dagger
-        self.circuit = US.inverse()
+        sub_label = getattr(self.subcircuit, "label", self.subcircuit.__class__.__name__)
+        n = self.subcircuit.N_qubits
+
+        qr = QuantumRegister(n)
+        self.circuit = QuantumCircuit(qr)
+
+        # US^\dagger — shown as a labelled box (e.g. "Dicke†")
+        self.circuit.append(US.inverse().to_instruction(label=f"{sub_label}\u2020"), range(n))
         # X^n
-        self.circuit.x(range(self.subcircuit.N_qubits))
+        self.circuit.x(range(n))
         # C^{n-1}Phase
-        if self.subcircuit.N_qubits == 1:
+        if n == 1:
             phase_gate = PhaseGate(-self.mixer_param)
         else:
-            phase_gate = PhaseGate(-self.mixer_param).control(
-                self.subcircuit.N_qubits - 1
-            )
-        self.circuit.append(phase_gate, self.circuit.qubits)
+            phase_gate = PhaseGate(-self.mixer_param).control(n - 1)
+        self.circuit.append(phase_gate, range(n))
         # X^n
-        self.circuit.x(range(self.subcircuit.N_qubits))
-        # US
-        self.circuit.compose(US, range(self.subcircuit.N_qubits), inplace=True)
+        self.circuit.x(range(n))
+        # US — shown as a labelled box (e.g. "Dicke")
+        self.circuit.append(US.to_instruction(label=sub_label), range(n))
