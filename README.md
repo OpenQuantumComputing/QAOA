@@ -391,7 +391,7 @@ If you use this library in your research, please cite:
   title        = {{QAOA}: A Modular Python Library for the Quantum Approximate Optimization Algorithm},
   year         = {2024},
   url          = {https://github.com/OpenQuantumComputing/QAOA},
-  note         = {Version 1.2.2}
+  note         = {Version 1.2.3}
 }
 ```
 
