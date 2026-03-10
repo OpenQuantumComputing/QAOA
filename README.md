@@ -143,9 +143,9 @@ Multi-angle QAOA allows components to use multiple parameters per layer, increas
 
 The flat angle array format used by `hist()`, `getParametersToBind()`, and `interp()` is:
 
-	[init_0, ..., init_{n-1},          # initial state params (0 for Plus)
-	 gamma_{0,0}, ..., beta_{0,n-1},   # layer 0 params
-	 gamma_{1,0}, ..., beta_{1,n-1},   # layer 1 params
+	[$init_0, ..., init_{n-1},$          # initial state params (0 for Plus)
+	 $gamma_{0,0}, ..., beta_{0,n-1},$   # layer 0 params
+	 $gamma_{1,0}, ..., beta_{1,n-1},$   # layer 1 params
 	 ...]
 
 For the standard single-parameter case, this reduces to `[gamma_0, beta_0, gamma_1, beta_1, ...]`.
@@ -193,11 +193,7 @@ To inspect the internal structure of a single Grover block:
 
 ![Grover circuit](images/grover_circuit.png "Grover mixer: Dicke† – X^n – C^{n-1}Phase – X^n – Dicke")
 
-The Grover mixer has the structure
-
-U_S† X^n C^{n−1}P X^n U_S,
-
-where `U_S` is the Dicke state-preparation circuit. In the drawing, `U_S` and its
+The Grover mixer has the structure $U_S^\dagger X^n C^{n-1} P X^n U_S$, where $U_S$ is the Dicke state-preparation circuit. In the drawing, $U_S$ and its
 inverse appear as labelled blocks (`Dicke` / `Dicke†`).
 
 Finally, create multiple independent copies of this Grover block:
@@ -211,7 +207,7 @@ The `Grover` mixer automatically inherits the qubit count from the Dicke circuit
 and `Tensor` replicates the full block without requiring manual qubit bookkeeping.
 
 <p align="center">
-  <img src="images/lego_circuit.png" width="450"><br>
+  <img src="images/lego_circuit.png" width="250"><br>
   <em>Lego-like circuit: three Grover blocks on 12 qubits</em>
 </p>
 
