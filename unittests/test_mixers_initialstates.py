@@ -265,8 +265,7 @@ class TestDickeInitialState(unittest.TestCase):
     def test_dicke_k1_n3(self):
         from qaoa.initialstates import Dicke
 
-        init = Dicke(k=1)
-        init.setNumQubits(3)
+        init = Dicke(k=1, N=3)
         init.create_circuit()
         self.assertIsInstance(init.circuit, QuantumCircuit)
         self.assertEqual(init.circuit.num_qubits, 3)
@@ -274,18 +273,38 @@ class TestDickeInitialState(unittest.TestCase):
     def test_dicke_k2_n4(self):
         from qaoa.initialstates import Dicke
 
-        init = Dicke(k=2)
-        init.setNumQubits(4)
+        init = Dicke(k=2, N=4)
         init.create_circuit()
         self.assertIsInstance(init.circuit, QuantumCircuit)
+        self.assertEqual(init.circuit.num_qubits, 4)
 
     def test_dicke_k3_n5(self):
         from qaoa.initialstates import Dicke
 
+        init = Dicke(k=3, N=5)
+        init.create_circuit()
+        self.assertIsInstance(init.circuit, QuantumCircuit)
+        self.assertEqual(init.circuit.num_qubits, 5)
+
+    def test_dicke_n_defaults_to_k(self):
+        """Without N, N_qubits should default to k (backward-compatible)."""
+        from qaoa.initialstates import Dicke
+
         init = Dicke(k=3)
+        self.assertEqual(init.N_qubits, 3)
+        init.create_circuit()
+        self.assertIsInstance(init.circuit, QuantumCircuit)
+        self.assertEqual(init.circuit.num_qubits, 3)
+
+    def test_dicke_setnumqubits_still_works(self):
+        """setNumQubits() can still override N after construction."""
+        from qaoa.initialstates import Dicke
+
+        init = Dicke(k=2)
         init.setNumQubits(5)
         init.create_circuit()
         self.assertIsInstance(init.circuit, QuantumCircuit)
+        self.assertEqual(init.circuit.num_qubits, 5)
 
 
 class TestStateVectorInitialState(unittest.TestCase):

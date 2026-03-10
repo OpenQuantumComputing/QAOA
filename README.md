@@ -175,16 +175,15 @@ For example, a Grover mixer over 3 independent Dicke sub-registers (each with 4 
 
 	from qaoa import initialstates, mixers
 
-	dicke  = initialstates.Dicke(2)        # Dicke state with k=2 excitations
-	dicke.setNumQubits(4)                   # 4-qubit register per block
-	grover = mixers.Grover(dicke)           # Grover mixer over the Dicke feasible space
+	dicke  = initialstates.Dicke(2, 4)        # Dicke state: k=2 excitations, N=4 qubits
+	grover = mixers.Grover(dicke)              # Grover mixer over the Dicke feasible space
 	tensor = initialstates.Tensor(grover, 3)  # 3 independent copies (12 qubits total)
 
 	tensor.create_circuit()
 	tensor.circuit.draw('mpl')
 
-`Grover` inherits the qubit count from its sub-circuit, so no extra `setNumQubits`
-call is needed for the mixer itself.
+`Dicke(k, N)` accepts the Hamming weight `k` and the register size `N` directly, and
+`Grover` inherits the qubit count from its sub-circuit automatically.
 
 ![Lego circuit](images/lego_circuit.png "Lego circuit: three Grover blocks on 12 qubits")
 
@@ -209,7 +208,7 @@ the circuit name when `create_circuit()` is called.  The label defaults to the c
 name but can be customised at construction time (for `Dicke`, `Grover`, and `Tensor`)
 or by setting the attribute before calling `create_circuit()`:
 
-	dicke = initialstates.Dicke(2, label="Dicke-2")
+	dicke = initialstates.Dicke(2, 4, label="Dicke-2")
 	dicke.create_circuit()
 	print(dicke.circuit.name)   # → "Dicke-2"
 
