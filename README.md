@@ -196,7 +196,8 @@ To inspect the internal structure of a single Grover block:
 The Grover mixer has the structure $U_S^\dagger X^n C^{n-1} P X^n U_S$, where $U_S$ is the Dicke state-preparation circuit. In the drawing, $U_S$ and its
 inverse appear as labelled blocks (`Dicke` / `Dicke†`).
 
-Finally, create multiple independent copies of this Grover block:
+Finally, create multiple independent copies of this Grover block.
+The `Tensor` class replicates the given sub-circuit across independent registers:
 
     tensor = initialstates.Tensor(grover, 3)   # 3 copies → 12 qubits total
 
@@ -231,17 +232,6 @@ or by setting the attribute before calling `create_circuit()`:
 	xy.setNumQubits(4)
 	xy.create_circuit()
 	print(xy.circuit.name)      # → "XY-ring"
-
-***
-### Tensorize mixers
-To tensorize a mixer, i.e. decomposing the mixer into a tensor product of unitaries that is 
-performed on each qubit, one can call the `Tensor` class with the sub-circuit and the number of copies.
-
-For example, for the standard MaxCut problem above where the X mixer was used, one could find the tensor by writing:
-
-	x_mixer = mixers.X()
-	x_mixer.setNumQubits(number_of_qubits_of_subpart)
-	tensorized_mixer = initialstates.Tensor(x_mixer, number_of_copies)
 
 ***
 ### Talk to an agent
