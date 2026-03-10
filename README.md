@@ -167,39 +167,53 @@ Assuming all-to-all connectivity of qubits, one can minimize the depth of the ci
 
 
 ***
-### Building circuits like Lego
+### Building circuits like "Lego"
 
-Components can be freely composed ("lego style") to build more complex circuits without needing to configure qubit counts manually.
+Components can be freely composed (“lego style”) to build more complex circuits.
 
-For example, a Grover mixer over 3 independent Dicke sub-registers (each with 4 qubits, Hamming weight k=2) can be assembled like this:
+A typical workflow is:
+1. define a feasible-state preparation circuit (e.g. Dicke),
+2. build a mixer acting on that feasible space (e.g. Grover),
+3. replicate the resulting block across independent registers using a tensor product.
 
-	from qaoa import initialstates, mixers
+For example, start by constructing a Dicke state with Hamming weight k=2 on 4 qubits:
 
-	dicke  = initialstates.Dicke(2, 4)        # Dicke state: k=2 excitations, N=4 qubits
-	grover = mixers.Grover(dicke)              # Grover mixer over the Dicke feasible space
-	tensor = initialstates.Tensor(grover, 3)  # 3 independent copies (12 qubits total)
+    from qaoa import initialstates, mixers
 
-	tensor.create_circuit()
-	tensor.circuit.draw('mpl')
+    dicke = initialstates.Dicke(2, 4)     # k=2 excitations on N=4 qubits
 
-`Dicke(k, N)` accepts the Hamming weight `k` and the register size `N` directly, and
-`Grover` inherits the qubit count from its sub-circuit automatically.
+Next, build a Grover mixer that operates on the feasible space prepared by the Dicke circuit:
 
-![Lego circuit](images/lego_circuit.png "Lego circuit: three Grover blocks on 12 qubits")
+    grover = mixers.Grover(dicke)
 
-Each sub-circuit is shown as a labelled block in the drawing so the "lego" structure
-is immediately visible.
+Finally, create multiple independent copies of this Grover block:
 
-To inspect the internal structure of a single Grover block, draw it directly:
+    tensor = initialstates.Tensor(grover, 3)   # 3 copies → 12 qubits total
 
-	grover.create_circuit()
-	grover.circuit.draw('mpl')
+    tensor.create_circuit()
+    tensor.circuit.draw('mpl')
+
+The `Grover` mixer automatically inherits the qubit count from the Dicke circuit,
+and `Tensor` replicates the full block without requiring manual qubit bookkeeping.
+
+<img src="images/lego_circuit.png" width="50%">
+
+Each sub-circuit is displayed as a labelled block so the modular “lego” structure
+is visible in the diagram.
+
+To inspect the internal structure of a single Grover block:
+
+    grover.create_circuit()
+    grover.circuit.draw('mpl')
 
 ![Grover circuit](images/grover_circuit.png "Grover mixer: Dicke† – X^n – C^{n-1}Phase – X^n – Dicke")
 
-The Grover mixer is constructed as U_S† X^n C^{n-1}P X^n U_S, where the Dicke
-state-preparation circuit U_S and its inverse are each shown as a single labelled
-box (`Dicke†` / `Dicke`).
+The Grover mixer has the structure
+
+U_S† X^n C^{n−1}P X^n U_S,
+
+where `U_S` is the Dicke state-preparation circuit. In the drawing, `U_S` and its
+inverse appear as labelled blocks (`Dicke` / `Dicke†`).
 
 ### Annotating circuits
 
