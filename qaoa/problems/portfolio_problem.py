@@ -75,9 +75,9 @@ class PortfolioOptimization(QUBO):
         # penalty = self.params.get("penalty", 0.0)
 
         x = np.array(list(map(int, string)))
-        cost = risk * (x.T @ cov_matrix @ x) - exp_return.T @ x
+        cost = self.risk * (x.T @ self.cov_matrix @ x) - self.exp_return.T @ x
         if penalize:
-            cost += penalty * (x.sum() - budget) ** 2
+            cost += self.penalty * (x.sum() - self.budget) ** 2
 
         return -cost
 

@@ -13,12 +13,12 @@ from qiskit import (
 )
 from qiskit.circuit import Parameter
 try:
-    from qiskit.primitives import Sampler
+    from qiskit_aer.primitives import SamplerV2 as _SamplerV2
 except ImportError:
-    from qiskit_aer.primitives import Sampler
+    from qiskit.primitives import StatevectorSampler as _SamplerV2
 from qiskit_algorithms.optimizers import COBYLA
 
-from qiskit_aer import Aer
+from qiskit_aer import AerSimulator, Aer
 
 from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
@@ -198,7 +198,7 @@ class QAOA:
         problem,
         mixer,
         initialstate,
-        backend=Aer.get_backend("qasm_simulator"),
+        backend=AerSimulator(),
         noisemodel=None,
         optimizer=[COBYLA, {}],  # optimizer, options
         precision=None,
@@ -869,7 +869,7 @@ class QAOA:
         except TypeError as e:  ### QNSPSA needs fidelity
             self.isQNSPSA = True
             self.optimizer[1]["fidelity"] = self.optimizer[0].get_fidelity(
-                self.parameterized_circuit, sampler=Sampler()
+                self.parameterized_circuit, sampler=_SamplerV2()
             )
             opt = self.optimizer[0](**self.optimizer[1])
         res = opt.minimize(self.loss, x0=angles0)

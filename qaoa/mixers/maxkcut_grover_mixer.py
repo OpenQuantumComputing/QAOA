@@ -130,6 +130,7 @@ class MaxKCutGrover(Mixer):
             tensor_feas = Tensor(circ_one_node, self.num_V)
 
             gm = Grover(tensor_feas)
+            gm.setNumQubits(tensor_feas.N_qubits)
 
             gm.create_circuit()
             self.circuit = gm.circuit

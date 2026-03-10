@@ -30,13 +30,11 @@ class QUBO(Problem):
         createParameterizedCostCircuitTril(): Creates a parameterized circuit of the triangularized QUBO problem.
     """
     def __init__(self, Q=None, c=None, b=None) -> None:
-        super().__init__()
         """
         Implements the mapping from the parameters in params to the QUBO problem.
         Is expected to be called by the child class.
 
-        # The QUBO will be on this form:
-        # min x^T Q x + c^T x + b
+        The QUBO will be on this form: min x^T Q x + c^T x + b
 
         Args:
             Q (np.ndarray): A 2-dimensional numpy ndarray representing the quadratic coefficients.
@@ -48,6 +46,7 @@ class QUBO(Problem):
             AssertionError: If c is not a 1D numpy ndarray of compatible size.
             AssertionError: If b is not a scalar.
         """
+        super().__init__()
         assert type(Q) is np.ndarray, "Q needs to be a numpy ndarray, but is " + str(
             type(Q)
         )

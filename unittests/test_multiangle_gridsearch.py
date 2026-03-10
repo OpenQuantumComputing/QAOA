@@ -6,14 +6,14 @@ import sys
 sys.path.append("../")
 from qaoa import QAOA
 from qaoa import problems, mixers, initialstates
-from qiskit_aer import Aer
+from qiskit_aer import AerSimulator
 
 
 class TestMultiAngleGridSearch(unittest.TestCase):
     """Test grid search works for both vanilla and multi-angle QAOA."""
 
     def setUp(self):
-        self.backend = Aer.get_backend("qasm_simulator")
+        self.backend = AerSimulator()
         self.angles = {"gamma": [0, 2 * np.pi, 5], "beta": [0, 2 * np.pi, 5]}
 
     def test_vanilla_grid_search_sequential(self):

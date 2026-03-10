@@ -40,7 +40,7 @@ This library already contains several standard implementations.
 - The following [problem](qaoa/problems/base_problem.py) cases are already available:
 	- [Max k-CUT binary power of two](qaoa/problems/maxkcut_binary_powertwo.py) *
 	- [Max k-CUT binary full H](qaoa/problems/maxkcut_binary_fullH.py)
-	- [Max k-CUT binary one hot](qaoa/problems/maxkcut_binary_one_hot.py)
+	- [Max k-CUT binary one hot](qaoa/problems/maxkcut_one_hot_problem.py)
 	- [QUBO](qaoa/problems/qubo_problem.py)
 	- [Exact cover](qaoa/problems/exactcover_problem.py)
 	- [Portfolio](qaoa/problems/portfolio_problem.py)
@@ -66,12 +66,12 @@ It is **very easy to extend this list** by providing  an implementation of a cir
 To make an ansatz for the MaxCut problem, the X-mixer and the initial state $|+\rangle^{\otimes n}$  one can create an instance like this: 
 
 	qaoa = QAOA(
-		initialstate=initialstates.Plus(),
 		problem=problems.MaxKCutBinaryPowerOfTwo(G="some networkx instance", k_cuts=2),
-		mixer=mixers.X()
+		mixer=mixers.X(),
+		initialstate=initialstates.Plus()
 	)
 
-*(can be used for the standard MaxCut with argument k_cuts=2)
+*(can be used for the standard MaxCut with argument k_cuts=2, or use `problems.MaxCut(G)` for convenience)*
 ***
 ### Run optimization at depth $p$
 
@@ -106,7 +106,7 @@ QAOA supports the following keywords:
 		cvar=
 	)
 
-- `backend`: the backend to be used, defaults to `Aer.get_backend("qasm_simulator")`
+- `backend`: the backend to be used, defaults to `AerSimulator()` (from `qiskit_aer`)
 - `noisemodel`: the noise model to be used, default to `None`,
 - `optimizer`: a list of the optimizer to be used from qiskit-algorithms together with options, defaults to `[COBYLA, {}]`,
 - `precision`: sampel until a certain precision of the expectation value is reached based on $\text{error}=\frac{\text{variance}}{\sqrt{\text{shots}}}$, defaults to `None`,
@@ -136,9 +136,9 @@ Multi-angle QAOA allows components to use multiple parameters per layer, increas
 - **Parameterized initial state** (`PlusParameterized`): The initial state |+⟩ with optimizable per-qubit phase rotations
 
 	qaoa = QAOA(
-		initialstate=initialstates.Plus(),
 		problem=problems.MaxKCutBinaryPowerOfTwo(G="some networkx instance", k_cuts=2),
-		mixer=mixers.XMultiAngle()  # N_qubits beta parameters per layer
+		mixer=mixers.XMultiAngle(),  # N_qubits beta parameters per layer
+		initialstate=initialstates.Plus()
 	)
 
 The flat angle array format used by `hist()`, `getParametersToBind()`, and `interp()` is:
