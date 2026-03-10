@@ -186,21 +186,6 @@ Next, build a Grover mixer that operates on the feasible space prepared by the D
 
     grover = mixers.Grover(dicke)
 
-Finally, create multiple independent copies of this Grover block:
-
-    tensor = initialstates.Tensor(grover, 3)   # 3 copies → 12 qubits total
-
-    tensor.create_circuit()
-    tensor.circuit.draw('mpl')
-
-The `Grover` mixer automatically inherits the qubit count from the Dicke circuit,
-and `Tensor` replicates the full block without requiring manual qubit bookkeeping.
-
-<img src="images/lego_circuit.png" width="50%">
-
-Each sub-circuit is displayed as a labelled block so the modular “lego” structure
-is visible in the diagram.
-
 To inspect the internal structure of a single Grover block:
 
     grover.create_circuit()
@@ -214,6 +199,25 @@ U_S† X^n C^{n−1}P X^n U_S,
 
 where `U_S` is the Dicke state-preparation circuit. In the drawing, `U_S` and its
 inverse appear as labelled blocks (`Dicke` / `Dicke†`).
+
+Finally, create multiple independent copies of this Grover block:
+
+    tensor = initialstates.Tensor(grover, 3)   # 3 copies → 12 qubits total
+
+    tensor.create_circuit()
+    tensor.circuit.draw('mpl')
+
+The `Grover` mixer automatically inherits the qubit count from the Dicke circuit,
+and `Tensor` replicates the full block without requiring manual qubit bookkeeping.
+
+<p align="center">
+  <img src="images/lego_circuit.png" width="450"><br>
+  <em>Lego-like circuit: three Grover blocks on 12 qubits</em>
+</p>
+
+Each sub-circuit is displayed as a labelled block so the modular “lego” structure
+is visible in the diagram.
+
 
 ### Annotating circuits
 
