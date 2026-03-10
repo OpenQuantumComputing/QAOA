@@ -143,9 +143,9 @@ Multi-angle QAOA allows components to use multiple parameters per layer, increas
 
 The flat angle array format used by `hist()`, `getParametersToBind()`, and `interp()` is:
 
-	[init_0, ..., init_{n-1},          # initial state params (0 for Plus)
-	 gamma_{0,0}, ..., beta_{0,n-1},   # layer 0 params
-	 gamma_{1,0}, ..., beta_{1,n-1},   # layer 1 params
+	[$init_0, ..., init_{n-1},$          # initial state params (0 for Plus)
+	 $gamma_{0,0}, ..., beta_{0,n-1},$   # layer 0 params
+	 $gamma_{1,0}, ..., beta_{1,n-1},$   # layer 1 params
 	 ...]
 
 For the standard single-parameter case, this reduces to `[gamma_0, beta_0, gamma_1, beta_1, ...]`.
@@ -167,14 +167,71 @@ Assuming all-to-all connectivity of qubits, one can minimize the depth of the ci
 
 
 ***
-### Tensorize mixers
-To tensorize a mixer, i.e. decomposing the mixer into a tensor product of unitaries that is 
-performed on each qubit, one can call the tensor class with the arguments of mixer and number of qubits in subpart.
+### Building circuits like "Lego"
 
-For example, for the standard MaxCut problem above where the X mixer was used, one could find the tensor by writing:
+Components can be freely composed (“lego style”) to build more complex circuits.
 
-	tensorized_mixer = Tensor(mixer.X(), number_of_qubits_of_subpart)
-<!--find out the number of qubits we want here -->
+A typical workflow is:
+1. define a feasible-state preparation circuit (e.g. Dicke),
+2. build a mixer acting on that feasible space (e.g. Grover),
+3. replicate the resulting block across independent registers using a tensor product.
+
+For example, start by constructing a Dicke state with Hamming weight k=2 on 4 qubits:
+
+    from qaoa import initialstates, mixers
+
+    dicke = initialstates.Dicke(2, 4)     # k=2 excitations on N=4 qubits
+
+Next, build a Grover mixer that operates on the feasible space prepared by the Dicke circuit:
+
+    grover = mixers.Grover(dicke)
+
+To inspect the internal structure of a single Grover block:
+
+    grover.create_circuit()
+    grover.circuit.draw('mpl')
+
+![Grover circuit](images/grover_circuit.png "Grover mixer: Dicke† – X^n – C^{n-1}Phase – X^n – Dicke")
+
+The Grover mixer has the structure $U_S^\dagger X^n C^{n-1} P X^n U_S$, where $U_S$ is the Dicke state-preparation circuit. In the drawing, $U_S$ and its
+inverse appear as labelled blocks (`Dicke` / `Dicke†`).
+
+Finally, create multiple independent copies of this Grover block.
+The `Tensor` class replicates the given sub-circuit across independent registers:
+
+    tensor = initialstates.Tensor(grover, 3)   # 3 copies → 12 qubits total
+
+    tensor.create_circuit()
+    tensor.circuit.draw('mpl')
+
+The `Grover` mixer automatically inherits the qubit count from the Dicke circuit,
+and `Tensor` replicates the full block without requiring manual qubit bookkeeping.
+
+<p align="center">
+  <img src="images/lego_circuit.png" width="250"><br>
+  <em>Lego-like circuit: three Grover blocks on 12 qubits</em>
+</p>
+
+Each sub-circuit is displayed as a labelled block so the modular “lego” structure
+is visible in the diagram.
+
+
+### Annotating circuits
+
+Every component (initial state or mixer) carries a `label` attribute that is used as
+the circuit name when `create_circuit()` is called.  The label defaults to the class
+name but can be customised at construction time (for `Dicke`, `Grover`, and `Tensor`)
+or by setting the attribute before calling `create_circuit()`:
+
+	dicke = initialstates.Dicke(2, 4, label="Dicke-2")
+	dicke.create_circuit()
+	print(dicke.circuit.name)   # → "Dicke-2"
+
+	xy = mixers.XY()
+	xy.label = "XY-ring"
+	xy.setNumQubits(4)
+	xy.create_circuit()
+	print(xy.circuit.name)      # → "XY-ring"
 
 ***
 ### Talk to an agent

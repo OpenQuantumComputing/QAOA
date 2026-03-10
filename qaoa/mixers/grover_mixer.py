@@ -21,15 +21,24 @@ class Grover(Mixer):
         create_circuit(): Constructs the Grover mixer circuit using the subcircuit.
     """
 
-    def __init__(self, subcircuit: InitialState) -> None:
+    def __init__(self, subcircuit: InitialState, label: str | None = None) -> None:
         """
         Initializes the Grover mixer.
 
         Args:
-            subcircuit (InitialState): The initial state circuit.
+            subcircuit (InitialState): The initial state circuit.  If the
+                subcircuit already has ``N_qubits`` set the Grover mixer
+                inherits it automatically so that ``setNumQubits`` does not
+                need to be called separately.
+            label (str | None): Optional annotation label.  Defaults to
+                ``"Grover"``.
         """
+        super().__init__(label=label)
         self.subcircuit = subcircuit
         self.mixer_param = Parameter("x_beta")
+        # Inherit N_qubits from the subcircuit when it is already known.
+        if hasattr(subcircuit, "N_qubits"):
+            self.N_qubits = subcircuit.N_qubits
 
     def create_circuit(self):
         r"""
@@ -38,25 +47,36 @@ class Grover(Mixer):
         Given feasible states f \in F,
         and let US be the circuit that prepares US = 1/|F| \sum_{f\inF} |f>.
         The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US.
-        """
 
-        self.subcircuit.setNumQubits(self.N_qubits)
+        The subcircuit (e.g. Dicke) is shown as a labelled box in circuit drawings,
+        so the structure is immediately visible.
+        """
+        from qiskit import QuantumRegister, QuantumCircuit
+
+        # Only update the subcircuit's qubit count when it differs from our own,
+        # preserving any N_qubits that was already set on the subcircuit.
+        if not hasattr(self.subcircuit, "N_qubits") or self.subcircuit.N_qubits != self.N_qubits:
+            self.subcircuit.setNumQubits(self.N_qubits)
         self.subcircuit.create_circuit()
         US = self.subcircuit.circuit
 
-        # US^\dagger
-        self.circuit = US.inverse()
+        sub_label = getattr(self.subcircuit, "label", self.subcircuit.__class__.__name__)
+        n = self.subcircuit.N_qubits
+
+        qr = QuantumRegister(n, name="q")
+        self.circuit = QuantumCircuit(qr)
+
+        # US^\dagger — shown as a labelled box (e.g. "Dicke†")
+        self.circuit.append(US.inverse().to_instruction(label=f"{sub_label}\u2020"), range(n))
         # X^n
-        self.circuit.x(range(self.subcircuit.N_qubits))
+        self.circuit.x(range(n))
         # C^{n-1}Phase
-        if self.subcircuit.N_qubits == 1:
+        if n == 1:
             phase_gate = PhaseGate(-self.mixer_param)
         else:
-            phase_gate = PhaseGate(-self.mixer_param).control(
-                self.subcircuit.N_qubits - 1
-            )
-        self.circuit.append(phase_gate, self.circuit.qubits)
+            phase_gate = PhaseGate(-self.mixer_param).control(n - 1)
+        self.circuit.append(phase_gate, range(n))
         # X^n
-        self.circuit.x(range(self.subcircuit.N_qubits))
-        # US
-        self.circuit.compose(US, range(self.subcircuit.N_qubits), inplace=True)
+        self.circuit.x(range(n))
+        # US — shown as a labelled box (e.g. "Dicke")
+        self.circuit.append(US.to_instruction(label=sub_label), range(n))
