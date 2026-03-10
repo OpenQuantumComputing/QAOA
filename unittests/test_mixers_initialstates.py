@@ -396,6 +396,159 @@ class TestTensorInitialState(unittest.TestCase):
         self.assertIsInstance(init.circuit, QuantumCircuit)
         self.assertEqual(init.circuit.num_qubits, 4)
 
+    def test_tensor_preserves_qubit_count(self):
+        from qaoa.initialstates import Tensor, Plus
+
+        plus = Plus()
+        plus.setNumQubits(3)
+        init = Tensor(subcircuit=plus, num=4)
+        self.assertEqual(init.N_qubits, 12)
+        init.create_circuit()
+        self.assertEqual(init.circuit.num_qubits, 12)
+
+
+# ---------------------------------------------------------------------------
+# Lego-building tests (no setNumQubits required)
+# ---------------------------------------------------------------------------
+
+
+class TestLegoBuilding(unittest.TestCase):
+    """Tests for composing circuits 'lego style' without explicit setNumQubits."""
+
+    def test_dicke_default_nqubits(self):
+        """Dicke(k) should have N_qubits == k by default."""
+        from qaoa.initialstates import Dicke
+
+        d = Dicke(2)
+        self.assertEqual(d.N_qubits, 2)
+        d.create_circuit()
+        self.assertEqual(d.circuit.num_qubits, 2)
+
+    def test_dicke_setnumqubits_override(self):
+        """setNumQubits still works to use a larger register than k."""
+        from qaoa.initialstates import Dicke
+
+        d = Dicke(1)
+        d.setNumQubits(4)
+        d.create_circuit()
+        self.assertEqual(d.circuit.num_qubits, 4)
+
+    def test_grover_inherits_nqubits_from_subcircuit(self):
+        """Grover should inherit N_qubits from its subcircuit automatically."""
+        from qaoa.mixers import Grover
+        from qaoa.initialstates import Dicke
+
+        dicke = Dicke(2)
+        grover = Grover(dicke)
+        self.assertEqual(grover.N_qubits, 2)
+
+    def test_lego_dicke_grover_tensor_no_setnumqubits(self):
+        """Tensor(Grover(Dicke(k)), n) should work without any setNumQubits call."""
+        from qaoa.mixers import Grover
+        from qaoa.initialstates import Dicke, Tensor
+
+        dicke = Dicke(2)
+        grover = Grover(dicke)
+        tensor = Tensor(grover, 3)
+
+        self.assertEqual(tensor.N_qubits, 6)
+        tensor.create_circuit()
+        self.assertIsInstance(tensor.circuit, QuantumCircuit)
+        self.assertEqual(tensor.circuit.num_qubits, 6)
+
+    def test_lego_grover_setnumqubits_still_works(self):
+        """setNumQubits on Grover should still propagate to the sub-circuit."""
+        from qaoa.mixers import Grover
+        from qaoa.initialstates import Dicke, Tensor
+
+        dicke = Dicke(1)
+        grover = Grover(dicke)
+        grover.setNumQubits(3)  # override to 3 qubits per Grover unit
+        self.assertEqual(grover.N_qubits, 3)
+
+        tensor = Tensor(grover, 2)
+        self.assertEqual(tensor.N_qubits, 6)
+        tensor.create_circuit()
+        self.assertEqual(tensor.circuit.num_qubits, 6)
+
+
+# ---------------------------------------------------------------------------
+# Annotation / label tests
+# ---------------------------------------------------------------------------
+
+
+class TestAnnotation(unittest.TestCase):
+    """Tests for the label / circuit annotation feature."""
+
+    def test_default_label_initial_state(self):
+        from qaoa.initialstates import Plus
+
+        p = Plus()
+        self.assertEqual(p.label, "Plus")
+
+    def test_default_label_mixer(self):
+        from qaoa.mixers import X
+
+        m = X()
+        self.assertEqual(m.label, "X")
+
+    def test_circuit_name_set_after_create_circuit(self):
+        from qaoa.initialstates import Plus
+
+        p = Plus()
+        p.setNumQubits(3)
+        p.create_circuit()
+        self.assertEqual(p.circuit.name, "Plus")
+
+    def test_mixer_circuit_name_set_after_create_circuit(self):
+        from qaoa.mixers import X
+
+        m = X()
+        m.setNumQubits(2)
+        m.create_circuit()
+        self.assertEqual(m.circuit.name, "X")
+
+    def test_custom_label_at_construction(self):
+        """Dicke, Grover and Tensor accept label= at construction time."""
+        from qaoa.initialstates import Dicke, Tensor
+        from qaoa.mixers import Grover
+
+        d = Dicke(2, label="my-dicke")
+        self.assertEqual(d.label, "my-dicke")
+        d.create_circuit()
+        self.assertEqual(d.circuit.name, "my-dicke")
+
+        g = Grover(d, label="my-grover")
+        self.assertEqual(g.label, "my-grover")
+
+        t = Tensor(g, 2, label="my-tensor")
+        self.assertEqual(t.label, "my-tensor")
+        t.create_circuit()
+        self.assertEqual(t.circuit.name, "my-tensor")
+
+    def test_custom_label_via_attribute(self):
+        """Any class supports label annotation via direct attribute assignment."""
+        from qaoa.mixers import XY
+
+        xy = XY()
+        xy.label = "XY-ring"
+        xy.setNumQubits(4)
+        xy.create_circuit()
+        self.assertEqual(xy.circuit.name, "XY-ring")
+
+    def test_tensor_subcircuit_shows_as_labelled_instruction(self):
+        """Tensor.create_circuit() wraps the sub-circuit as a labelled instruction."""
+        from qaoa.initialstates import Dicke, Tensor
+        from qaoa.mixers import Grover
+
+        grover = Grover(Dicke(2))
+        tensor = Tensor(grover, 3)
+        tensor.create_circuit()
+        # The circuit should contain instructions whose name matches the sub label
+        instruction_names = [instr.operation.name for instr in tensor.circuit.data]
+        self.assertTrue(all(name == "Grover" for name in instruction_names))
+
 
 if __name__ == "__main__":
     unittest.main()
+

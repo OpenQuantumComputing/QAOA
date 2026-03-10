@@ -167,14 +167,57 @@ Assuming all-to-all connectivity of qubits, one can minimize the depth of the ci
 
 
 ***
+### Building circuits like Lego
+
+Components can be freely composed ("lego style") to build more complex circuits without needing to configure qubit counts manually.
+
+For example, a Grover mixer over 3 independent Dicke-2 sub-registers can be assembled like this:
+
+	from qaoa import initialstates, mixers
+
+	dicke  = initialstates.Dicke(2)       # Dicke state with k=2 excitations
+	grover = mixers.Grover(dicke)          # Grover mixer over the Dicke feasible space
+	tensor = initialstates.Tensor(grover, 3)  # 3 independent copies (6 qubits total)
+
+	tensor.create_circuit()
+	tensor.circuit.draw('mpl')
+
+`Dicke(k)` automatically sets `N_qubits = k` (the minimum needed register), and
+`Grover` inherits that qubit count from its sub-circuit, so no explicit
+`setNumQubits` call is required.
+
+![Lego circuit](images/lego_circuit.png "Lego circuit: three Grover blocks on 6 qubits")
+
+Each sub-circuit is shown as a labelled block in the drawing so the "lego" structure
+is immediately visible.
+
+### Annotating circuits
+
+Every component (initial state or mixer) carries a `label` attribute that is used as
+the circuit name when `create_circuit()` is called.  The label defaults to the class
+name but can be customised at construction time (for `Dicke`, `Grover`, and `Tensor`)
+or by setting the attribute before calling `create_circuit()`:
+
+	dicke = initialstates.Dicke(2, label="Dicke-2")
+	dicke.create_circuit()
+	print(dicke.circuit.name)   # → "Dicke-2"
+
+	xy = mixers.XY()
+	xy.label = "XY-ring"
+	xy.setNumQubits(4)
+	xy.create_circuit()
+	print(xy.circuit.name)      # → "XY-ring"
+
+***
 ### Tensorize mixers
 To tensorize a mixer, i.e. decomposing the mixer into a tensor product of unitaries that is 
-performed on each qubit, one can call the tensor class with the arguments of mixer and number of qubits in subpart.
+performed on each qubit, one can call the `Tensor` class with the sub-circuit and the number of copies.
 
 For example, for the standard MaxCut problem above where the X mixer was used, one could find the tensor by writing:
 
-	tensorized_mixer = Tensor(mixer.X(), number_of_qubits_of_subpart)
-<!--find out the number of qubits we want here -->
+	x_mixer = mixers.X()
+	x_mixer.setNumQubits(number_of_qubits_of_subpart)
+	tensorized_mixer = initialstates.Tensor(x_mixer, number_of_copies)
 
 ***
 ### Talk to an agent

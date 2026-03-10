@@ -21,15 +21,24 @@ class Grover(Mixer):
         create_circuit(): Constructs the Grover mixer circuit using the subcircuit.
     """
 
-    def __init__(self, subcircuit: InitialState) -> None:
+    def __init__(self, subcircuit: InitialState, label: str | None = None) -> None:
         """
         Initializes the Grover mixer.
 
         Args:
-            subcircuit (InitialState): The initial state circuit.
+            subcircuit (InitialState): The initial state circuit.  If the
+                subcircuit already has ``N_qubits`` set the Grover mixer
+                inherits it automatically so that ``setNumQubits`` does not
+                need to be called separately.
+            label (str | None): Optional annotation label.  Defaults to
+                ``"Grover"``.
         """
+        super().__init__(label=label)
         self.subcircuit = subcircuit
         self.mixer_param = Parameter("x_beta")
+        # Inherit N_qubits from the subcircuit when it is already known.
+        if hasattr(subcircuit, "N_qubits"):
+            self.N_qubits = subcircuit.N_qubits
 
     def create_circuit(self):
         r"""
@@ -40,7 +49,10 @@ class Grover(Mixer):
         The Grover mixer has the form US^\dagger X^n C^{n-1}Phase X^n US.
         """
 
-        self.subcircuit.setNumQubits(self.N_qubits)
+        # Only update the subcircuit's qubit count when it differs from our own,
+        # preserving any N_qubits that was already set on the subcircuit.
+        if not hasattr(self.subcircuit, "N_qubits") or self.subcircuit.N_qubits != self.N_qubits:
+            self.subcircuit.setNumQubits(self.N_qubits)
         self.subcircuit.create_circuit()
         US = self.subcircuit.circuit
 

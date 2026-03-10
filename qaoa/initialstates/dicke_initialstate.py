@@ -19,13 +19,18 @@ class Dicke(InitialState):
     Methods:
         create_circuit(): Creates the circuit to prepare the Dicke states.
     """
-    def __init__(self, k) -> None:
+    def __init__(self, k, label: str | None = None) -> None:
         """
         Args:
             k (int): The Hamming weight of the Dicke states.
+            label (str | None): Optional annotation label.  Defaults to
+                ``"Dicke"``.
         """
-        super().__init__()
+        super().__init__(label=label)
         self.k = k
+        # Default N_qubits to k (minimum register needed for k excitations).
+        # Can be overridden via setNumQubits().
+        self.N_qubits = k
 
     def create_circuit(self):
         """
