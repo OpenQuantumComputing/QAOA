@@ -1,11 +1,95 @@
 # QAOA
 
-This package is a flexible python implementation of the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) /[Quantum Alternating Operator ansatz](https://arxiv.org/pdf/1709.03489.pdf)  (QAOA) **aimed at researchers** to readily test the performance of a new ansatz, a new classical optimizer, etc. By default it uses qiskit as a backend.
+[![PyPI version](https://img.shields.io/pypi/v/qaoa.svg)](https://pypi.org/project/qaoa/)
+[![Python](https://img.shields.io/pypi/pyversions/qaoa.svg)](https://pypi.org/project/qaoa/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-Install with `pip install qaoa` or `pip install -e .`.
+A flexible, modular Python library for the [Quantum Approximate Optimization Algorithm](https://arxiv.org/pdf/1411.4028.pdf) / [Quantum Alternating Operator Ansatz](https://arxiv.org/pdf/1709.03489.pdf) (QAOA), **designed for research and experimentation**. Swap problems, mixers, initial states, optimizers, and backends without rewriting your code.
 
-***
-### Background
+---
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Requirements](#requirements)
+- [Quick Example](#quick-example)
+- [Background](#background)
+- [Custom Ansatz](#custom-ansatz)
+- [Running Optimization](#running-optimization-at-depth-p)
+- [Further Parameters](#further-parameters)
+- [Extracting Results](#extract-results)
+- [Multi-Angle QAOA](#multi-angle-qaoa)
+- [Building Circuits like Lego](#building-circuits-like-lego)
+- [Minimizing Circuit Depth](#minimizing-depth-of-phase-separating-operator)
+- [Repository Structure](#repository-structure)
+- [Agent](#talk-to-an-agent)
+- [Citation](#citation)
+- [Acknowledgement](#acknowledgement)
+
+---
+
+## Installation
+
+```bash
+pip install qaoa
+```
+
+Or install in development mode from source:
+
+```bash
+git clone https://github.com/OpenQuantumComputing/QAOA.git
+cd QAOA
+pip install -e .
+```
+
+---
+
+## Requirements
+
+- Python ≥ 3.9
+- [qiskit](https://qiskit.org/) ≥ 2.3.0
+- [qiskit-aer](https://github.com/Qiskit/qiskit-aer) ≥ 0.17.0
+- [qiskit-algorithms](https://github.com/qiskit-community/qiskit-algorithms) ≥ 0.4.0
+- numpy, scipy, matplotlib, networkx
+
+Optional (for the agent):
+- langchain, langchain_community, langchain_chroma, langchain_openai, streamlit
+
+---
+
+## Quick Example
+
+```python
+import networkx as nx
+from qaoa import QAOA, problems, mixers, initialstates
+
+# Build a random graph
+G = nx.random_regular_graph(3, 8, seed=42)
+
+# Define QAOA components
+qaoa = QAOA(
+    problem=problems.MaxCut(G),
+    mixer=mixers.X(),
+    initialstate=initialstates.Plus()
+)
+
+# Sample cost landscape at depth p=1
+qaoa.sample_cost_landscape()
+
+# Optimize to depth p=3
+qaoa.optimize(depth=3)
+
+# Extract results
+print("Optimal expectation value:", qaoa.get_Exp(depth=3))
+print("Optimal parameters (gamma):", qaoa.get_gamma(depth=3))
+print("Optimal parameters (beta):", qaoa.get_beta(depth=3))
+```
+
+See [examples/](examples/) for more complete worked examples.
+
+---
+
+## Background
 Given a **cost function** 
 $$c: \lbrace 0, 1\rbrace^n \rightarrow \mathbb{R}$$
 one defines a **problem Hamiltonian** $H_P$ through the action on computational basis states via
@@ -17,7 +101,7 @@ Given a parametrized ansatz $| \gamma, \beta \rangle$, a classical optimizer is 
 
 $$ \langle \gamma, \beta | H_P | \gamma, \beta \rangle.$$
 
-QAOA of depth $p$ consist of the following **ansatz**:
+QAOA of depth $p$ consists of the following **ansatz**:
 
 $$ |\gamma, \beta \rangle = \prod_{l=1}^p \left( U_M(\beta_l) U_P(\gamma_l)\right) | s\rangle, $$
 
@@ -30,15 +114,16 @@ where
 In plain vanilla QAOA these have the form
 $U_M(\beta_l)=e^{-i\beta_l X^{\otimes n}}$,  $U_P(\gamma_l)=e^{-i\gamma_l H_P}$, and the uniform superposition $| s \rangle = |+\rangle^{\otimes n}$ as initial state.
 
-***
-### Create a custom ansatz
+---
 
-In order to create a custom QAOA ansatz, one needs to specify a [problem](qaoa/problems/base_problem.py), a [mixer](qaoa/mixers/base_mixer.py), and an [initial state](qaoa/initialstates/base_initialstate.py). These base classes have an abstract method `def create_circuit:`which needs to be implemented. The problem base class additionally has an abstract method `def cost:`.
+## Custom Ansatz
+
+To create a custom QAOA ansatz, specify a [problem](qaoa/problems/base_problem.py), a [mixer](qaoa/mixers/base_mixer.py), and an [initial state](qaoa/initialstates/base_initialstate.py). These base classes each have an abstract method `def create_circuit:` that must be implemented. The problem base class additionally requires `def cost:`.
 
 This library already contains several standard implementations.
 
 - The following [problem](qaoa/problems/base_problem.py) cases are already available:
-	- [Max k-CUT binary power of two](qaoa/problems/maxkcut_binary_powertwo.py) *
+	- [Max k-CUT binary power of two](qaoa/problems/maxkcut_binary_powertwo.py)
 	- [Max k-CUT binary full H](qaoa/problems/maxkcut_binary_fullH.py)
 	- [Max k-CUT binary one hot](qaoa/problems/maxkcut_one_hot_problem.py)
 	- [QUBO](qaoa/problems/qubo_problem.py)
@@ -61,197 +146,257 @@ This library already contains several standard implementations.
 	- [Max k-CUT feasible](qaoa/initialstates/maxkcut_feasible_initialstate.py)
 	- [Plus parameterized](qaoa/initialstates/plus_parameterized_initialstate.py) *(|+⟩ with optimizable phase rotations)*
 
-It is **very easy to extend this list** by providing  an implementation of a circuit/cost of the base classes mentioned above. Feel free to fork the repo and create a pull request :-)
+It is **very easy to extend this list** by implementing the abstract methods of the base classes above. Feel free to fork the repo and open a pull request!
 
-To make an ansatz for the MaxCut problem, the X-mixer and the initial state $|+\rangle^{\otimes n}$  one can create an instance like this: 
+For example, to set up QAOA for MaxCut using the X-mixer and $|+\rangle^{\otimes n}$ as the initial state:
 
-	qaoa = QAOA(
-		problem=problems.MaxKCutBinaryPowerOfTwo(G="some networkx instance", k_cuts=2),
-		mixer=mixers.X(),
-		initialstate=initialstates.Plus()
-	)
+```python
+qaoa = QAOA(
+    problem=problems.MaxCut(G),
+    mixer=mixers.X(),
+    initialstate=initialstates.Plus()
+)
+```
 
-*(can be used for the standard MaxCut with argument k_cuts=2, or use `problems.MaxCut(G)` for convenience)*
-***
-### Run optimization at depth $p$
+---
+
+## Running Optimization at Depth $p$
 
 For depth $p=1$ the expectation value can be sampled on an $n\times m$ Cartesian grid over the domain $[0,\gamma_\text{max}]\times[0,\beta_\text{max}]$ with:
-		
-	qaoa.sample_cost_landscape()
-	
-![Energy landscape](images/E.png  "Energy landscape")
 
-Sampling high-dimensional target functions quickly becomes intractable for depth $p>1$. We therefore **iteratively increase the depth**. At each depth a **local optimization** algorithm, e.g. COBYLA, is used to find a local minimum. As **initial guess** the following is used:
+```python
+qaoa.sample_cost_landscape()
+```
 
-- At depth $p=1$ initial parameters $(\gamma, \beta)$ are given by the lowest value of the sampled cost landscape. 
-- At depth $p>1$ initial parameters $(\gamma, \beta)$ are based on an [interpolation-based heuristic](https://arxiv.org/pdf/1812.01041.pdf) of the optimal values at the previous depth.
+![Energy landscape](images/E.png "Energy landscape")
 
-Running this iterative local optimization to depth $p$ can be done by the following call:
+Sampling high-dimensional target functions quickly becomes intractable for depth $p>1$. The library therefore **iteratively increases the depth**. At each depth a **local optimization** algorithm (e.g. COBYLA) finds a local minimum, using the following **initial guess**:
 
-	qaoa.optimize(depth=p)
+- At depth $p=1$: parameters $(\gamma, \beta)$ are taken from the minimum of the sampled cost landscape.
+- At depth $p>1$: parameters are seeded via an [interpolation-based heuristic](https://arxiv.org/pdf/1812.01041.pdf) from the optimal values at the previous depth.
 
-The function will call `sample_cost_landscape` if not already done, before iteratively increasing the depth.
+```python
+qaoa.optimize(depth=p)
+```
 
-***
-### Further parameters
+This will call `sample_cost_landscape` automatically if it has not been run yet.
 
-QAOA supports the following keywords:
+---
 
-	qaoa = QAOA( ...,
-		backend= ,
-		noisemodel= ,
-		optimizer= ,
-		precision= ,
-		shots= ,
-		cvar=
-	)
+## Further Parameters
 
-- `backend`: the backend to be used, defaults to `AerSimulator()` (from `qiskit_aer`)
-- `noisemodel`: the noise model to be used, default to `None`,
-- `optimizer`: a list of the optimizer to be used from qiskit-algorithms together with options, defaults to `[COBYLA, {}]`,
-- `precision`: sampel until a certain precision of the expectation value is reached based on $\text{error}=\frac{\text{variance}}{\sqrt{\text{shots}}}$, defaults to `None`,
-- `shots`: number of shots to be used, defaults to `1024`,
-- `cvar`: the value for [conditional value at risk (CVAR)](https://arxiv.org/pdf/1907.04769.pdf), defaults to `1`, which are the standard moments.
+```python
+qaoa = QAOA(
+    ...,
+    backend=,
+    noisemodel=,
+    optimizer=,
+    precision=,
+    shots=,
+    cvar=
+)
+```
 
-***
-### Extract results
+- `backend`: the backend to use, defaults to `AerSimulator()` from `qiskit_aer`
+- `noisemodel`: noise model to apply, defaults to `None`
+- `optimizer`: optimizer from qiskit-algorithms with options, defaults to `[COBYLA, {}]`
+- `precision`: sample until a certain precision of the expectation value is reached, based on $\text{error}=\frac{\text{variance}}{\sqrt{\text{shots}}}$, defaults to `None`
+- `shots`: number of measurement shots, defaults to `1024`
+- `cvar`: value for [Conditional Value at Risk (CVaR)](https://arxiv.org/pdf/1907.04769.pdf), defaults to `1` (standard expectation value)
 
-Once `qaoa.optimize(depth=p)` is run, one can extract, the expectation value, variance, and parametres for each depth $1\leq i \leq p$ by respectively calling:
 
-	qaoa.get_Exp(depth=i)
-	qaoa.get_Var(depth=i)
-	qaoa.get_gamma(depth=i)
-	qaoa.get_beta(depth=i)
+---
 
-Additionally, for each depth every time the loss function is called, the **angles, expectation value, variance, maximum cost, minimum cost, **and** number of shots** are stored in 
+## Extract Results
 
-	qaoa.optimization_results[i]
+Once `qaoa.optimize(depth=p)` is run, extract the expectation value, variance, and parameters for each depth $1\leq i \leq p$:
 
-***
-### Multi-Angle QAOA
+```python
+qaoa.get_Exp(depth=i)
+qaoa.get_Var(depth=i)
+qaoa.get_gamma(depth=i)
+qaoa.get_beta(depth=i)
+```
+
+Additionally, for every optimizer call at each depth, the **angles, expectation value, variance, maximum cost, minimum cost, and number of shots** are stored in:
+
+```python
+qaoa.optimization_results[i]
+```
+
+---
+
+## Multi-Angle QAOA
 
 Multi-angle QAOA allows components to use multiple parameters per layer, increasing expressibility:
 
-- **Multi-angle mixer** (`XMultiAngle`): Each qubit gets its own independent β parameter
-- **Parameterized initial state** (`PlusParameterized`): The initial state |+⟩ with optimizable per-qubit phase rotations
+- **Multi-angle mixer** (`XMultiAngle`): each qubit gets its own independent β parameter.
+- **Parameterized initial state** (`PlusParameterized`): the initial state |+⟩ with optimizable per-qubit phase rotations.
 
-	qaoa = QAOA(
-		problem=problems.MaxKCutBinaryPowerOfTwo(G="some networkx instance", k_cuts=2),
-		mixer=mixers.XMultiAngle(),  # N_qubits beta parameters per layer
-		initialstate=initialstates.Plus()
-	)
+```python
+qaoa = QAOA(
+    problem=problems.MaxCut(G),
+    mixer=mixers.XMultiAngle(),   # N_qubits beta parameters per layer
+    initialstate=initialstates.Plus()
+)
+```
 
 The flat angle array format used by `hist()`, `getParametersToBind()`, and `interp()` is:
 
-	[$init_0, ..., init_{n-1},$          # initial state params (0 for Plus)
-	 $gamma_{0,0}, ..., beta_{0,n-1},$   # layer 0 params
-	 $gamma_{1,0}, ..., beta_{1,n-1},$   # layer 1 params
-	 ...]
+```
+[init_0, ..., init_{n-1},          # initial state params (0 for Plus)
+ gamma_{0,0}, ..., beta_{0,n-1},   # layer 0 params
+ gamma_{1,0}, ..., beta_{1,n-1},   # layer 1 params
+ ...]
+```
 
-For the standard single-parameter case, this reduces to `[gamma_0, beta_0, gamma_1, beta_1, ...]`.
+For the standard single-parameter case this reduces to `[gamma_0, beta_0, gamma_1, beta_1, ...]`.
 
 Implement `get_num_parameters()` in a custom component to enable multi-angle support. See [examples/MultiAngle](examples/MultiAngle/) for a complete example.
 
-***
-### Example use cases
+---
 
-See [examples here](examples/).
+## Minimizing Depth of Phase Separating Operator
 
+Assuming all-to-all connectivity of qubits, one can minimize the circuit depth of the phase separating operator by solving the minimum edge colouring problem. This is implemented in [GraphHandler](qaoa/util/graphutils.py) and is invoked automatically. An [example](examples/MaxCut/MinimalDepth.ipynb) output is shown below:
 
-***
-### Minimizing depth of phase separating operator
+![Edge Coloring](images/minimal_depth.png "Edge Coloring")
 
-Assuming all-to-all connectivity of qubits, one can minimize the depth of the circuit of the phase separating operator by solving the problem of minimum edge colouring. This is implemtend in [GraphHandler](qaoa/util/graphutils.py) and gets automatically invoked. An [example](examples/MaxCut/MinimalDepth.ipynb) output is this
+---
 
-![this graph](images/minimal_depth.png  "Edge Coloring")
+## Building Circuits like "Lego"
 
-
-***
-### Building circuits like "Lego"
-
-Components can be freely composed (“lego style”) to build more complex circuits.
+Components can be freely composed ("lego style") to build more complex circuits.
 
 A typical workflow is:
-1. define a feasible-state preparation circuit (e.g. Dicke),
-2. build a mixer acting on that feasible space (e.g. Grover),
-3. replicate the resulting block across independent registers using a tensor product.
+1. Define a feasible-state preparation circuit (e.g. Dicke).
+2. Build a mixer acting on that feasible space (e.g. Grover).
+3. Replicate the resulting block across independent registers using a tensor product.
 
-For example, start by constructing a Dicke state with Hamming weight k=2 on 4 qubits:
+For example, construct a Dicke state with Hamming weight $k=2$ on 4 qubits:
 
-    from qaoa import initialstates, mixers
+```python
+from qaoa import initialstates, mixers
 
-    dicke = initialstates.Dicke(2, 4)     # k=2 excitations on N=4 qubits
+dicke = initialstates.Dicke(2, 4)     # k=2 excitations on N=4 qubits
+```
 
 Next, build a Grover mixer that operates on the feasible space prepared by the Dicke circuit:
 
-    grover = mixers.Grover(dicke)
-
-To inspect the internal structure of a single Grover block:
-
-    grover.create_circuit()
-    grover.circuit.draw('mpl')
+```python
+grover = mixers.Grover(dicke)
+grover.create_circuit()
+grover.circuit.draw('mpl')
+```
 
 ![Grover circuit](images/grover_circuit.png "Grover mixer: Dicke† – X^n – C^{n-1}Phase – X^n – Dicke")
 
-The Grover mixer has the structure $U_S^\dagger X^n C^{n-1} P X^n U_S$, where $U_S$ is the Dicke state-preparation circuit. In the drawing, $U_S$ and its
-inverse appear as labelled blocks (`Dicke` / `Dicke†`).
+The Grover mixer implements
 
-Finally, create multiple independent copies of this Grover block.
-The `Tensor` class replicates the given sub-circuit across independent registers:
+$$U_M(\beta) = U_S^\dagger \, X^{\otimes n} \, C^{n-1}P(\beta) \, X^{\otimes n} \, U_S,$$
 
-    tensor = initialstates.Tensor(grover, 3)   # 3 copies → 12 qubits total
+where $U_S$ is the state-preparation circuit (here, Dicke). In the circuit diagram, $U_S$ and $U_S^\dagger$ appear as labelled blocks (`Dicke` / `Dicke†`).
 
-    tensor.create_circuit()
-    tensor.circuit.draw('mpl')
+Finally, use `Tensor` to replicate the block across independent registers:
 
-The `Grover` mixer automatically inherits the qubit count from the Dicke circuit,
-and `Tensor` replicates the full block without requiring manual qubit bookkeeping.
+```python
+tensor = initialstates.Tensor(grover, 3)   # 3 copies → 12 qubits total
+tensor.create_circuit()
+tensor.circuit.draw('mpl')
+```
+
+The `Grover` mixer automatically inherits the qubit count from the Dicke circuit, and `Tensor` replicates the full block without manual qubit bookkeeping.
 
 <p align="center">
   <img src="images/lego_circuit.png" width="250"><br>
   <em>Lego-like circuit: three Grover blocks on 12 qubits</em>
 </p>
 
-Each sub-circuit is displayed as a labelled block so the modular “lego” structure
-is visible in the diagram.
-
-
 ### Annotating circuits
 
-Every component (initial state or mixer) carries a `label` attribute that is used as
-the circuit name when `create_circuit()` is called.  The label defaults to the class
-name but can be customised at construction time (for `Dicke`, `Grover`, and `Tensor`)
-or by setting the attribute before calling `create_circuit()`:
+Every component (initial state or mixer) carries a `label` attribute used as the circuit name when `create_circuit()` is called. The label defaults to the class name but can be customised at construction time (for `Dicke`, `Grover`, and `Tensor`) or by setting the attribute before calling `create_circuit()`:
 
-	dicke = initialstates.Dicke(2, 4, label="Dicke-2")
-	dicke.create_circuit()
-	print(dicke.circuit.name)   # → "Dicke-2"
+```python
+dicke = initialstates.Dicke(2, 4, label="Dicke-2")
+dicke.create_circuit()
+print(dicke.circuit.name)   # → "Dicke-2"
 
-	xy = mixers.XY()
-	xy.label = "XY-ring"
-	xy.setNumQubits(4)
-	xy.create_circuit()
-	print(xy.circuit.name)      # → "XY-ring"
+xy = mixers.XY()
+xy.label = "XY-ring"
+xy.setNumQubits(4)
+xy.create_circuit()
+print(xy.circuit.name)      # → "XY-ring"
+```
 
-***
-### Talk to an agent
-In the code, there is also included an "agent" folder, which has implemented a specialized QAOA agent. It is possible to ask the agent for either code that implements, or explanations about, the QAOA package.
+---
 
-There are two ways to run the agents. Either one can run the agent in the terminal, or run an interface.
+## Repository Structure
 
-To run the agent directly from the terminal, one can simply open the agent folder and run the file planner.py. It is then possible to ask it questions as inputs from the terminal.
+```
+QAOA/
+├── qaoa/                    # Core library
+│   ├── qaoa.py              # Main QAOA class
+│   ├── problems/            # Problem Hamiltonians (MaxCut, QUBO, Portfolio, …)
+│   ├── mixers/              # Mixing operators (X, XY, Grover, …)
+│   ├── initialstates/       # Initial state circuits (Plus, Dicke, Tensor, …)
+│   └── util/                # Graph utilities and helpers
+├── examples/                # Jupyter notebook examples
+│   ├── MaxCut/
+│   ├── ExactCover/
+│   └── PortfolioOptimization/
+├── agent/                   # LLM-powered QAOA assistant
+├── unittests/               # Unit tests
+├── images/                  # Figures used in documentation
+└── setup.py
+```
 
-To run the interface, open the agent folder, and run streamlit by typing: streamlit run interface.py
-The following window will pop up:
+---
 
-<img src="images\interface.png" alt="QAOA Agent interface startup page" width=500/>
+## Talk to an Agent
+
+The `agent/` folder contains a specialized QAOA assistant that can answer questions about the library or generate example code.
+
+**Run from the terminal:**
+
+```bash
+cd agent
+python planner.py
+```
+
+**Run as a web interface:**
+
+```bash
+cd agent
+streamlit run interface.py
+```
+
+<img src="images/interface.png" alt="QAOA Agent interface startup page" width=500/>
 <br><br>
-It is then possible to ask questions in the text box. An example could be:
-<img src="images\interface_output.png" alt="QAOA Agent interface with question page" width=500/>
 
-For the agent application the following dependencies are needed: langchain, langchain_community, langchain_chroma, langchain_openai and optionally streamlit (for the interface). Additionally, an API-KEY is needed. 
+Example interaction:
 
+<img src="images/interface_output.png" alt="QAOA Agent interface with question page" width=500/>
 
-***
-### Acknowledgement
-We would like to thank for funding of the work by the Research Council of Norway through project number 33202.
+**Dependencies for the agent:** `langchain`, `langchain_community`, `langchain_chroma`, `langchain_openai`, and optionally `streamlit` for the web interface. An OpenAI API key is also required.
+
+---
+
+## Citation
+
+If you use this library in your research, please cite:
+
+```bibtex
+@software{fuchs2024qaoa,
+  author       = {Franz Georg Fuchs},
+  title        = {{QAOA}: A Modular Python Library for the Quantum Approximate Optimization Algorithm},
+  year         = {2024},
+  url          = {https://github.com/OpenQuantumComputing/QAOA},
+  note         = {Version 1.2.3}
+}
+```
+
+---
+
+## Acknowledgement
+
+This work was funded by the Research Council of Norway through project number 33202.
