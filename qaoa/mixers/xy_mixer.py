@@ -56,7 +56,7 @@ class XY(Mixer):
 
     @staticmethod
     def generate_pairs(n, case="ring"):
-        """_summary_
+        """Generates pairs of adjacent qubit indices for the given topology.
 
         Args:
             n (int): The number of qubits.
