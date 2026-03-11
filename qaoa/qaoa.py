@@ -784,7 +784,10 @@ class QAOA:
         """
         ## run local optimization by iteratively increasing the depth until depth p is reached
         while self.current_depth < depth:
-            
+            n_gamma = self.problem.get_num_parameters()
+            n_beta = self.mixer.get_num_parameters()
+            n_init = self.initialstate.get_num_parameters()
+            n_per_layer = n_gamma + n_beta
             start_time = time.perf_counter()
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:

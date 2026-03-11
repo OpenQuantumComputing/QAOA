@@ -137,7 +137,7 @@ class Problem(BaseProblem):
         """
         Exact check that the problem's circuit represents the problem's cost function.
         This tests checks that the unitary operator represented by the quantum circuit is
-        equal to the excepted matrix with diagonal elements 
+        equal to the expected matrix with diagonal elements 
         exp(-j*t*cost(e)),
         where e is the corresponding binary state, up to a global phase.
         

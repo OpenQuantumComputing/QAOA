@@ -245,7 +245,7 @@ class QAOAResult:
         else:
             mixer_method = MixerMethod(mixer_str)
 
-        assert("COBYLA" in str(qaoa.optimizer)), "unsupported optimizer "+str(qaoa.optimizer)+" in qaoaIO "
+        assert("COBYLA" in str(qaoa.optimizer)), f"unsupported optimizer {qaoa.optimizer} in qaoaIO"
         optimizer = "COBYLA"
 
         qaoa_params = QAOAParameters(

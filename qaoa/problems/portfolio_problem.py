@@ -21,7 +21,8 @@ class PortfolioOptimization(QUBO):
         N_qubits (int): Number of assets/qubits in the problem.
 
     Methods:
-        cost_nonQUBO(string, penalize): Computes the cost of a given portfolio bitstring, optionally including the penalty term.
+        cost(string, penalize): Computes the cost (QUBO) of a given portfolio bitstring, always including the penalty.
+        cost_nonQUBO(string, penalize): Computes the non-QUBO cost of a given portfolio bitstring, optionally including the penalty term.
         isFeasible(string): Checks if a given bitstring satisfies the budget constraint.
         __str2np(s): Converts a bitstring to a numpy array of integers.
     """
@@ -64,16 +65,27 @@ class PortfolioOptimization(QUBO):
         Returns:
             cost (float): The negative of the portfolio objective value.
         """
-        # risk = self.params.get("risk")
-        # budget = self.params.get("budget")
-        # cov_matrix = self.params.get("cov_matrix")
-        # exp_return = self.params.get("exp_return")
-        # penalty = self.params.get("penalty", 0.0)
-
         x = np.array(list(map(int, string)))
         cost = self.risk * (x.T @ self.cov_matrix @ x) - self.exp_return.T @ x
-        #if penalize:
         cost += self.penalty * (x.sum() - self.budget) ** 2
+
+        return -cost
+
+    def cost_nonQUBO(self, string, penalize=True):
+        """
+        Computes the non-QUBO cost of a given portfolio bitstring, optionally including the penalty term for the budget constraint.
+
+        Args:
+            string (str): Bitstring representing the selected assets (portfolio).
+            penalize (bool): Whether to include the penalty term for violating the budget constraint.
+
+        Returns:
+            cost (float): The negative of the portfolio objective value.
+        """
+        x = np.array(list(map(int, string)))
+        cost = self.risk * (x.T @ self.cov_matrix @ x) - self.exp_return.T @ x
+        if penalize:
+            cost += self.penalty * (x.sum() - self.budget) ** 2
 
         return -cost
 
