@@ -68,7 +68,7 @@ class ProblemData:
         """Factory method that picks the right subclass based on problem_type."""
         problem_type = data.get("problem_type", "Base")
         if problem_type not in problem_registry:
-            raise ValueError(f"Unknown problem type: {problem_type}")
+            raise ValueError(f"Unknown problem type for IO: {problem_type}")
         subclass = problem_registry[problem_type]
         data = _list_to_numpy(data)
         data.pop("problem_type", None)
