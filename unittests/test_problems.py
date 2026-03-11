@@ -4,7 +4,7 @@ Unit tests for problem classes.
 Covers:
 - ExactCover: cost, isFeasible, create_circuit
 - QUBO: cost, create_circuit, lower-triangular
-- PortfolioOptimization: cost, isFeasible, cost_nonQUBO
+- PortfolioOptimization: cost, isFeasible, penalty behavior
 - MaxKCutOneHot: binstringToLabels, cost, create_circuit
 """
 
@@ -174,18 +174,25 @@ class TestPortfolioOptimization(unittest.TestCase):
         cost = problem.cost("01")
         self.assertIsInstance(cost, (float, np.floating))
 
-    def test_portfolio_cost_nonqubo(self):
+    def test_portfolio_cost_penalized(self):
         problem = self._make_portfolio()
-        # cost_nonQUBO should return a float for feasible bitstrings
-        cost = problem.cost_nonQUBO("01", penalize=False)
+        # cost() should return a float for any bitstring
+        cost = problem.cost("01")
         self.assertIsInstance(cost, (float, np.floating))
 
-    def test_portfolio_cost_nonqubo_with_penalty(self):
-        problem = self._make_portfolio()
-        # Infeasible "11": penalized cost should be worse (lower, since we negate)
-        cost_with = problem.cost_nonQUBO("11", penalize=True)
-        cost_without = problem.cost_nonQUBO("11", penalize=False)
-        self.assertLess(cost_with, cost_without)
+    def test_portfolio_penalty_lowers_infeasible_cost(self):
+        from qaoa.problems import PortfolioOptimization
+        cov = np.array([[1.0, 0.2], [0.2, 1.0]])
+        exp_ret = np.array([0.1, 0.3])
+        # Without penalty: infeasible "11" gets no budget penalty
+        problem_no_pen = PortfolioOptimization(risk=0.5, budget=1, cov_matrix=cov,
+                                               exp_return=exp_ret, penalty=0)
+        # With penalty: infeasible "11" is penalized → lower (more negative) cost
+        problem_with_pen = PortfolioOptimization(risk=0.5, budget=1, cov_matrix=cov,
+                                                 exp_return=exp_ret, penalty=2.0)
+        cost_no_pen = problem_no_pen.cost("11")
+        cost_with_pen = problem_with_pen.cost("11")
+        self.assertLess(cost_with_pen, cost_no_pen)
 
     def test_portfolio_circuit_created(self):
         problem = self._make_portfolio()

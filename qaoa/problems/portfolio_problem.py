@@ -21,8 +21,7 @@ class PortfolioOptimization(QUBO):
         N_qubits (int): Number of assets/qubits in the problem.
 
     Methods:
-        cost(string, penalize): Computes the cost (QUBO) of a given portfolio bitstring, always including the penalty.
-        cost_nonQUBO(string, penalize): Computes the non-QUBO cost of a given portfolio bitstring, optionally including the penalty term.
+        cost(string): Computes the portfolio cost of a given bitstring (problem-specific, includes penalty).
         isFeasible(string): Checks if a given bitstring satisfies the budget constraint.
         __str2np(s): Converts a bitstring to a numpy array of integers.
     """
@@ -54,38 +53,20 @@ class PortfolioOptimization(QUBO):
 
         super().__init__(Q=Q, c=c, b=b)
 
-    def cost(self, string, penalize=True):
+    def cost(self, string):
         """
-        Computes the cost of a given portfolio bitstring, optionally including the penalty term for the budget constraint.
+        Computes the portfolio cost of a given bitstring. This overrides the QUBO base class
+        cost to use the problem-specific formula directly.
 
         Args:
             string (str): Bitstring representing the selected assets (portfolio).
-            penalize (bool): Whether to include the penalty term for violating the budget constraint.
 
         Returns:
-            cost (float): The negative of the portfolio objective value.
+            cost (float): The negative of the portfolio objective value (including penalty).
         """
         x = np.array(list(map(int, string)))
         cost = self.risk * (x.T @ self.cov_matrix @ x) - self.exp_return.T @ x
         cost += self.penalty * (x.sum() - self.budget) ** 2
-
-        return -cost
-
-    def cost_nonQUBO(self, string, penalize=True):
-        """
-        Computes the non-QUBO cost of a given portfolio bitstring, optionally including the penalty term for the budget constraint.
-
-        Args:
-            string (str): Bitstring representing the selected assets (portfolio).
-            penalize (bool): Whether to include the penalty term for violating the budget constraint.
-
-        Returns:
-            cost (float): The negative of the portfolio objective value.
-        """
-        x = np.array(list(map(int, string)))
-        cost = self.risk * (x.T @ self.cov_matrix @ x) - self.exp_return.T @ x
-        if penalize:
-            cost += self.penalty * (x.sum() - self.budget) ** 2
 
         return -cost
 
