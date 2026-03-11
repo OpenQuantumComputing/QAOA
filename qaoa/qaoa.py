@@ -13,10 +13,13 @@ from qiskit import (
     transpile,
 )
 from qiskit.circuit import Parameter
-from qiskit.primitives import Sampler
+try:
+    from qiskit_aer.primitives import SamplerV2 as _SamplerV2
+except ImportError:
+    from qiskit.primitives import StatevectorSampler as _SamplerV2
 from qiskit_algorithms.optimizers import COBYLA
 
-from qiskit_aer import Aer
+from qiskit_aer import AerSimulator, Aer
 
 from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
@@ -198,7 +201,7 @@ class QAOA:
         problem,
         mixer,
         initialstate,
-        backend=Aer.get_backend("qasm_simulator"),
+        backend=AerSimulator(),
         noisemodel=None,
         optimizer=[COBYLA, {}],  # optimizer, options
         precision=None,
@@ -286,6 +289,10 @@ class QAOA:
 
         self.gamma_params = None
         self.beta_params = None
+        self.init_params = None
+        self.n_gamma = 1
+        self.n_beta = 1
+        self.n_init = 0
 
         self.Exp_sampled_p1 = None
         self.landscape_p1_angles = {}
@@ -413,7 +420,8 @@ class QAOA:
 
         The function generates quantum circuits for the problem and mixer Hamiltonians and the initial state.
         The main circuit is constructed layer by layer starting from the initial state.
-        For each layer, a symbolic parameter is assigned is assigned to the problem unitary (gamma) and the mixer unitary (beta).
+        For each layer, symbolic parameters are assigned to the problem unitary (gamma) and the mixer unitary (beta).
+        Multi-angle components can use multiple parameters per layer.
 
         If `flip` is set to True, a bit-flip circuit is added between layers to modify the state according to a pre-defined bit-flip pattern.
         If `usebarrier` is set to True, visual barrier instructions are added between layers to improve circuit readability and potentially
@@ -434,37 +442,62 @@ class QAOA:
         self.mixer.create_circuit()
         self.initialstate.create_circuit()
 
+        # Query number of parameters from each component
+        self.n_gamma = self.problem.get_num_parameters()
+        self.n_beta = self.mixer.get_num_parameters()
+        self.n_init = self.initialstate.get_num_parameters()
+
         a = AncillaRegister(self.problem.N_ancilla_qubits)
         q = QuantumRegister(self.problem.N_qubits)
         c = ClassicalRegister(self.problem.N_qubits)
         self.parameterized_circuit = QuantumCircuit(q, c, a)
 
-        self.gamma_params = [None] * depth
-        self.beta_params = [None] * depth
+        self.gamma_params = [[None] * self.n_gamma for _ in range(depth)]
+        self.beta_params = [[None] * self.n_beta for _ in range(depth)]
+        self.init_params = [None] * self.n_init
 
-        self.parameterized_circuit.compose(self.initialstate.circuit, inplace=True)
+        # Compose initial state circuit (with parameters if applicable)
+        if self.n_init > 0:
+            for i in range(self.n_init):
+                self.init_params[i] = Parameter("init_{}".format(i))
+            init_param_map = {
+                self.initialstate.circuit.parameters[i]: self.init_params[i]
+                for i in range(self.n_init)
+            }
+            tmp_init = self.initialstate.circuit.assign_parameters(
+                init_param_map, inplace=False
+            )
+            self.parameterized_circuit.compose(tmp_init, inplace=True)
+        else:
+            self.parameterized_circuit.compose(self.initialstate.circuit, inplace=True)
 
         if self.usebarrier:
-            self.circuit.barrier()
+            self.parameterized_circuit.barrier()
 
         for d in range(depth):
-            self.gamma_params[d] = Parameter("gamma_" + str(d))
+            for i in range(self.n_gamma):
+                self.gamma_params[d][i] = Parameter("gamma_{}_{}".format(d, i))
+            gamma_param_map = {
+                self.problem.circuit.parameters[i]: self.gamma_params[d][i]
+                for i in range(self.n_gamma)
+            }
             tmp_circuit = self.problem.circuit.assign_parameters(
-                {self.problem.circuit.parameters[0]: self.gamma_params[d]},
-                inplace=False,
+                gamma_param_map, inplace=False
             )
             self.parameterized_circuit.compose(tmp_circuit, inplace=True)
 
             if self.usebarrier:
-                self.circuit.barrier()
+                self.parameterized_circuit.barrier()
 
-            self.beta_params[d] = Parameter("beta_" + str(d))
+            for i in range(self.n_beta):
+                self.beta_params[d][i] = Parameter("beta_{}_{}".format(d, i))
+            beta_param_map = {
+                self.mixer.circuit.parameters[i]: self.beta_params[d][i]
+                / self.number_trottersteps_mixer
+                for i in range(self.n_beta)
+            }
             tmp_circuit = self.mixer.circuit.assign_parameters(
-                {
-                    self.mixer.circuit.parameters[0]: self.beta_params[d]
-                    / self.number_trottersteps_mixer
-                },
-                inplace=False,
+                beta_param_map, inplace=False
             )
             for _ in range(0, self.number_trottersteps_mixer):
                 self.parameterized_circuit.compose(tmp_circuit, inplace=True)
@@ -487,19 +520,32 @@ class QAOA:
         self, angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]}
     ):
         """
-        Evaluates the cost function (lanscape) at depth p = 1 for a grid of angles.
+        Evaluates the cost function (landscape) at depth p = 1 for a grid of angles.
 
-        **Sequential mode**: If `sequential` is set to True, CVaR, variance and max/min cost are calculated sequentially for each combination of gamma and beta and stored in
-        the lists  `Exp_sampled_p1`, `Var_sampled_p1`, `MaxCost_sampled_p1`, and `MinCost_sampled_p1`.
+        The grid search is performed in the *vanilla (symmetric) subspace*: for every
+        ``(gamma, beta)`` grid point, **all** gamma parameters for that layer are set
+        equal to ``gamma`` and **all** beta parameters are set equal to ``beta``.
+        This restriction keeps the search 2-D regardless of the total number of
+        multi-angle parameters, while ensuring that the best grid point lies in the
+        same landscape as vanilla QAOA, providing a valid warm-start for both single-
+        and multi-angle ansätze.
 
-        **Batch mode**: If `sequential` is set to False, the angles are prepared and a single job is submitted to the backend with all parameter binds.
-        After execution, `measurementStatistics` is called to retrieve the results.
+        **Sequential mode**: If `sequential` is set to True, CVaR, variance and
+        max/min cost are calculated sequentially for each (gamma, beta) combination
+        and stored in `Exp_sampled_p1`, `Var_sampled_p1`, `MaxCost_sampled_p1`,
+        and `MinCost_sampled_p1`.
+
+        **Batch mode**: If `sequential` is set to False, all parameter binds are
+        prepared and a single batched job is submitted to the backend.
 
         Args:
-            angles (dict[str, list], optional): Dictionary mapping angle ranges to gamma and beta, where the range is defined by [start, stop, num]. Defaults to {"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]}.
+            angles (dict[str, list], optional): Grid specification for gamma and beta,
+                each as ``[start, stop, num]``.
+                Defaults to ``{"gamma": [0, 2π, 20], "beta": [0, 2π, 20]}``.
 
         Raises:
-            NotImplementedError: If the backend is not local or if the backend does not support the required operations.
+            NotImplementedError: If the backend is not local or does not support
+                batched parameter binds.
         """
         self.landscape_p1_angles = angles
         logger = LOG.bind(func=self.sample_cost_landscape.__name__)
@@ -525,8 +571,18 @@ class QAOA:
                     for g in range(angles["gamma"][2]):
                         gamma = self.gamma_grid[g]
                         beta = self.beta_grid[b]
+                        # Build angle array in the symmetric (vanilla) subspace: all
+                        # gamma parameters equal to the grid value and all beta
+                        # parameters equal to the grid value.  This ensures the grid
+                        # search explores the vanilla subspace so the best grid point
+                        # is a valid warm-start for both vanilla and multi-angle ansätze.
+                        angle_array = (
+                            [0.0] * self.n_init
+                            + [gamma] * self.n_gamma
+                            + [beta] * self.n_beta
+                        )
                         params = self.getParametersToBind(
-                            [gamma, beta], self.parametrized_circuit_depth, asList=True
+                            angle_array, self.parametrized_circuit_depth, asList=True
                         )
 
                         job = self.backend.run(
@@ -580,7 +636,15 @@ class QAOA:
                         beta[counter] = self.beta_grid[b]
                         counter += 1
 
-                parameters = {self.gamma_params[0]: gamma, self.beta_params[0]: beta}
+                parameters = {}
+                # All gamma parameters get the same grid values (vanilla subspace).
+                # This ensures the 2-D grid search is equivalent to vanilla QAOA,
+                # giving a valid warm-start for both single- and multi-angle ansätze.
+                for i in range(self.n_gamma):
+                    parameters[self.gamma_params[0][i]] = gamma
+                # All beta parameters get the same grid values (vanilla subspace).
+                for i in range(self.n_beta):
+                    parameters[self.beta_params[0][i]] = beta
 
                 logger.info("Executing sample_cost_landscape")
                 logger.info(f"parameters: {len(parameters)}")
@@ -682,21 +746,49 @@ class QAOA:
         """
         Runs the optimization process for the QAOA algorithm up to a specified depth.
 
-        Drives the core iterative optimization loop of the QAOA algoritm up to a specified depth `p`, by incrementally building the circuit one layer at a time until the desired depth is reached.
-        - If p=1, a **grid search** is performed over the angles to find a good starting point.
-        - If p>1, the previously found angles are used as a starting point for local optimization at the next depth. If `interpolate` is set to True, the angles are interpolated to create a smoother transition between depths.
+        Drives the core iterative optimization loop of the QAOA algorithm up to a
+        specified depth `p`, by incrementally building the circuit one layer at a time
+        until the desired depth is reached.
 
-        At each depth, the optimization results are stored in `optimization_results`. Measurement statistics are collected and stored in `samplecount_hists`.
-        If `flip` is set to True, bit-flip boosting is applied to the best solution found at each depth with masks stored in `bitflips`.
-        If `post` is set to True, post-processing is applied to the measurement results at the final depth, and the processed expected value and variance are stored in `Exp_post_processed` and `Var_post_processed`.
+        - At depth p=1 a **2-D grid search** is performed to find a good starting point.
+          The grid search is always in the *vanilla (symmetric) subspace*: all gamma
+          parameters for that layer are set equal to the grid gamma value and all beta
+          parameters are set equal to the grid beta value.  This guarantees that the
+          warm-start for multi-angle and orbit ansätze lies in the same landscape as
+          vanilla QAOA.
+
+        - At depth p>1, two strategies are available depending on ``self.interpolate``:
+
+          * ``interpolate=True`` (default): uses the INTERP heuristic to produce a
+            smooth initial guess by interpolating the optimal angles from depth p-1.
+            Works well for vanilla QAOA but can give non-monotonic approximation ratios
+            for multi-angle / orbit ansätze.
+
+          * ``interpolate=False``: uses a **layer-by-layer grid search** via
+            :meth:`_grid_search_layer`.  The best angles from depth p-1 are *locked*
+            and a 2-D grid search is performed over the new layer's parameters in the
+            vanilla subspace.  Because the grid includes (gamma=0, beta=0) — which
+            adds an identity layer reproducing the depth-(p-1) result — the initial
+            cost at depth p is guaranteed to be ≤ cost at depth p-1, ensuring a
+            monotonically increasing approximation ratio.  Recommended for free and
+            orbit ansätze.
+
+        At each depth, the optimization results are stored in `optimization_results`.
+        Measurement statistics are collected and stored in `samplecount_hists`.
 
         Args:
             depth (int): The maximum depth p to which the optimization should be run.
-            angles (dict, optional): Dictionary mapping angle ranges to gamma and beta, where the range is defined by [start, stop, num]. Defaults to {"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]}.
+            angles (dict, optional): Dictionary specifying the grid search range for
+                gamma and beta, each as ``[start, stop, num]``.
+                Defaults to ``{"gamma": [0, 2π, 20], "beta": [0, 2π, 20]}``.
         """
         ## run local optimization by iteratively increasing the depth until depth p is reached
         while self.current_depth < depth:
-            
+            n_gamma = self.problem.get_num_parameters()
+            n_beta = self.mixer.get_num_parameters()
+            n_init = self.initialstate.get_num_parameters()
+            n_per_layer = n_gamma + n_beta
+
             start_time = time.perf_counter()
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:
@@ -704,28 +796,34 @@ class QAOA:
                 ind_Emin = np.unravel_index(
                     np.argmin(self.Exp_sampled_p1, axis=None), self.Exp_sampled_p1.shape
                 )
+                # Build initial angles with init params (zeros) followed by first-layer params.
+                # For multi-angle QAOA (n_gamma > 1 or n_beta > 1), the best vanilla angles
+                # are broadcast to all parameters of each type as a warm-start.
+                gamma_best = self.gamma_grid[ind_Emin[1]]
+                beta_best = self.beta_grid[ind_Emin[0]]
                 angles0 = np.array(
-                    (self.gamma_grid[ind_Emin[1]], self.beta_grid[ind_Emin[0]])
+                    [0.0] * n_init
+                    + [gamma_best] * n_gamma
+                    + [beta_best] * n_beta
                 )
             else:
-                gamma = self.get_gamma(self.current_depth)
-                beta = self.get_beta(self.current_depth)
+                best_angles = self.get_angles(self.current_depth)
 
                 if self.interpolate:
-                    gamma_interp = self.interp(gamma)
-                    beta_interp = self.interp(beta)
+                    angles0 = self.interp(best_angles)
                 else:
-                    gamma_interp = np.append(gamma, 0)
-                    beta_interp = np.append(beta, 0)
-                angles0 = np.zeros(2 * (self.current_depth + 1))
-                angles0[::2] = gamma_interp
-                angles0[1::2] = beta_interp
+                    # Layer-by-layer grid search: lock previous layers at their
+                    # best angles and do a 2-D grid search over the new layer.
+                    # The grid includes (0, 0) which is equivalent to the depth
+                    # p-1 circuit, so cost(p) ≤ cost(p-1) is guaranteed.
+                    angles0 = self._grid_search_layer(best_angles, angles)
 
             self.optimization_results[self.current_depth + 1] = OptResult(
                 self.current_depth + 1
             )
             # Create parameterized circuit at new depth
-            self.createParameterizedCircuit(int(len(angles0) / 2))
+            new_depth = int((len(angles0) - n_init) / n_per_layer)
+            self.createParameterizedCircuit(new_depth)
 
             res = self.local_opt(angles0)
 
@@ -776,7 +874,7 @@ class QAOA:
         except TypeError as e:  ### QNSPSA needs fidelity
             self.isQNSPSA = True
             self.optimizer[1]["fidelity"] = self.optimizer[0].get_fidelity(
-                self.parameterized_circuit, sampler=Sampler()
+                self.parameterized_circuit, sampler=_SamplerV2()
             )
             opt = self.optimizer[0](**self.optimizer[1])
         res = opt.minimize(self.loss, x0=angles0)
@@ -841,24 +939,54 @@ class QAOA:
         Utility function to structure the parameterized parameter values
         so that they can be applied/bound to the parameterized circuit.
 
+        The flat angle array has the format:
+            [init_0, ..., init_{n_init-1},
+             gamma_{0,0}, ..., gamma_{0,n_gamma-1}, beta_{0,0}, ..., beta_{0,n_beta-1},
+             gamma_{1,0}, ..., gamma_{1,n_gamma-1}, beta_{1,0}, ..., beta_{1,n_beta-1},
+             ...,
+             gamma_{p-1,0}, ..., gamma_{p-1,n_gamma-1}, beta_{p-1,0}, ..., beta_{p-1,n_beta-1}]
+
+        For the default single-parameter case (n_init=0, n_gamma=1, n_beta=1), this reduces
+        to the classic alternating format: [gamma_0, beta_0, gamma_1, beta_1, ...].
+
         Args:
-            angles (array-like): 1D array of alternating gamma and beta values (length = 2 * depth)
+            angles (array-like): 1D flat array of parameter values.
             depth (int): Circuit depth.
             asList (bool): Boolean that specify if the values in the dict should be a list or not (required for batching).
 
         Returns:
-            dict: Dictionary mapping each QAOA parameter (gamma/beta) to its corresponding value.
+            dict: Dictionary mapping each QAOA parameter to its corresponding value.
         """
-        assert len(angles) == 2 * depth
+        n_per_layer = self.n_gamma + self.n_beta
+        assert len(angles) == self.n_init + depth * n_per_layer
 
         params = {}
-        for d in range(depth):
+        offset = 0
+
+        # Bind initial state parameters
+        for i in range(self.n_init):
             if asList:
-                params[self.gamma_params[d]] = [angles[2 * d + 0]]
-                params[self.beta_params[d]] = [angles[2 * d + 1]]
+                params[self.init_params[i]] = [angles[offset + i]]
             else:
-                params[self.gamma_params[d]] = angles[2 * d + 0]
-                params[self.beta_params[d]] = angles[2 * d + 1]
+                params[self.init_params[i]] = angles[offset + i]
+        offset += self.n_init
+
+        # Bind gamma and beta parameters layer by layer
+        for d in range(depth):
+            for i in range(self.n_gamma):
+                if asList:
+                    params[self.gamma_params[d][i]] = [angles[offset + i]]
+                else:
+                    params[self.gamma_params[d][i]] = angles[offset + i]
+            offset += self.n_gamma
+
+            for i in range(self.n_beta):
+                if asList:
+                    params[self.beta_params[d][i]] = [angles[offset + i]]
+                else:
+                    params[self.beta_params[d][i]] = angles[offset + i]
+            offset += self.n_beta
+
         return params
 
     def interp(self, angles):
@@ -866,24 +994,149 @@ class QAOA:
         INTERP heuristic/linear interpolation for initial parameters
         when going from depth p to p+1 (https://doi.org/10.1103/PhysRevX.10.021067).
 
+        Operates on the full flat angle array in the format:
+            [init_0, ..., init_{n_init-1}, gamma_{0,0}, ..., beta_{p-1,n_beta-1}]
+
+        Initial state parameters are kept unchanged. The INTERP heuristic is applied
+        independently to each gamma and beta parameter index across layers.
+
         Args:
-            angles (array-like): 1D array of gamma or beta parameters at depth p (length = p).
+            angles (array-like): Full flat array of parameters at depth p.
 
         Returns:
-            np.ndarray: Interpolated parameters for depth p+1 (length = p+1).
+            np.ndarray: Interpolated parameters for depth p+1 in the same flat format.
         """
-        depth = len(angles)
-        tmp = np.zeros(len(angles) + 2)
-        tmp[1:-1] = angles.copy()
-        w = np.arange(0, depth + 1)
-        return w / depth * tmp[:-1] + (depth - w) / depth * tmp[1:]
+        n_per_layer = self.n_gamma + self.n_beta
+        depth = (len(angles) - self.n_init) // n_per_layer
+
+        # Keep initial state parameters unchanged
+        init_part = list(angles[: self.n_init])
+
+        # Reshape layer params to [depth, n_gamma + n_beta]
+        layer_angles = np.array(angles[self.n_init :]).reshape(depth, n_per_layer)
+
+        # Apply INTERP heuristic independently to each parameter index
+        result_layers = np.zeros((depth + 1, n_per_layer))
+        for i in range(n_per_layer):
+            param_vals = layer_angles[:, i]
+            tmp = np.zeros(depth + 2)
+            tmp[1:-1] = param_vals
+            w = np.arange(0, depth + 1)
+            result_layers[:, i] = w / depth * tmp[:-1] + (depth - w) / depth * tmp[1:]
+
+        return np.concatenate([init_part, result_layers.flatten()])
+
+    def _eval_cost(self, angle_array):
+        """
+        Evaluate the expected cost (CVaR) for a specific angle array without
+        recording the result in ``optimization_results``.
+
+        Intended for use during grid searches where many candidate points are
+        evaluated cheaply without polluting the optimizer trajectory.
+
+        Args:
+            angle_array (np.ndarray): Flat parameter array whose length must
+                be consistent with the current ``parametrized_circuit_depth``.
+
+        Returns:
+            float: Negative expected cost (CVaR), i.e. the value to minimise.
+
+        Raises:
+            NotImplementedError: If the backend is not local.
+        """
+        if not self.backend.configuration().local:
+            raise NotImplementedError
+        params = self.getParametersToBind(
+            angle_array, self.parametrized_circuit_depth, asList=True
+        )
+        job = self.backend.run(
+            self.parameterized_circuit,
+            noise_model=self.noisemodel,
+            shots=self.shots,
+            parameter_binds=[params],
+            optimization_level=0,
+            memory=self.memory,
+        )
+        jres = job.result()
+        counts = jres.get_counts()
+        self.stat.reset()
+        for string in counts:
+            cost = self.problem.cost(string[::-1])
+            self.stat.add_sample(cost, counts[string], string[::-1])
+        return -self.stat.get_CVaR()
+
+    def _grid_search_layer(self, prev_angles, angles):
+        """
+        Grid search over a single new layer's parameters with all previous
+        layers locked at ``prev_angles``.
+
+        For each ``(gamma, beta)`` point on the 2-D grid the cost is evaluated
+        with layers ``1 … p-1`` fixed to ``prev_angles`` and the new layer
+        ``p`` initialised in the *symmetric (vanilla) subspace*: all
+        ``n_gamma`` gamma parameters are set equal to ``gamma`` and all
+        ``n_beta`` beta parameters are set equal to ``beta``.
+
+        Because the grid always includes the point ``(0, 0)`` — which adds an
+        identity layer and therefore reproduces the depth-``(p-1)`` circuit —
+        the best grid cost satisfies ``cost_grid ≤ cost(p-1)``.  The
+        subsequent full local optimisation can only improve on this, so
+        ``cost(p) ≤ cost(p-1)`` is guaranteed, giving a monotonically
+        increasing approximation ratio.
+
+        Args:
+            prev_angles (np.ndarray): Flat angle array optimised at depth p-1,
+                with length ``n_init + (p-1) * (n_gamma + n_beta)``.
+            angles (dict): Grid specification in the form
+                ``{"gamma": [lo, hi, n], "beta": [lo, hi, n]}``.
+
+        Returns:
+            np.ndarray: Initial angle array of length
+                ``n_init + p * (n_gamma + n_beta)`` for the depth-p local
+                optimisation.
+
+        Raises:
+            NotImplementedError: If the backend is not local.
+        """
+        n_per_layer = self.n_gamma + self.n_beta
+        new_depth = (len(prev_angles) - self.n_init) // n_per_layer + 1
+        self.createParameterizedCircuit(new_depth)
+
+        gamma_grid = np.linspace(
+            angles["gamma"][0], angles["gamma"][1], angles["gamma"][2], endpoint=False
+        )
+        beta_grid = np.linspace(
+            angles["beta"][0], angles["beta"][1], angles["beta"][2], endpoint=False
+        )
+
+        logger = LOG.bind(func=self._grid_search_layer.__name__)
+        logger.info(
+            f"Layer grid search at depth {new_depth}: "
+            f"{len(gamma_grid)}×{len(beta_grid)} points"
+        )
+
+        best_cost = np.inf
+        best_angles = None
+
+        for beta_val in beta_grid:
+            for gamma_val in gamma_grid:
+                new_layer = np.array(
+                    [gamma_val] * self.n_gamma + [beta_val] * self.n_beta
+                )
+                candidate = np.concatenate([prev_angles, new_layer])
+                cost = self._eval_cost(candidate)
+                if cost < best_cost:
+                    best_cost = cost
+                    best_angles = candidate.copy()
+
+        logger.info(f"Layer grid search done, best cost: {-best_cost:.6f}")
+        return best_angles
 
     def hist(self, angles, shots):
         """
         Executes the QAOA circuit for a given set of angles and returns the corrected histogram of bitstring outcomes.
 
         Args:
-            angles (array-like): Flat list or array of gamma and beta values (length = 2 * depth).
+            angles (array-like): Flat list or array of parameter values in the multi-angle format.
             shots (int): Number of circuit executions (samples) to collect.
 
         Returns:
@@ -892,7 +1145,10 @@ class QAOA:
         Raises:
             NotImplementedError: If the backend is not local or not implemented.
         """
-        depth = int(len(angles) / 2)
+        n_gamma = self.problem.get_num_parameters()
+        n_beta = self.mixer.get_num_parameters()
+        n_init = self.initialstate.get_num_parameters()
+        depth = int((len(angles) - n_init) / (n_gamma + n_beta))
         self.createParameterizedCircuit(depth)
 
         params = self.getParametersToBind(angles, depth, asList=True)

@@ -116,8 +116,7 @@ class MaxKCutGrover(Mixer):
         elif self.problem_encoding == "onehot":
             self.set_numV(self.k_cuts)
 
-            circ_one_node = Dicke(1)
-            circ_one_node.setNumQubits(self.k_cuts)
+            circ_one_node = Dicke(1, self.k_cuts)
 
         if self.tensorized:
             gm = Grover(circ_one_node)
@@ -131,7 +130,7 @@ class MaxKCutGrover(Mixer):
             tensor_feas = Tensor(circ_one_node, self.num_V)
 
             gm = Grover(tensor_feas)
-            gm.setNumQubits(self.N_qubits)
+            gm.setNumQubits(tensor_feas.N_qubits)
 
             gm.create_circuit()
             self.circuit = gm.circuit

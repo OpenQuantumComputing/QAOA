@@ -137,3 +137,5 @@ dmypy.json
 
 # Embedding for agent 
 embeddings/
+
+*.pickle

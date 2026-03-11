@@ -95,8 +95,7 @@ class MaxKCutFeasible(InitialState):
                 )
             self.num_V = int(self.num_V)
 
-            circ_one_node = Dicke(1)
-            circ_one_node.setNumQubits(self.k_cuts)
+            circ_one_node = Dicke(1, self.k_cuts)
 
         self.num_V = int(self.num_V)
         self.tensor = Tensor(circ_one_node, self.num_V)
