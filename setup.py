@@ -20,7 +20,7 @@ setup(
         "jupyter",
         "qiskit==1.1.1",
         "qiskit-aer",
-        "qiskit-algorithms",
+        "qiskit-algorithms<0.4",
         "qiskit-finance",
         "pylatexenc",
     ],
