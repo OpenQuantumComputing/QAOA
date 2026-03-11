@@ -3,6 +3,7 @@ import structlog
 LOG = structlog.get_logger(file=__name__)
 
 import numpy as np
+import time
 
 from qiskit import (
     QuantumCircuit,
@@ -40,6 +41,7 @@ class OptResult:
         BestSols (list): List of best solutions.
         shots (list): List of shots taken for each iteration.
         index_Exp_min (int): Index of the minimum expected value.
+        opt_time (float): Time used for optimization on given depth
 
     Methods:
         add_iteration(): Adds an iteration's results to the OptResult object.
@@ -70,6 +72,7 @@ class OptResult:
         self.shots = []
 
         self.index_Exp_min = -1
+        self.opt_time = -1.0
 
     def add_iteration(self, angles, stat, shots):
         """
@@ -785,7 +788,7 @@ class QAOA:
             n_beta = self.mixer.get_num_parameters()
             n_init = self.initialstate.get_num_parameters()
             n_per_layer = n_gamma + n_beta
-
+            start_time = time.perf_counter()
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:
                     self.sample_cost_landscape(angles=angles)
@@ -826,6 +829,7 @@ class QAOA:
             self.samplecount_hists[self.current_depth + 1] = self.last_hist
 
             self.optimization_results[self.current_depth + 1].compute_best_index()
+            self.optimization_results[self.current_depth + 1].opt_time = time.perf_counter() - start_time
 
             LOG.info(
                 f"cost(depth { self.current_depth + 1} = {res.fun}",
@@ -1205,3 +1209,9 @@ class QAOA:
             opt_sols.append(best_sols[i])
         opt_sols = [item for sublist in opt_sols for item in sublist]
         return np.unique(opt_sols)
+        
+
+    
+
+    def validate_circuit(self, t=1, flip=True, atol=1e-8, rtol=1e-8):
+        return self.problem.validate_circuit(t=t, flip=flip, atol=atol, rtol=rtol)
