@@ -513,7 +513,10 @@ class QAOA:
 
         self.parameterized_circuit.barrier()
         self.parameterized_circuit.measure(q, c)
-        self.parameterized_circuit = transpile(self.parameterized_circuit, self.backend)
+        self.parameterized_circuit = transpile(
+            self.parameterized_circuit, self.backend
+            #basis_gates=['cx', 'u', 'p', 'cp', 'id', 'x', 'h', 'ry', 'cry', 'cu']
+        )
         self.parametrized_circuit_depth = depth
 
     def sample_cost_landscape(
@@ -582,14 +585,14 @@ class QAOA:
                             + [beta] * self.n_beta
                         )
                         params = self.getParametersToBind(
-                            angle_array, self.parametrized_circuit_depth, asList=True
+                            angle_array, self.parametrized_circuit_depth, asList=False
                         )
+                        bound_circuit = self.parameterized_circuit.assign_parameters(params)
 
                         job = self.backend.run(
-                            self.parameterized_circuit,
+                            bound_circuit,
                             noise_model=self.noisemodel,
                             shots=self.shots,
-                            parameter_binds=[params],
                             optimization_level=0,
                             memory=self.memory,
                         )
@@ -626,33 +629,31 @@ class QAOA:
                 logger.info("Done measurement")
             else:
                 self.createParameterizedCircuit(depth)
-                gamma = [None] * angles["beta"][2] * angles["gamma"][2]
-                beta = [None] * angles["beta"][2] * angles["gamma"][2]
 
-                counter = 0
+                # Build a list of fully-bound circuits, one per grid point.
+                # Each circuit lives in the vanilla (symmetric) subspace: all
+                # gamma parameters equal and all beta parameters equal.
+                bound_circuits = []
                 for b in range(angles["beta"][2]):
                     for g in range(angles["gamma"][2]):
-                        gamma[counter] = self.gamma_grid[g]
-                        beta[counter] = self.beta_grid[b]
-                        counter += 1
-
-                parameters = {}
-                # All gamma parameters get the same grid values (vanilla subspace).
-                # This ensures the 2-D grid search is equivalent to vanilla QAOA,
-                # giving a valid warm-start for both single- and multi-angle ansätze.
-                for i in range(self.n_gamma):
-                    parameters[self.gamma_params[0][i]] = gamma
-                # All beta parameters get the same grid values (vanilla subspace).
-                for i in range(self.n_beta):
-                    parameters[self.beta_params[0][i]] = beta
+                        angle_array = (
+                            [0.0] * self.n_init
+                            + [self.gamma_grid[g]] * self.n_gamma
+                            + [self.beta_grid[b]] * self.n_beta
+                        )
+                        params = self.getParametersToBind(
+                            angle_array, self.parametrized_circuit_depth, asList=False
+                        )
+                        bound_circuits.append(
+                            self.parameterized_circuit.assign_parameters(params)
+                        )
 
                 logger.info("Executing sample_cost_landscape")
-                logger.info(f"parameters: {len(parameters)}")
+                logger.info(f"circuits: {len(bound_circuits)}")
                 job = self.backend.run(
-                    self.parameterized_circuit,
+                    bound_circuits,
                     noise_model=self.noisemodel,
                     shots=self.shots,
-                    parameter_binds=[parameters],
                     optimization_level=0,
                     memory=self.memory,
                 )
@@ -905,13 +906,13 @@ class QAOA:
         for i in range(3):  # this loop is used only used if precision is set
             if self.backend.configuration().local:
                 params = self.getParametersToBind(
-                    angles, self.parametrized_circuit_depth, asList=True
+                    angles, self.parametrized_circuit_depth, asList=False
                 )
+                bound_circuit = self.parameterized_circuit.assign_parameters(params)
                 job = self.backend.run(
-                    self.parameterized_circuit,
+                    bound_circuit,
                     noise_model=self.noisemodel,
                     shots=shots,
-                    parameter_binds=[params],
                     optimization_level=0,
                     memory=self.memory,
                 )
@@ -1046,13 +1047,13 @@ class QAOA:
         if not self.backend.configuration().local:
             raise NotImplementedError
         params = self.getParametersToBind(
-            angle_array, self.parametrized_circuit_depth, asList=True
+            angle_array, self.parametrized_circuit_depth, asList=False
         )
+        bound_circuit = self.parameterized_circuit.assign_parameters(params)
         job = self.backend.run(
-            self.parameterized_circuit,
+            bound_circuit,
             noise_model=self.noisemodel,
             shots=self.shots,
-            parameter_binds=[params],
             optimization_level=0,
             memory=self.memory,
         )
@@ -1150,12 +1151,12 @@ class QAOA:
         depth = int((len(angles) - n_init) / (n_gamma + n_beta))
         self.createParameterizedCircuit(depth)
 
-        params = self.getParametersToBind(angles, depth, asList=True)
+        params = self.getParametersToBind(angles, depth, asList=False)
+        bound_circuit = self.parameterized_circuit.assign_parameters(params)
         if self.backend.configuration().local:
             job = self.backend.run(
-                self.parameterized_circuit,
+                bound_circuit,
                 shots=shots,
-                parameter_binds=[params],
                 optimization_level=0,
                 memory=self.memory,
             )

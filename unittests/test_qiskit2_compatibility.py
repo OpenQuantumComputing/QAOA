@@ -137,8 +137,8 @@ class TestQAOAEndToEnd(unittest.TestCase):
         qaoa.createParameterizedCircuit(depth=1)
 
         self.assertIsInstance(qaoa.parameterized_circuit, QuantumCircuit)
-        # After transpilation the circuit should have no free parameters
-        # (they are bound at runtime via parameter_binds).
+        # After transpilation the circuit should still have free parameters
+        # (they are bound via assign_parameters before each backend.run call).
         self.assertGreater(len(qaoa.parameterized_circuit.parameters), 0)
 
     def test_hist_method(self):
