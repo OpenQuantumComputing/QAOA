@@ -1,7 +1,7 @@
 import math
+import itertools
 
 import numpy as np
-import itertools
 
 from .qubo_problem import QUBO
 
@@ -22,6 +22,7 @@ class PortfolioOptimization(QUBO):
 
     Methods:
         cost_nonQUBO(string, penalize): Computes the cost of a given portfolio bitstring, optionally including the penalty term.
+        brute_force_solve(): Finds the optimal solution by checking all feasible solutions.
         isFeasible(string): Checks if a given bitstring satisfies the budget constraint.
         __str2np(s): Converts a bitstring to a numpy array of integers.
     """
@@ -44,16 +45,21 @@ class PortfolioOptimization(QUBO):
 
         # Reformulated as a QUBO
         # min x^T Q x + c^T x + b
-        
-        Q = self.risk* self.cov_matrix + self.penalty*np.ones_like(self.cov_matrix)
-
-        c = -self.exp_return - 2*self.penalty*self.budget*np.ones_like(self.exp_return)
-
+        # Writing Q as lower triangular matrix since it otherwise is symmetric
+        Q = self.risk * np.tril(
+            self.cov_matrix + np.tril(self.cov_matrix, k=-1)
+        ) + self.penalty * (
+            np.eye(self.N_qubits)
+            + 2 * np.tril(np.ones((self.N_qubits, self.N_qubits)), k=-1)
+        )
+        c = -self.exp_return - (
+            2 * self.penalty * self.budget * np.ones_like(self.exp_return)
+        )
         b = self.penalty * self.budget * self.budget
 
         super().__init__(Q=Q, c=c, b=b)
 
-    def cost(self, string, penalize=True):
+    def cost_nonQUBO(self, string, penalize=True):
         """
         Computes the cost of a given portfolio bitstring, optionally including the penalty term for the budget constraint.
 
@@ -64,18 +70,34 @@ class PortfolioOptimization(QUBO):
         Returns:
             cost (float): The negative of the portfolio objective value.
         """
-        # risk = self.params.get("risk")
-        # budget = self.params.get("budget")
-        # cov_matrix = self.params.get("cov_matrix")
-        # exp_return = self.params.get("exp_return")
-        # penalty = self.params.get("penalty", 0.0)
-
         x = np.array(list(map(int, string)))
         cost = self.risk * (x.T @ self.cov_matrix @ x) - self.exp_return.T @ x
         if penalize:
             cost += self.penalty * (x.sum() - self.budget) ** 2
 
         return -cost
+
+    def brute_force_solve(self):
+        """
+        Finding optimal solution using brute force tactics by checking all feasible solutions.
+        """
+
+        def bitstrings_hamming_weight_generator(n, k):
+            for ones in itertools.combinations(range(n), k):
+                s = ['0'] * n
+                for i in ones:
+                    s[i] = '1'
+                yield ''.join(s)
+
+        opt_val = -np.inf
+        opt_sol = None
+        for bs in bitstrings_hamming_weight_generator(self.N_qubits, self.budget):
+            cost = self.cost(bs)
+            if cost > opt_val:
+                opt_val = cost
+                opt_sol = bs
+
+        return opt_sol
 
     def isFeasible(self, string):
         """
@@ -90,30 +112,6 @@ class PortfolioOptimization(QUBO):
         x = self.__str2np(string)
         constraint = np.sum(x) - self.budget
         return math.isclose(constraint, 0, abs_tol=1e-7)
-
-
-    def brute_force_solve(self):
-        """
-        Finding optimal solution using brute force tactics by checking all feasible solutions.
-        """
-        
-        def bitstrings_hamming_weight_generator(n, k):
-            for ones in itertools.combinations(range(n), k):
-                s = ['0'] * n
-                for i in ones:
-                    s[i] = '1'
-                yield ''.join(s)
-    
-        opt_val = -np.inf
-        opt_sol = None
-        for bs in bitstrings_hamming_weight_generator(self.N_qubits, self.budget):
-            cost = self.cost(bs)
-            if cost > opt_val:
-                opt_val = cost
-                opt_sol = bs
-        
-        return opt_sol
-
 
     def __str2np(self, s):
         """
