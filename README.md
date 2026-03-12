@@ -173,9 +173,19 @@ qaoa.sample_cost_landscape()
 Sampling high-dimensional target functions quickly becomes intractable for depth $p>1$. The library therefore **iteratively increases the depth**. At each depth a **local optimization** algorithm (e.g. COBYLA) finds a local minimum, using the following **initial guess**:
 
 - At depth $p=1$: parameters $(\gamma, \beta)$ are taken from the minimum of the sampled cost landscape.
-- At depth $p>1$: parameters are seeded via an [interpolation-based heuristic](https://arxiv.org/pdf/1812.01041.pdf) from the optimal values at the previous depth.
+- At depth $p>1$: two strategies are available, controlled by the `interpolate` parameter:
+
+  * **Interpolation** (`interpolate=True`, default): uses the [INTERP heuristic](https://arxiv.org/pdf/1812.01041.pdf) to produce a smooth initial guess by interpolating the optimal angles from depth $p-1$. Works well for vanilla QAOA.
+
+  * **Layer-by-layer grid scan** (`interpolate=False`): the best angles from depth $p-1$ are *locked* and a 2-D grid search is performed over the new layer's parameters. Because the grid includes $(γ=0, β=0)$ — which adds an identity layer reproducing the depth-$(p-1)$ result — the initial cost at depth $p$ is guaranteed to be ≤ cost at depth $p-1$, ensuring a monotonically increasing approximation ratio. Recommended for multi-angle and orbit ansätze.
 
 ```python
+# Interpolation (default)
+qaoa = QAOA(..., interpolate=True)
+qaoa.optimize(depth=p)
+
+# Layer-by-layer grid scan
+qaoa = QAOA(..., interpolate=False)
 qaoa.optimize(depth=p)
 ```
 
@@ -339,16 +349,23 @@ QAOA/
 │   ├── problems/            # Problem Hamiltonians (MaxCut, QUBO, Portfolio, …)
 │   ├── mixers/              # Mixing operators (X, XY, Grover, …)
 │   ├── initialstates/       # Initial state circuits (Plus, Dicke, Tensor, …)
-│   └── util/                # Graph utilities and helpers
+│   └── utils/               # Graph utilities, plot routines, and helpers
 ├── examples/                # Jupyter notebook examples
 │   ├── MaxCut/
 │   ├── ExactCover/
-│   └── PortfolioOptimization/
+│   ├── PortfolioOptimization/
+│   └── QUBO/
+├── scripts/                 # Batch / SLURM run scripts
 ├── agent/                   # LLM-powered QAOA assistant
 ├── unittests/               # Unit tests
 ├── images/                  # Figures used in documentation
 └── setup.py
 ```
+
+> **Note:** Several notebooks in `examples/` (e.g. `ValidateMaxCut`, `ValidateCircuitQUBO`,
+> `PortOptValidate`) are **validation** notebooks whose checks are covered by the automated
+> unit tests in `unittests/`. They are kept as worked examples; the authoritative validation
+> lives in the test suite and is run via `pytest unittests/`.
 
 ---
 
@@ -391,7 +408,7 @@ If you use this library in your research, please cite:
   title        = {{QAOA}: A Modular Python Library for the Quantum Approximate Optimization Algorithm},
   year         = {2024},
   url          = {https://github.com/OpenQuantumComputing/QAOA},
-  note         = {Version 1.2.3}
+  note         = {Version 2.0.0}
 }
 ```
 

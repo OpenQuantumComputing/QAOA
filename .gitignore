@@ -133,7 +133,6 @@ dmypy.json
 *.swp
 
 *.yaml
-*.sh
 
 # Embedding for agent 
 embeddings/

@@ -7,5 +7,5 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=1
 
-python run_graphs.py "$1" "$2" "$3" "$4" "$5" "$6" "$7"
+python scripts/run_graphs.py "$1" "$2" "$3" "$4" "$5" "$6" "$7"
 

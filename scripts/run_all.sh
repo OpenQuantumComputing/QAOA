@@ -28,7 +28,7 @@ do
             do
 
                 echo "fullH" $k $clf $mixer $casename $maxdepth $shots
-                bash run_graphs.sh "fullH" $k $clf $mixer $casename $maxdepth $shots
+                bash scripts/run_graphs.sh "fullH" $k $clf $mixer $casename $maxdepth $shots
             done
         done
 
@@ -38,7 +38,7 @@ do
         do
 
             echo "subH" $k "None" $mixer $casename $maxdepth $shots
-            bash run_graphs.sh "subH" $k "None" $mixer $casename $maxdepth $shots
+            bash scripts/run_graphs.sh "subH" $k "None" $mixer $casename $maxdepth $shots
         done
 
         echo "------"
