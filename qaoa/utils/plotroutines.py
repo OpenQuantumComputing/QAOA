@@ -501,7 +501,7 @@ def plotHitProbabilities(qaoa, opt_sol, depth=None, hist_shots=2**13, **kwargs):
 
 def plotHitProbabilities_fromHist(hist, opt_sol,
                          hamming_weight=None, plot_random=True, fig=None,
-                         label="QAOA", style='o-', title=None, title_add_on="",
+                         label="QAOA", style="o-", title=None, title_add_on="",
                          max_shots_base2=20):
     """Plot the probability of finding the optimal solution vs. number of shots.
 
@@ -532,13 +532,13 @@ def plotHitProbabilities_fromHist(hist, opt_sol,
         state_space_size = 2**len(opt_sol)
         p_random = 1 / state_space_size
         hit_prob_random = [prob_hit_ones(p_random, n) for n in ns]
-        ax.plot(ns, hit_prob_random, '.:k', label='random all')
+        ax.plot(ns, hit_prob_random, ".:k", label="random all")
 
         if hamming_weight is not None:
             subspace_size = comb(len(opt_sol), hamming_weight)
             p_subspace = 1 / subspace_size
             hit_prob_subspace = [prob_hit_ones(p_subspace, n) for n in ns]
-            ax.plot(ns, hit_prob_subspace, '.-.k', label='random subspace')
+            ax.plot(ns, hit_prob_subspace, ".-.k", label="random subspace")
 
     hist_shots = sum(hist.values())
     p_qaoa = 0.0
