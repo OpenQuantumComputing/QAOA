@@ -1,12 +1,9 @@
 import unittest
-import sys
 import networkx as nx
 import numpy as np
 
 from qiskit_aer import Aer
 from qiskit.quantum_info import Statevector
-
-sys.path.append("../")
 
 from qaoa.initialstates import MaxKCutFeasible
 

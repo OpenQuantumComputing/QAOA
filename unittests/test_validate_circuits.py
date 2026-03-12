@@ -1,10 +1,7 @@
 import unittest
-import sys
 import os
 import numpy as np
 import networkx as nx
-
-sys.path.append("../")
 
 from qaoa import QAOA, problems, mixers, initialstates
 

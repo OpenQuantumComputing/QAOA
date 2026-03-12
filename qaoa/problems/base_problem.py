@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from qaoa.util import validation
+from qaoa.utils import validation
 
 
 class BaseProblem(ABC):

@@ -3,7 +3,7 @@ from qiskit.circuit import Parameter
 from abc import abstractmethod
 
 from .base_problem import Problem
-from qaoa.util import *
+from qaoa.utils import *
 
 
 class GraphProblem(Problem):

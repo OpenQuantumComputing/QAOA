@@ -1,9 +1,7 @@
 import unittest
 import numpy as np
 import networkx as nx
-import sys
 
-sys.path.append("../")
 from qaoa import QAOA
 from qaoa import problems, mixers, initialstates
 from qiskit_aer import AerSimulator

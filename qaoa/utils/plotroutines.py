@@ -6,11 +6,9 @@ import networkx as nx
 import numpy as np
 from math import comb
 
-from qaoa import QAOA
+from .statistic import Statistic
 
-from qaoa.util import Statistic
-
-def np2str(npBitString):
+def __np2str(npBitString):
     """
     Cast binary numpy arrays to bitstrings.
     Safe to call both with a standard list and bitstring as long as the entries are in fact integers
@@ -20,13 +18,16 @@ def np2str(npBitString):
         s += str(int(i))
     return s
 
-def __plot_landscape(A, extent, fig):
+def __plot_landscape(A, extent, fig, title=None):
     if not fig:
         fig = plt.figure(figsize=(6, 6), dpi=80, facecolor="w", edgecolor="k")
     _ = plt.xlabel(r"$\gamma$")
     _ = plt.ylabel(r"$\beta$")
     ax = fig.gca()
-    _ = plt.title("Expectation value")
+    if not title:
+        _ = plt.title("Expectation value")
+    else:
+        _ = plt.title(title)
     im = ax.imshow(A, interpolation="bicubic", origin="lower", extent=extent)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -34,7 +35,7 @@ def __plot_landscape(A, extent, fig):
     return fig, ax
 
 
-def plot_E(qaoa_instance, fig=None):
+def plot_E(qaoa_instance, fig=None, title=None):
     angles = qaoa_instance.landscape_p1_angles
     extent = [
         angles["gamma"][0],
@@ -42,10 +43,10 @@ def plot_E(qaoa_instance, fig=None):
         angles["beta"][0],
         angles["beta"][1],
     ]
-    return __plot_landscape(qaoa_instance.exp_landscape(), extent, fig=fig)
+    return __plot_landscape(qaoa_instance.exp_landscape(), extent, fig=fig, title=title)
 
 
-def plot_Var(qaoa_instance, fig=None):
+def plot_Var(qaoa_instance, fig=None, title=None):
     angles = qaoa_instance.landscape_p1_angles
     extent = [
         angles["gamma"][0],
@@ -53,7 +54,7 @@ def plot_Var(qaoa_instance, fig=None):
         angles["beta"][0],
         angles["beta"][1],
     ]
-    return __plot_landscape(qaoa_instance.var_landscape(), extent, fig=fig)
+    return __plot_landscape(qaoa_instance.var_landscape(), extent, fig=fig, title=title)
 
 
 def plot_ApproximationRatio(
@@ -269,7 +270,7 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
 def plot_optimalHitRatios(qaoa, optimal_solution, shots=1024, fig=None, label=None, style="", title=None, **kwargs):
 
     # Compute the rate at which the best angles gives us the optimal solution
-    optimal_sol = np2str(optimal_solution)
+    optimal_sol = __np2str(optimal_solution)
     hit_rates = np.zeros(qaoa.current_depth)
     for d in range(qaoa.current_depth):
         hist = qaoa.hist(qaoa.optimization_results[d+1].get_best_angles(), shots)
@@ -310,7 +311,7 @@ def printBestHistogramEntries( qaoa, classical_solution = None, num_solutions=10
 
     best_classical_sol = None
     if classical_solution is not None:
-        best_classical_sol = np2str(classical_solution)
+        best_classical_sol = __np2str(classical_solution)
         print("Classical best result: ", (best_classical_sol, qaoa.problem.cost(best_classical_sol)))
         print(" --> points to the classical solution ")
     print("   * marks feasible solutions ")

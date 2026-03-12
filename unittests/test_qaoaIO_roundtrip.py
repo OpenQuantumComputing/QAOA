@@ -1,12 +1,9 @@
 import unittest
-import sys
 import os
 import tempfile
 import numpy as np
 
-sys.path.append("../")
-
-from qaoa.util import qaoaIO as qio
+from qaoa.utils import qaoaIO as qio
 
 
 class TestQAOAIORoundtrip(unittest.TestCase):

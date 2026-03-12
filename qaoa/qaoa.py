@@ -24,7 +24,7 @@ from qiskit_aer import AerSimulator, Aer
 from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
 from qaoa.problems import Problem
-from qaoa.util import Statistic, BitFlip, post_processing
+from qaoa.utils import Statistic, BitFlip, post_processing
 
 
 class OptResult:

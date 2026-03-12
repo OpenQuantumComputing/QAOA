@@ -2,9 +2,9 @@
 Unit tests for Statistic, BitFlip and post-processing utilities.
 
 Covers:
-- qaoa.util.Statistic: expectation, variance, min/max, CVaR
-- qaoa.util.BitFlip: boost_samples and xor
-- qaoa.util.post_processing: functional post-processing
+- qaoa.utils.Statistic: expectation, variance, min/max, CVaR
+- qaoa.utils.BitFlip: boost_samples and xor
+- qaoa.utils.post_processing: functional post-processing
 """
 
 import math
@@ -18,7 +18,7 @@ class TestStatistic(unittest.TestCase):
     """Tests for the Statistic class."""
 
     def setUp(self):
-        from qaoa.util import Statistic
+        from qaoa.utils import Statistic
         self.Statistic = Statistic
 
     def test_single_sample_expectation(self):
@@ -96,7 +96,7 @@ class TestBitFlip(unittest.TestCase):
     """Tests for the BitFlip class."""
 
     def setUp(self):
-        from qaoa.util import BitFlip
+        from qaoa.utils import BitFlip
         self.BitFlip = BitFlip
 
     def _make_maxcut_problem(self):
@@ -146,8 +146,8 @@ class TestPostProcessing(unittest.TestCase):
     def test_post_processing_returns_dict(self):
         import networkx as nx
         from qaoa.problems import MaxCut
-        from qaoa.util import BitFlip, Statistic
-        from qaoa.util import post_processing
+        from qaoa.utils import BitFlip, Statistic
+        from qaoa.utils import post_processing
 
         G = nx.path_graph(3)
         problem = MaxCut(G)
@@ -169,8 +169,8 @@ class TestPostProcessing(unittest.TestCase):
     def test_post_processing_string_input(self):
         import networkx as nx
         from qaoa.problems import MaxCut
-        from qaoa.util import BitFlip, Statistic
-        from qaoa.util import post_processing
+        from qaoa.utils import BitFlip, Statistic
+        from qaoa.utils import post_processing
 
         G = nx.path_graph(3)
         problem = MaxCut(G)

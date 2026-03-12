@@ -549,7 +549,7 @@
     "machine": "arm64",
     "processor": "arm",
     "conda_env": "neqst-kongsberg-2025",
-    "qaoa_repo_dir": "/Users/havahol/playground/quantum/QAOA/qaoa/util",
+    "qaoa_repo_dir": "/Users/havahol/playground/quantum/QAOA/qaoa/utils",
     "qaoa_git_commit": "ff2d04cf2aa5069dcb58ba57ab7d2fc79c465513"
   }
 }

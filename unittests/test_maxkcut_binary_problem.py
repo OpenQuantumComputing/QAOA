@@ -5,9 +5,6 @@ import unittest
 from qiskit import QuantumRegister, QuantumCircuit
 from qiskit.quantum_info import Statevector
 
-import sys
-
-sys.path.append("../")
 from qaoa.problems import MaxKCutBinaryPowerOfTwo, MaxKCutBinaryFullH
 
 
