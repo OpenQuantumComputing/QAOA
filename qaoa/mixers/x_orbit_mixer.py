@@ -6,7 +6,7 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
 from .base_mixer import Mixer
-from qaoa.util import GraphHandler
+from qaoa.utils import GraphHandler
 
 
 class XOrbit(Mixer):
@@ -30,7 +30,7 @@ class XOrbit(Mixer):
 
     Args:
         G (nx.Graph): The graph whose node orbits define the parameter
-            sharing.  A :class:`~qaoa.util.GraphHandler` is used internally
+            sharing.  A :class:`~.utils.GraphHandler` is used internally
             to obtain the same canonical node ordering as the problem circuit.
     """
 

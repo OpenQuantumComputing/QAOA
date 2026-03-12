@@ -1,9 +1,6 @@
 import unittest
-import sys
 import numpy as np
 import networkx as nx
-
-sys.path.append("../")
 
 from qaoa.problems import MaxKCutOneHot
 

@@ -1,12 +1,9 @@
 import unittest
-import sys
 import networkx as nx
 import numpy as np
 
 from qiskit.quantum_info import Statevector
 from qiskit.circuit import QuantumCircuit, QuantumRegister, ClassicalRegister
-
-sys.path.append("../")
 
 from qaoa.mixers import MaxKCutGrover, MaxKCutLX
 from qaoa.initialstates import MaxKCutFeasible

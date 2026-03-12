@@ -3,6 +3,7 @@ import structlog
 LOG = structlog.get_logger(file=__name__)
 
 import numpy as np
+import time
 
 from qiskit import (
     QuantumCircuit,
@@ -23,7 +24,7 @@ from qiskit_aer import AerSimulator, Aer
 from qaoa.initialstates import InitialState
 from qaoa.mixers import Mixer
 from qaoa.problems import Problem
-from qaoa.util import Statistic, BitFlip, post_processing
+from qaoa.utils import Statistic, BitFlip, post_processing
 
 
 class OptResult:
@@ -40,6 +41,7 @@ class OptResult:
         BestSols (list): List of best solutions.
         shots (list): List of shots taken for each iteration.
         index_Exp_min (int): Index of the minimum expected value.
+        opt_time (float): Time used for optimization on given depth
 
     Methods:
         add_iteration(): Adds an iteration's results to the OptResult object.
@@ -70,6 +72,7 @@ class OptResult:
         self.shots = []
 
         self.index_Exp_min = -1
+        self.opt_time = -1.0
 
     def add_iteration(self, angles, stat, shots):
         """
@@ -510,7 +513,10 @@ class QAOA:
 
         self.parameterized_circuit.barrier()
         self.parameterized_circuit.measure(q, c)
-        self.parameterized_circuit = transpile(self.parameterized_circuit, self.backend)
+        self.parameterized_circuit = transpile(
+            self.parameterized_circuit, self.backend
+            #basis_gates=['cx', 'u', 'p', 'cp', 'id', 'x', 'h', 'ry', 'cry', 'cu']
+        )
         self.parametrized_circuit_depth = depth
 
     def sample_cost_landscape(
@@ -579,14 +585,14 @@ class QAOA:
                             + [beta] * self.n_beta
                         )
                         params = self.getParametersToBind(
-                            angle_array, self.parametrized_circuit_depth, asList=True
+                            angle_array, self.parametrized_circuit_depth, asList=False
                         )
+                        bound_circuit = self.parameterized_circuit.assign_parameters(params)
 
                         job = self.backend.run(
-                            self.parameterized_circuit,
+                            bound_circuit,
                             noise_model=self.noisemodel,
                             shots=self.shots,
-                            parameter_binds=[params],
                             optimization_level=0,
                             memory=self.memory,
                         )
@@ -623,33 +629,31 @@ class QAOA:
                 logger.info("Done measurement")
             else:
                 self.createParameterizedCircuit(depth)
-                gamma = [None] * angles["beta"][2] * angles["gamma"][2]
-                beta = [None] * angles["beta"][2] * angles["gamma"][2]
 
-                counter = 0
+                # Build a list of fully-bound circuits, one per grid point.
+                # Each circuit lives in the vanilla (symmetric) subspace: all
+                # gamma parameters equal and all beta parameters equal.
+                bound_circuits = []
                 for b in range(angles["beta"][2]):
                     for g in range(angles["gamma"][2]):
-                        gamma[counter] = self.gamma_grid[g]
-                        beta[counter] = self.beta_grid[b]
-                        counter += 1
-
-                parameters = {}
-                # All gamma parameters get the same grid values (vanilla subspace).
-                # This ensures the 2-D grid search is equivalent to vanilla QAOA,
-                # giving a valid warm-start for both single- and multi-angle ansätze.
-                for i in range(self.n_gamma):
-                    parameters[self.gamma_params[0][i]] = gamma
-                # All beta parameters get the same grid values (vanilla subspace).
-                for i in range(self.n_beta):
-                    parameters[self.beta_params[0][i]] = beta
+                        angle_array = (
+                            [0.0] * self.n_init
+                            + [self.gamma_grid[g]] * self.n_gamma
+                            + [self.beta_grid[b]] * self.n_beta
+                        )
+                        params = self.getParametersToBind(
+                            angle_array, self.parametrized_circuit_depth, asList=False
+                        )
+                        bound_circuits.append(
+                            self.parameterized_circuit.assign_parameters(params)
+                        )
 
                 logger.info("Executing sample_cost_landscape")
-                logger.info(f"parameters: {len(parameters)}")
+                logger.info(f"circuits: {len(bound_circuits)}")
                 job = self.backend.run(
-                    self.parameterized_circuit,
+                    bound_circuits,
                     noise_model=self.noisemodel,
                     shots=self.shots,
-                    parameter_binds=[parameters],
                     optimization_level=0,
                     memory=self.memory,
                 )
@@ -785,7 +789,7 @@ class QAOA:
             n_beta = self.mixer.get_num_parameters()
             n_init = self.initialstate.get_num_parameters()
             n_per_layer = n_gamma + n_beta
-
+            start_time = time.perf_counter()
             if self.current_depth == 0:
                 if self.Exp_sampled_p1 is None:
                     self.sample_cost_landscape(angles=angles)
@@ -826,6 +830,7 @@ class QAOA:
             self.samplecount_hists[self.current_depth + 1] = self.last_hist
 
             self.optimization_results[self.current_depth + 1].compute_best_index()
+            self.optimization_results[self.current_depth + 1].opt_time = time.perf_counter() - start_time
 
             LOG.info(
                 f"cost(depth { self.current_depth + 1} = {res.fun}",
@@ -901,13 +906,13 @@ class QAOA:
         for i in range(3):  # this loop is used only used if precision is set
             if self.backend.configuration().local:
                 params = self.getParametersToBind(
-                    angles, self.parametrized_circuit_depth, asList=True
+                    angles, self.parametrized_circuit_depth, asList=False
                 )
+                bound_circuit = self.parameterized_circuit.assign_parameters(params)
                 job = self.backend.run(
-                    self.parameterized_circuit,
+                    bound_circuit,
                     noise_model=self.noisemodel,
                     shots=shots,
-                    parameter_binds=[params],
                     optimization_level=0,
                     memory=self.memory,
                 )
@@ -1042,13 +1047,13 @@ class QAOA:
         if not self.backend.configuration().local:
             raise NotImplementedError
         params = self.getParametersToBind(
-            angle_array, self.parametrized_circuit_depth, asList=True
+            angle_array, self.parametrized_circuit_depth, asList=False
         )
+        bound_circuit = self.parameterized_circuit.assign_parameters(params)
         job = self.backend.run(
-            self.parameterized_circuit,
+            bound_circuit,
             noise_model=self.noisemodel,
             shots=self.shots,
-            parameter_binds=[params],
             optimization_level=0,
             memory=self.memory,
         )
@@ -1146,12 +1151,12 @@ class QAOA:
         depth = int((len(angles) - n_init) / (n_gamma + n_beta))
         self.createParameterizedCircuit(depth)
 
-        params = self.getParametersToBind(angles, depth, asList=True)
+        params = self.getParametersToBind(angles, depth, asList=False)
+        bound_circuit = self.parameterized_circuit.assign_parameters(params)
         if self.backend.configuration().local:
             job = self.backend.run(
-                self.parameterized_circuit,
+                bound_circuit,
                 shots=shots,
-                parameter_binds=[params],
                 optimization_level=0,
                 memory=self.memory,
             )
@@ -1205,3 +1210,9 @@ class QAOA:
             opt_sols.append(best_sols[i])
         opt_sols = [item for sublist in opt_sols for item in sublist]
         return np.unique(opt_sols)
+        
+
+    
+
+    def validate_circuit(self, t=1, flip=True, atol=1e-8, rtol=1e-8):
+        return self.problem.validate_circuit(t=t, flip=flip, atol=atol, rtol=rtol)
