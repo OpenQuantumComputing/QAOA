@@ -19,7 +19,7 @@ A flexible, modular Python library for the [Quantum Approximate Optimization Alg
 - [Further Parameters](#further-parameters)
 - [Extracting Results](#extract-results)
 - [Multi-Angle QAOA](#multi-angle-qaoa)
-- [Fixing One Node to Reduce Circuit Size](#fixing-one-node-to-reduce-circuit-size)
+- [Fixing One Node to Reduce Circuit depth/width](#fixing-one-node-to-reduce-circuit-size)
 - [Bit-Flip Boosting](#bit-flip-boosting)
 - [Building Circuits like Lego](#building-circuits-like-lego)
 - [Minimizing Circuit Depth](#minimizing-depth-of-phase-separating-operator)

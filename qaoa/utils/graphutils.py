@@ -37,8 +37,8 @@ class GraphHandler:
         # ensure graph has labels 0, 1, ..., num_V-1
         G_int = self.__ensure_integer_labels__(G)
         # relabel to make node n-1 the one with maximum degree; when fix_one_node=True
-        # this node is fixed (removed from the circuit), maximizing the number of CZ
-        # gates eliminated (equal to the degree of the fixed node)
+        # this node is fixed (removed from the circuit), maximizing the number of entangling
+        # gates eliminated (proportional to the degree of the fixed node)
         self.G = self.__get_graph_maxdegree_last_node__(G_int)
         # to avoid a deep circuit, we partition the edges into sets which can be executed in parallel
         if not nx.is_isomorphic(G, self.G):
