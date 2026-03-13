@@ -19,6 +19,8 @@ A flexible, modular Python library for the [Quantum Approximate Optimization Alg
 - [Further Parameters](#further-parameters)
 - [Extracting Results](#extract-results)
 - [Multi-Angle QAOA](#multi-angle-qaoa)
+- [Fixing One Node to Reduce Circuit Size](#fixing-one-node-to-reduce-circuit-size)
+- [Bit-Flip Boosting](#bit-flip-boosting)
 - [Building Circuits like Lego](#building-circuits-like-lego)
 - [Minimizing Circuit Depth](#minimizing-depth-of-phase-separating-operator)
 - [Repository Structure](#repository-structure)
@@ -148,6 +150,8 @@ This library already contains several standard implementations.
 
 It is **very easy to extend this list** by implementing the abstract methods of the base classes above. Feel free to fork the repo and open a pull request!
 
+See [examples/MaxCut/KCutExamples.ipynb](examples/MaxCut/KCutExamples.ipynb) for worked examples of Max k-cut using both one-hot and binary encodings.
+
 For example, to set up QAOA for MaxCut using the X-mixer and $|+\rangle^{\otimes n}$ as the initial state:
 
 ```python
@@ -263,6 +267,39 @@ The flat angle array format used by `hist()`, `getParametersToBind()`, and `inte
 For the standard single-parameter case this reduces to `[gamma_0, beta_0, gamma_1, beta_1, ...]`.
 
 Implement `get_num_parameters()` in a custom component to enable multi-angle support. See [examples/MultiAngle](examples/MultiAngle/) for a complete example.
+
+---
+
+## Fixing One Node to Reduce Circuit Size
+
+The MaxCut (and Max k-cut) problem exhibits a **flip symmetry**: swapping all partition labels yields an equally valid solution. This symmetry allows one node to be fixed to a specific partition, removing it from the circuit entirely.
+
+The node selected for fixing is always the **highest-degree node**. Fixing this node eliminates CZ gates equal to its degree — the maximum possible reduction for a single fixed node.
+
+Enable this via the `fix_one_node` flag on any graph problem:
+
+```python
+problem = problems.MaxCut(G, fix_one_node=True)
+```
+
+See [examples/MaxCut/FixOneQubit.ipynb](examples/MaxCut/FixOneQubit.ipynb) for a worked example showing the circuit-size reduction and that the approximation quality is preserved.
+
+---
+
+## Bit-Flip Boosting
+
+A bit-flip layer can be inserted between QAOA layers to exploit the flip symmetry at the quantum level. Enable it with the `flip=True` argument:
+
+```python
+qaoa = QAOA(
+    problem=problems.MaxCut(G),
+    mixer=mixers.X(),
+    initialstate=initialstates.Plus(),
+    flip=True
+)
+```
+
+See [examples/MaxCut/WithFlip.ipynb](examples/MaxCut/WithFlip.ipynb) for a comparison between standard QAOA and QAOA with bit-flip boosting.
 
 ---
 
