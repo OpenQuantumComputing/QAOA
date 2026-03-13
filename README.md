@@ -20,7 +20,6 @@ A flexible, modular Python library for the [Quantum Approximate Optimization Alg
 - [Extracting Results](#extract-results)
 - [Multi-Angle QAOA](#multi-angle-qaoa)
 - [Fixing One Node to Reduce Circuit depth/width](#fixing-one-node-to-reduce-circuit-size)
-- [Bit-Flip Boosting](#bit-flip-boosting)
 - [Building Circuits like Lego](#building-circuits-like-lego)
 - [Minimizing Circuit Depth](#minimizing-depth-of-phase-separating-operator)
 - [Repository Structure](#repository-structure)
@@ -149,6 +148,8 @@ This library already contains several standard implementations.
 	- [Plus parameterized](qaoa/initialstates/plus_parameterized_initialstate.py) *(|+⟩ with optimizable phase rotations)*
 
 It is **very easy to extend this list** by implementing the abstract methods of the base classes above. Feel free to fork the repo and open a pull request!
+
+See [examples/MaxCut/OverlapInitialState.ipynb](examples/MaxCut/OverlapInitialState.ipynb) for a study of how the overlap between the initial state and the X-mixer ground state affects QAOA performance at various circuit depths.
 
 See [examples/MaxCut/KCutExamples.ipynb](examples/MaxCut/KCutExamples.ipynb) for worked examples of Max k-cut using both one-hot and binary encodings.
 
@@ -283,23 +284,6 @@ problem = problems.MaxCut(G, fix_one_node=True)
 ```
 
 See [examples/MaxCut/FixOneQubit.ipynb](examples/MaxCut/FixOneQubit.ipynb) for a worked example showing the circuit-size reduction and that the approximation quality is preserved.
-
----
-
-## Bit-Flip Boosting
-
-A bit-flip layer can be inserted between QAOA layers to exploit the flip symmetry at the quantum level. Enable it with the `flip=True` argument:
-
-```python
-qaoa = QAOA(
-    problem=problems.MaxCut(G),
-    mixer=mixers.X(),
-    initialstate=initialstates.Plus(),
-    flip=True
-)
-```
-
-See [examples/MaxCut/WithFlip.ipynb](examples/MaxCut/WithFlip.ipynb) for a comparison between standard QAOA and QAOA with bit-flip boosting.
 
 ---
 
