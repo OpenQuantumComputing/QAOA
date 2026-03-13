@@ -15,7 +15,9 @@ class GraphProblem(Problem):
     Attributes:
         G: The graph to be used in the problem.
         N_qubits_per_node (int): Number of qubits per node.
-        fix_one_node (bool): If True, fixes the last node to "color1". 
+        fix_one_node (bool): If True, fixes the highest-degree node to "color1",
+            reducing circuit size. The highest-degree node is chosen to maximize the
+            number of entangling gates eliminated.
     
     Methods:
         create_edge_circuit(theta): Abstract method to create circuit for an edge
@@ -30,17 +32,19 @@ class GraphProblem(Problem):
         self,
         G,
         N_qubits_per_node=1,
-        fix_one_node: bool = False,  # this fixes the last node to color 1, i.e., one qubit gets removed
+        fix_one_node: bool = False,  # fixes the highest-degree node to color 1, removing it from the circuit and eliminating entangling gates proportional to its degree
     ) -> None:
         """
         Args:
             G: The graph to be used in the problem.
             N_qubits_per_node (int): Number of qubits per node.
-            fix_one_node (bool): If True, fixes the last node to "color1".
+            fix_one_node (bool): If True, fixes the highest-degree node to "color1", reducing
+                the circuit size. The highest-degree node is chosen to maximize the number of
+                entangling gates eliminated (proportional to the degree of the fixed node).
         """
         super().__init__()
 
-        # fixes the last node to "color1"
+        # fixes the highest-degree node (node n-1 after relabeling) to "color1"
         self.fix_one_node = fix_one_node
 
         # ensure graph has labels 0, 1, ..., num_V-1

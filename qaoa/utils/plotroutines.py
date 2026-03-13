@@ -130,6 +130,10 @@ def plot_ApproximationRatio(
 
     fig, ax = _get_fig_ax(fig)
     ax.hlines(1, 1, maxdepth, linestyles="solid", colors="black")
+    # Normalized approximation ratio for a minimization objective.
+    # Here mincost is the optimal (most negative) value and maxcost the worst.
+    # This maps exp = maxcost → 0 (worst) and exp = mincost → 1 (optimal).
+    # Hence we use (maxcost - exp) / (maxcost - mincost).
     ax.plot(
         np.arange(1, maxdepth + 1),
         (maxcost - exp) / (maxcost - mincost),
