@@ -282,14 +282,18 @@ class TestBucketExactCover(unittest.TestCase):
     # order4 [  1   0   1   0   0   1   0 ]
     #
     # weights = [20, 40, 30, 35, 10, 25, 40], num_buckets = 2
-    # bucket 0 (boat1): [c0, c1, c2], n_k=3, b_k=2 → qubits 0,1
-    # bucket 1 (boat2): [c3, c4, c5, c6], n_k=4, b_k=3 → qubits 2,3,4
-    # N_qubits = 5
+    # bucket 0 (boat1): [c0, c1, c2], n_k=3, b_k=ceil(log2(3))=2 → qubits 0,1
+    # bucket 1 (boat2): [c3, c4, c5, c6], n_k=4, b_k=ceil(log2(4))=2 → qubits 2,3
+    # N_qubits = 4
+    #
+    # Bitstring layout (LSB first per bucket):
+    #   bucket0: string[0]=z0, string[1]=z1; v=z0+2*z1; idx=v%3
+    #   bucket1: string[2]=z0, string[3]=z1; v=z0+2*z1; idx=v%4
     #
     # Feasible solutions (all 4 orders covered exactly once):
-    #   [c0, c4]: weights 20+10=30   → bitstring "10010"  (optimal, least cost)
-    #   [c1, c5]: weights 40+25=65   → bitstring "01110"
-    #   [c2, c6]: weights 30+40=70   → bitstring "11001"
+    #   [c0, c4]: weights 20+10=30 → "0010"  (optimal, least cost)
+    #   [c1, c5]: weights 40+25=65 → "1001"
+    #   [c2, c6]: weights 30+40=70 → "0111"
 
     def _make_problem(self, **kwargs):
         from qaoa.problems import BucketExactCover
@@ -304,19 +308,20 @@ class TestBucketExactCover(unittest.TestCase):
         weights = np.array([20., 40., 30., 35., 10., 25., 40.])
         return BucketExactCover(columns, num_buckets=2, weights=weights, **kwargs)
 
-    # Bitstrings for known solutions
-    # bucket0: v=1→c0 → bits "10"; bucket1: v=2→c4 → bits "010"
-    _S_C0C4 = "10010"
-    # bucket0: v=2→c1 → bits "01"; bucket1: v=3→c5 → bits "110"
-    _S_C1C5 = "01110"
-    # bucket0: v=3→c2 → bits "11"; bucket1: v=4→c6 → bits "001"
-    _S_C2C6 = "11001"
-    # all zeros → null routes
-    _S_NULL = "00000"
+    # Bitstrings for known feasible solutions
+    # bucket0: v=0→idx=0→c0, bucket1: v=1→idx=1→c4
+    _S_C0C4 = "0010"
+    # bucket0: v=1→idx=1→c1, bucket1: v=2→idx=2→c5
+    _S_C1C5 = "1001"
+    # bucket0: v=2→idx=2→c2, bucket1: v=3→idx=3→c6
+    _S_C2C6 = "0111"
+    # "0000" → bucket0 v=0→c0 (covers orders 1,4), bucket1 v=0→c3 (covers orders 1,3)
+    # → order 1 covered twice, order 2 not covered at all → infeasible
+    _S_INFEASIBLE = "0000"
 
     def test_n_qubits(self):
         bec = self._make_problem()
-        self.assertEqual(bec.N_qubits, 5)
+        self.assertEqual(bec.N_qubits, 4)
 
     def test_cost_feasible_solution(self):
         bec = self._make_problem()
@@ -334,7 +339,7 @@ class TestBucketExactCover(unittest.TestCase):
 
     def test_is_feasible_false(self):
         bec = self._make_problem()
-        self.assertFalse(bec.isFeasible(self._S_NULL))
+        self.assertFalse(bec.isFeasible(self._S_INFEASIBLE))
 
     def test_brute_force_finds_cheapest_solution(self):
         bec = self._make_problem()
@@ -359,7 +364,7 @@ class TestBucketExactCover(unittest.TestCase):
 
     def test_unscaled_cost_equals_cost_when_no_scaling(self):
         bec = self._make_problem(scale_problem=False)
-        for s in [self._S_C0C4, self._S_C1C5, self._S_C2C6, self._S_NULL]:
+        for s in [self._S_C0C4, self._S_C1C5, self._S_C2C6, self._S_INFEASIBLE]:
             self.assertAlmostEqual(bec.cost(s), bec.unscaled_cost(s))
 
     def test_penalty_auto_computed(self):
@@ -381,7 +386,7 @@ class TestBucketExactCover(unittest.TestCase):
         # c7 has all zeros in top 2 rows → ignored
         bec = BucketExactCover(columns, num_buckets=2, weights=weights)
         # N_qubits should be the same as the 7-column problem (c7 ignored)
-        self.assertEqual(bec.N_qubits, 5)
+        self.assertEqual(bec.N_qubits, 4)
         self.assertNotIn(7, bec._valid_columns)
 
 

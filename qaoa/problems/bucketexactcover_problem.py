@@ -18,8 +18,9 @@ class BucketExactCover(Problem):
     formulation that requires fewer qubits than the one-hot QUBO.
 
     Each bucket k corresponds to one boat and contains all routes for that boat.
-    A b_k-bit binary string selects one route (or a null route) from bucket k
-    via modular wrapping (Strategy B).
+    A b_k-bit binary string selects exactly one route from bucket k via modular
+    wrapping (Strategy B): `idx = v % n_k` where `v` is the integer value of
+    the binary string. This guarantees one route is always selected per bucket.
 
     Attributes:
         columns (np.ndarray): Full column matrix (N_rows × N_routes).
@@ -63,10 +64,11 @@ class BucketExactCover(Problem):
         self._valid_columns = sorted(valid_set)
         self._valid_col_to_idx = {col: idx for idx, col in enumerate(self._valid_columns)}
 
-        # Bucket sizes and qubit counts
+        # Bucket sizes and qubit counts: b_k = ceil(log2(n_k)) per Eq. 10 of
+        # docs/main_hubo.tex. Minimum 1 qubit (handles n_k == 1 where log2=0).
         self._bucket_sizes = [len(bc) for bc in self._bucket_columns]
         self._bucket_qubits = [
-            max(1, math.ceil(math.log2(n_k + 1))) for n_k in self._bucket_sizes
+            max(1, math.ceil(math.log2(n_k))) for n_k in self._bucket_sizes
         ]
         self._bucket_qubit_offsets = []
         offset = 0
@@ -131,18 +133,20 @@ class BucketExactCover(Problem):
     # -------------------------------------------------------------------------
 
     def _decode(self, string):
-        """Decode a bitstring to a binary indicator vector over valid columns."""
+        """Decode a bitstring to a binary indicator vector over valid columns.
+
+        Strategy B modular wrapping: idx = v % n_k always selects one route.
+        """
         x = np.zeros(len(self._valid_columns))
         for k in range(self.num_buckets):
             offset = self._bucket_qubit_offsets[k]
             b_k = self._bucket_qubits[k]
             n_k = self._bucket_sizes[k]
             v = sum(int(string[offset + j]) * (1 << j) for j in range(b_k))
-            idx = v % (n_k + 1)
-            if idx > 0:
-                global_col = self._bucket_columns[k][idx - 1]
-                valid_idx = self._valid_col_to_idx[global_col]
-                x[valid_idx] = 1.0
+            idx = v % n_k
+            global_col = self._bucket_columns[k][idx]
+            valid_idx = self._valid_col_to_idx[global_col]
+            x[valid_idx] = 1.0
         return x
 
     # -------------------------------------------------------------------------
@@ -269,11 +273,10 @@ class BucketExactCover(Problem):
             # Cost contribution values per state
             cost_vals = np.zeros(num_states)
             for v in range(num_states):
-                idx = v % (n_k + 1)
-                if idx > 0:
-                    global_col = self._bucket_columns[k][idx - 1]
-                    valid_idx = self._valid_col_to_idx[global_col]
-                    cost_vals[v] = self.weights[valid_idx]
+                idx = v % n_k
+                global_col = self._bucket_columns[k][idx]
+                valid_idx = self._valid_col_to_idx[global_col]
+                cost_vals[v] = self.weights[valid_idx]
 
             # Möbius inversion for cost
             cost_alpha = self._mobius_inversion(cost_vals, b_k)
@@ -286,10 +289,9 @@ class BucketExactCover(Problem):
                 for o in range(n_orders):
                     cov_vals = np.zeros(num_states)
                     for v in range(num_states):
-                        idx = v % (n_k + 1)
-                        if idx > 0:
-                            global_col = self._bucket_columns[k][idx - 1]
-                            cov_vals[v] = float(Y_orders[o, global_col])
+                        idx = v % n_k
+                        global_col = self._bucket_columns[k][idx]
+                        cov_vals[v] = float(Y_orders[o, global_col])
                     cov_alpha = self._mobius_inversion(cov_vals, b_k)
                     cov_polys[(o, k)] = {}
                     for T_local, coeff in cov_alpha.items():
