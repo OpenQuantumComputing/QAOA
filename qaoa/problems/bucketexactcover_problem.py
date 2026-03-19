@@ -64,8 +64,8 @@ class BucketExactCover(Problem):
         self._valid_columns = sorted(valid_set)
         self._valid_col_to_idx = {col: idx for idx, col in enumerate(self._valid_columns)}
 
-        # Bucket sizes and qubit counts: b_k = ceil(log2(n_k)) per Eq. 10 of
-        # docs/main_hubo.tex. Minimum 1 qubit (handles n_k == 1 where log2=0).
+        # Each bucket k has n_k columns; we need ceil(log2(n_k)) qubits to encode a choice among them.
+        # Use at least 1 qubit (when n_k=1, log2(1)=0).
         self._bucket_sizes = [len(bc) for bc in self._bucket_columns]
         self._bucket_qubits = [
             max(1, math.ceil(math.log2(n_k))) for n_k in self._bucket_sizes
@@ -135,7 +135,7 @@ class BucketExactCover(Problem):
     def _decode(self, string):
         """Decode a bitstring to a binary indicator vector over valid columns.
 
-        Strategy B modular wrapping: idx = v % n_k always selects one route.
+        Modular wrapping: idx = v % n_k always selects one route.
         """
         x = np.zeros(len(self._valid_columns))
         for k in range(self.num_buckets):
