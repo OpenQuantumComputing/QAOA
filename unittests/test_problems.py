@@ -6,6 +6,7 @@ Covers:
 - QUBO: cost, create_circuit, lower-triangular
 - PortfolioOptimization: cost, isFeasible, penalty behavior
 - MaxKCutOneHot: binstringToLabels, cost, create_circuit
+- BucketExactCover: cost, isFeasible, circuit, brute force, scaling, IO
 """
 
 import math
@@ -266,6 +267,122 @@ class TestMaxKCutOneHot(unittest.TestCase):
         self.assertEqual(problem.N_qubits, 9)  # 3 nodes × 3 colors
         problem.create_circuit()
         self.assertIsNotNone(problem.circuit)
+
+
+class TestBucketExactCover(unittest.TestCase):
+    """Tests for the BucketExactCover problem (HUBO formulation)."""
+
+    # columns (6 rows × 7 cols):
+    #          c0  c1  c2  c3  c4  c5  c6
+    # boat1  [  1   1   1   0   0   0   0 ]
+    # boat2  [  0   0   0   1   1   1   1 ]
+    # order1 [  1   0   0   1   0   1   1 ]
+    # order2 [  0   1   0   0   1   0   1 ]
+    # order3 [  0   1   0   1   1   0   1 ]
+    # order4 [  1   0   1   0   0   1   0 ]
+    #
+    # weights = [20, 40, 30, 35, 10, 25, 40], num_buckets = 2
+    # bucket 0 (boat1): [c0, c1, c2], n_k=3, b_k=2 → qubits 0,1
+    # bucket 1 (boat2): [c3, c4, c5, c6], n_k=4, b_k=3 → qubits 2,3,4
+    # N_qubits = 5
+    #
+    # Feasible solutions (all 4 orders covered exactly once):
+    #   [c0, c4]: weights 20+10=30   → bitstring "10010"  (optimal, least cost)
+    #   [c1, c5]: weights 40+25=65   → bitstring "01110"
+    #   [c2, c6]: weights 30+40=70   → bitstring "11001"
+
+    def _make_problem(self, **kwargs):
+        from qaoa.problems import BucketExactCover
+        columns = np.array([
+            [1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1],
+            [1, 0, 0, 1, 0, 1, 1],
+            [0, 1, 0, 0, 1, 0, 1],
+            [0, 1, 0, 1, 1, 0, 1],
+            [1, 0, 1, 0, 0, 1, 0],
+        ], dtype=float)
+        weights = np.array([20., 40., 30., 35., 10., 25., 40.])
+        return BucketExactCover(columns, num_buckets=2, weights=weights, **kwargs)
+
+    # Bitstrings for known solutions
+    # bucket0: v=1→c0 → bits "10"; bucket1: v=2→c4 → bits "010"
+    _S_C0C4 = "10010"
+    # bucket0: v=2→c1 → bits "01"; bucket1: v=3→c5 → bits "110"
+    _S_C1C5 = "01110"
+    # bucket0: v=3→c2 → bits "11"; bucket1: v=4→c6 → bits "001"
+    _S_C2C6 = "11001"
+    # all zeros → null routes
+    _S_NULL = "00000"
+
+    def test_n_qubits(self):
+        bec = self._make_problem()
+        self.assertEqual(bec.N_qubits, 5)
+
+    def test_cost_feasible_solution(self):
+        bec = self._make_problem()
+        self.assertAlmostEqual(bec.unscaled_cost(self._S_C0C4), -30.0)
+
+    def test_cost_suboptimal_feasible(self):
+        bec = self._make_problem()
+        self.assertAlmostEqual(bec.unscaled_cost(self._S_C1C5), -65.0)
+
+    def test_is_feasible_true(self):
+        bec = self._make_problem()
+        self.assertTrue(bec.isFeasible(self._S_C0C4))
+        self.assertTrue(bec.isFeasible(self._S_C1C5))
+        self.assertTrue(bec.isFeasible(self._S_C2C6))
+
+    def test_is_feasible_false(self):
+        bec = self._make_problem()
+        self.assertFalse(bec.isFeasible(self._S_NULL))
+
+    def test_brute_force_finds_cheapest_solution(self):
+        bec = self._make_problem()
+        opt_sol = bec.brute_force_solve()
+        self.assertAlmostEqual(bec.unscaled_cost(opt_sol), -30.0)
+
+    def test_create_circuit_not_none(self):
+        bec = self._make_problem()
+        circ = bec.create_circuit()
+        self.assertIsNotNone(circ)
+
+    def test_circuit_has_parameter(self):
+        bec = self._make_problem()
+        circ = bec.create_circuit()
+        self.assertGreater(len(circ.parameters), 0)
+
+    def test_validate_circuit(self):
+        bec = self._make_problem()
+        bec.create_circuit()
+        ok, report = bec.validate_circuit()
+        self.assertTrue(ok, msg=str(report))
+
+    def test_unscaled_cost_equals_cost_when_no_scaling(self):
+        bec = self._make_problem(scale_problem=False)
+        for s in [self._S_C0C4, self._S_C1C5, self._S_C2C6, self._S_NULL]:
+            self.assertAlmostEqual(bec.cost(s), bec.unscaled_cost(s))
+
+    def test_penalty_auto_computed(self):
+        bec = self._make_problem()
+        self.assertGreater(bec.penalty_factor, 0)
+
+    def test_no_bucket_columns_ignored(self):
+        """Columns with all zeros in the top num_buckets rows are ignored."""
+        from qaoa.problems import BucketExactCover
+        columns = np.array([
+            [1, 1, 1, 0, 0, 0, 0, 0],   # boat1: c0,c1,c2
+            [0, 0, 0, 1, 1, 1, 1, 0],   # boat2: c3,c4,c5,c6
+            [1, 0, 0, 1, 0, 1, 1, 0],   # order1
+            [0, 1, 0, 0, 1, 0, 1, 0],   # order2
+            [0, 1, 0, 1, 1, 0, 1, 0],   # order3
+            [1, 0, 1, 0, 0, 1, 0, 0],   # order4
+        ], dtype=float)
+        weights = np.array([20., 40., 30., 35., 10., 25., 40., 99.])
+        # c7 has all zeros in top 2 rows → ignored
+        bec = BucketExactCover(columns, num_buckets=2, weights=weights)
+        # N_qubits should be the same as the 7-column problem (c7 ignored)
+        self.assertEqual(bec.N_qubits, 5)
+        self.assertNotIn(7, bec._valid_columns)
 
 
 if __name__ == "__main__":

@@ -87,6 +87,15 @@ class ExactCoverProblemData(ProblemData):
 
 
 @dataclass
+class BucketExactCoverProblemData(ProblemData):
+    columns: np.ndarray = None
+    weights: np.ndarray = None
+    solution: np.ndarray = None
+    num_buckets: int = None
+    problem_type: str = "BucketExactCover"
+
+
+@dataclass
 class PortfolioOptimizationProblemData(ProblemData):
     risk: float = 0.0
     exp_returns: np.ndarray = None
@@ -98,6 +107,7 @@ class PortfolioOptimizationProblemData(ProblemData):
 # Register available problem types
 problem_registry: Dict[str, Type[ProblemData]] = {
     "ExactCover": ExactCoverProblemData,
+    "BucketExactCover": BucketExactCoverProblemData,
     "PortfolioOptimization": PortfolioOptimizationProblemData,
 }
 
@@ -227,12 +237,20 @@ class QAOAResult:
                 opt_time = qaoa.optimization_results[k].opt_time
             )
 
-        problem_data = ExactCoverProblemData(
-            columns = qaoa.problem.columns,
-            weights = qaoa.problem.weights,
-            solution = solution,
-            hamming_weight = qaoa.problem.hamming_weight
-        )
+        if isinstance(qaoa.problem, problems.BucketExactCover):
+            problem_data = BucketExactCoverProblemData(
+                columns=qaoa.problem.columns,
+                weights=qaoa.problem._original_weights,
+                solution=solution,
+                num_buckets=qaoa.problem.num_buckets,
+            )
+        else:
+            problem_data = ExactCoverProblemData(
+                columns=qaoa.problem.columns,
+                weights=qaoa.problem.weights,
+                solution=solution,
+                hamming_weight=qaoa.problem.hamming_weight,
+            )
 
         init_method = InitMethod(str(qaoa.initialstate).split(" ")[0].split(".")[-1].upper())
         mixer_str = str(qaoa.mixer).split(" ")[0].split(".")[-1].upper()
@@ -264,7 +282,13 @@ class QAOAResult:
     # def generate_qaoa_object(self) -> "QAOA"
 
     def get_problem_instance(self):
-        if isinstance(self.problem, ExactCoverProblemData):
+        if isinstance(self.problem, BucketExactCoverProblemData):
+            return problems.BucketExactCover(
+                columns=self.problem.columns,
+                weights=self.problem.weights,
+                num_buckets=self.problem.num_buckets,
+            )
+        elif isinstance(self.problem, ExactCoverProblemData):
             return problems.ExactCover(
                 columns = self.problem.columns,
                 weights = self.problem.weights,
