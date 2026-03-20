@@ -238,9 +238,12 @@ class QAOAResult:
             )
 
         if isinstance(qaoa.problem, problems.BucketExactCover):
+            # Save full weights array (one per column); BucketExactCover expects this on load
+            full_weights = np.zeros(qaoa.problem.columns.shape[1])
+            full_weights[qaoa.problem._valid_columns] = qaoa.problem._original_weights
             problem_data = BucketExactCoverProblemData(
                 columns=qaoa.problem.columns,
-                weights=qaoa.problem._original_weights,
+                weights=full_weights,
                 solution=solution,
                 num_buckets=qaoa.problem.num_buckets,
             )
@@ -303,4 +306,10 @@ class QAOAResult:
                 exp_return=self.problem.exp_return
             )
         
-        
+    def best_bitstring(self) -> str:
+        """Return the most frequent bitstring from the histogram at the final depth."""
+        if not self.qaoa_params.depths:
+            raise ValueError("No depth results available")
+        final_depth = max(self.qaoa_params.depths.keys())
+        hist = self.qaoa_params.depths[final_depth].histogram
+        return max(hist, key=lambda bs: hist[bs])
