@@ -3,7 +3,7 @@ from qaoa import QAOA, problems
 import json
 import numpy as np
 from dataclasses import dataclass, asdict, field
-from typing import List, Dict, Type
+from typing import List, Dict, Type, Tuple
 from enum import Enum
 import os
 import subprocess
@@ -306,10 +306,32 @@ class QAOAResult:
                 exp_return=self.problem.exp_return
             )
         
-    def best_bitstring(self) -> str:
-        """Return the most frequent bitstring from the histogram at the final depth."""
+    def best_bitstring(self, decode: bool = False) -> Tuple[str, int]:
+        """Return the most frequent bitstring from the histogram at the final depth.
+        
+        Args:
+            decode: If True and problem is BucketExactCover, return histogram with
+                        decoded (ExactCover-format) keys and combined counts.
+                        Otherwise return raw encoded histogram.
+        """
         if not self.qaoa_params.depths:
             raise ValueError("No depth results available")
         final_depth = max(self.qaoa_params.depths.keys())
-        hist = self.qaoa_params.depths[final_depth].histogram
-        return max(hist, key=lambda bs: hist[bs])
+        hist = self.get_histogram(final_depth, decode=decode)
+        best_bs = max(hist, key=lambda bs: hist[bs])
+        return best_bs, hist[best_bs]
+
+    def get_histogram(self, depth: int, decode: bool = False) -> dict:
+        """Get histogram for a given depth.
+
+        Args:
+            depth: QAOA depth.
+            decode: If True and problem is BucketExactCover, return histogram with
+                        decoded (ExactCover-format) keys and combined counts.
+                        Otherwise return raw encoded histogram.
+        """
+        hist = self.qaoa_params.depths[depth].histogram
+        if decode and isinstance(self.problem, BucketExactCoverProblemData):
+            bec = self.get_problem_instance()
+            return bec.decode_histogram(hist)
+        return hist

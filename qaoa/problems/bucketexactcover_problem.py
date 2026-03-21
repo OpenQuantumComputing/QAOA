@@ -400,3 +400,48 @@ class BucketExactCover(Problem):
         if return_num_feasible:
             return best_sol, num_feasible
         return best_sol
+
+
+    # -------------------------------------------------------------------------
+    # Decode histogram
+    # -------------------------------------------------------------------------
+
+    def decode_histogram(self, encoded_hist: dict) -> dict:
+        """Collapse encoded histogram to decoded (ExactCover-format) keys.
+        
+        Multiple encoded bitstrings can map to the same column selection via modular
+        wrapping; their counts are summed.
+        
+        Returns:
+            dict: Keys are one-hot strings over all columns (ExactCover format),
+                values are combined hit counts.
+        """
+        decoded = {}
+        N_routes = self.columns.shape[1]
+        for enc_bs, count in encoded_hist.items():
+            x = self._decode(enc_bs)
+            full = np.zeros(N_routes)
+            for valid_idx in range(len(x)):
+                if x[valid_idx]:
+                    full[self._valid_columns[valid_idx]] = 1
+            key = "".join(str(int(b)) for b in full)
+            decoded[key] = decoded.get(key, 0) + count
+        return decoded
+
+
+    def preprocess_histogram(self, hist: dict) -> dict:
+        """
+        Decode histogram keys from HUBO bitstrings to one-hot column format.
+
+        Multiple encoded bitstrings can map to the same column selection via
+        modular wrapping; their counts are summed. The returned histogram uses
+        keys compatible with ExactCover (one-hot over all columns), enabling
+        direct comparison with QUBO-based exact cover results.
+
+        Args:
+            hist (dict): Raw histogram with encoded HUBO bitstrings as keys.
+
+        Returns:
+            dict: Histogram with one-hot keys and combined hit counts.
+        """
+        return self.decode_histogram(hist)
