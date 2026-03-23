@@ -114,8 +114,8 @@ class TestBucketExactCoverIO(unittest.TestCase):
         # Test cost of [c0, c4] bitstring (bucket0 v=0→c0, bucket1 v=1→c4)
         test_bitstring = "0010"
         self.assertAlmostEqual(
-            original_bec.cost(test_bitstring),
-            reconstructed_bec.cost(test_bitstring),
+            original_bec.unscaled_cost(test_bitstring),
+            reconstructed_bec.unscaled_cost(test_bitstring),
         )
 
 

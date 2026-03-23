@@ -30,6 +30,7 @@ class BucketExactCover(Problem):
         scale_problem (bool): Whether the problem has been scaled.
         allow_infeasible (bool): Whether infeasible solutions are accepted.
         N_qubits (int): Total number of qubits.
+        upper_bound_scaling (float): Upper bound used for scaling (defaults to 1.0)
     """
 
     def __init__(
@@ -40,6 +41,7 @@ class BucketExactCover(Problem):
         penalty_factor=None,
         allow_infeasible=False,
         scale_problem=False,
+        upper_bound_scaling=1.0
     ) -> None:
         super().__init__()
 
@@ -47,6 +49,7 @@ class BucketExactCover(Problem):
         self.num_buckets = num_buckets
         self.allow_infeasible = allow_infeasible
         self.scale_problem = scale_problem
+        self.upper_bound_scaling = upper_bound_scaling
 
         N_rows, N_routes = self.columns.shape
         n_orders = N_rows - num_buckets
@@ -123,7 +126,7 @@ class BucketExactCover(Problem):
 
             lam = C_max_shifted + epsilon
             denom = C_max_shifted * (1 + n_orders * (num_buckets - 1) ** 2)
-            s = 1.0 / denom
+            s = self.upper_bound_scaling / denom
 
             self.weights = s * omega
             self.penalty_factor = s * lam

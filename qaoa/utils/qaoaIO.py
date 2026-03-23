@@ -72,7 +72,10 @@ class ProblemData:
         subclass = problem_registry[problem_type]
         data = _list_to_numpy(data)
         data.pop("problem_type", None)
-        return subclass(**data)
+        # Only pass known fields for backward compatibility (missing keys use defaults)
+        known_fields = set(subclass.__dataclass_fields__.keys()) - {"problem_type"}
+        filtered = {k: v for k, v in data.items() if k in known_fields}
+        return subclass(**filtered)
 
 
 # ---------- Problem Data Subclasses ----------
@@ -92,6 +95,7 @@ class BucketExactCoverProblemData(ProblemData):
     weights: np.ndarray = None
     solution: np.ndarray = None
     num_buckets: int = None
+    upper_bound_scaling: float = 1.0
     problem_type: str = "BucketExactCover"
 
 
@@ -141,8 +145,10 @@ class QAOAParameters:
     backend: str
     optimizer: str
     N_qubits: int
-    #depths: List[DepthResult] = field(default_factory=list)
     depths: Dict[int, DepthResult] = field(default_factory=dict)
+    landscape_p1_angles: Dict[str, List[float]] = field(default_factory=dict)
+    interpolate: bool = True
+    shots: int = 1024
 
 @dataclass
 class QAOAResult:
@@ -180,14 +186,18 @@ class QAOAResult:
         depths_data = data["qaoa_params"]["depths"]
         depths = {int(k): DepthResult(**v) for k, v in depths_data.items()}
 
+        qp = data["qaoa_params"]
         qaoa_params = QAOAParameters(
-            cvar=data["qaoa_params"]["cvar"],
-            init_method=InitMethod[data["qaoa_params"]["init_method"]],
-            mixer_method=MixerMethod[data["qaoa_params"]["mixer_method"]],
-            backend=data["qaoa_params"]["backend"],
-            optimizer=data["qaoa_params"]["optimizer"],
-            N_qubits=data["qaoa_params"]["N_qubits"],
+            cvar=qp["cvar"],
+            init_method=InitMethod[qp["init_method"]],
+            mixer_method=MixerMethod[qp["mixer_method"]],
+            backend=qp["backend"],
+            optimizer=qp["optimizer"],
+            N_qubits=qp["N_qubits"],
             depths=depths,
+            landscape_p1_angles=qp.get("landscape_p1_angles", {}),
+            interpolate=qp.get("interpolate", True),
+            shots=qp.get("shots", 1024),
         )
 
         return cls(problem=problem, qaoa_params=qaoa_params, metadata=data.get("metadata", {}))
@@ -246,6 +256,7 @@ class QAOAResult:
                 weights=full_weights,
                 solution=solution,
                 num_buckets=qaoa.problem.num_buckets,
+                upper_bound_scaling=getattr(qaoa.problem, "upper_bound_scaling", 1.0),
             )
         else:
             problem_data = ExactCoverProblemData(
@@ -270,13 +281,16 @@ class QAOAResult:
         optimizer = "COBYLA"
 
         qaoa_params = QAOAParameters(
-            cvar = qaoa.cvar,
-            init_method = init_method,
-            mixer_method = mixer_method,
-            backend = qaoa.backend.name,
-            optimizer = optimizer,
-            N_qubits = qaoa.problem.N_qubits,
-            depths = depths
+            cvar=qaoa.cvar,
+            init_method=init_method,
+            mixer_method=mixer_method,
+            backend=qaoa.backend.name,
+            optimizer=optimizer,
+            N_qubits=qaoa.problem.N_qubits,
+            depths=depths,
+            landscape_p1_angles=getattr(qaoa, "landscape_p1_angles", {}) or {},
+            interpolate=getattr(qaoa, "interpolate", True),
+            shots=getattr(qaoa, "shots", 1024),
         )
 
         return cls(problem=problem_data, qaoa_params=qaoa_params)
@@ -290,6 +304,10 @@ class QAOAResult:
                 columns=self.problem.columns,
                 weights=self.problem.weights,
                 num_buckets=self.problem.num_buckets,
+                scale_problem=True,
+                upper_bound_scaling=getattr(
+                    self.problem, "upper_bound_scaling", 1.0
+                ),
             )
         elif isinstance(self.problem, ExactCoverProblemData):
             return problems.ExactCover(
