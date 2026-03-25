@@ -351,6 +351,24 @@ class TestBucketExactCover(unittest.TestCase):
         circ = bec.create_circuit()
         self.assertIsNotNone(circ)
 
+    def test_encoding_degeneracy_stats(self):
+        bec = self._make_problem()
+        st = bec.get_encoding_degeneracy_stats()
+        # bucket 0: n_k=3, b_k=2 → M=4; v%3 yields multiplicities [2,1,1]
+        b0 = st["per_bucket"][0]
+        self.assertEqual(b0["n_routes"], 3)
+        self.assertEqual(b0["num_encoded_states"], 4)
+        self.assertEqual(b0["multiplicities"], [2, 1, 1])
+        self.assertEqual(b0["redundant_encodings"], 1)
+        # bucket 1: n_k=4, b_k=2 → M=4; perfect fit
+        b1 = st["per_bucket"][1]
+        self.assertEqual(b1["multiplicities"], [1, 1, 1, 1])
+        self.assertEqual(b1["redundant_encodings"], 0)
+        self.assertEqual(st["total_encoded_bitstrings"], 16)
+        self.assertEqual(st["total_decoded_assignments"], 12)
+        self.assertEqual(st["excess_encodings_over_assignments"], 4)
+
+
     def test_circuit_has_parameter(self):
         bec = self._make_problem()
         circ = bec.create_circuit()

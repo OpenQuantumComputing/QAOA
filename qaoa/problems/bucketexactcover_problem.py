@@ -31,6 +31,9 @@ class BucketExactCover(Problem):
         allow_infeasible (bool): Whether infeasible solutions are accepted.
         N_qubits (int): Total number of qubits.
         upper_bound_scaling (float): Upper bound used for scaling (defaults to 1.0)
+
+    See Also:
+        :meth:`get_encoding_degeneracy_stats` for modular wrap multiplicities per bucket.
     """
 
     def __init__(
@@ -151,6 +154,90 @@ class BucketExactCover(Problem):
             valid_idx = self._valid_col_to_idx[global_col]
             x[valid_idx] = 1.0
         return x
+
+    def get_encoding_degeneracy_stats(self):
+        """
+        Degeneracy from Strategy B encoding: ``n_k`` routes share ``2^{b_k}`` bit patterns.
+
+        For bucket ``k``, integer values ``v ∈ {0, …, 2^{b_k}-1}`` map to local route index
+        ``v % n_k``. Multiple ``v`` can select the same column (same decoded route).
+
+        Returns:
+            dict with keys:
+
+            * ``per_bucket`` — list of ``dict`` (one per bucket) with:
+
+              - ``bucket_index`` (int)
+              - ``n_routes`` — ``n_k`` (distinct columns in the bucket)
+              - ``num_qubits`` — ``b_k``
+              - ``num_encoded_states`` — ``2^{b_k}``
+              - ``multiplicities`` — list of length ``n_k``; ``multiplicities[j]`` is the
+                number of encoded bit-patterns with ``v % n_k == j`` (same global column)
+              - ``redundant_encodings`` — ``num_encoded_states - n_routes``; encodings beyond
+                a single bit-pattern per route index (equals ``sum(m-1)`` over multiplicities)
+              - ``global_column_indices`` — list of route column indices ``0 … N_routes-1`` in
+                this bucket (same order as multiplicities / local indices)
+
+            * ``total_encoded_bitstrings`` — product of ``2^{b_k}`` (full HUBO register size)
+            * ``total_decoded_assignments`` — product of ``n_k`` (distinct decoded route tuples)
+            * ``excess_encodings_over_assignments`` —
+              ``total_encoded_bitstrings - total_decoded_assignments`` (aggregate “extra”
+              bitstrings versus counting one representative per decoded choice)
+            * ``mean_encoded_per_assignment`` —
+              ``total_encoded_bitstrings / total_decoded_assignments``
+        """
+        per_bucket = []
+        prod_encoded = 1
+        prod_decoded = 1
+
+        for k in range(self.num_buckets):
+            n_k = self._bucket_sizes[k]
+            b_k = self._bucket_qubits[k]
+            if n_k <= 0:
+                encoded = 1 << b_k
+                entry = {
+                    "bucket_index": k,
+                    "n_routes": 0,
+                    "num_qubits": b_k,
+                    "num_encoded_states": encoded,
+                    "multiplicities": [],
+                    "redundant_encodings": encoded,
+                    "global_column_indices": list(self._bucket_columns[k]),
+                }
+                per_bucket.append(entry)
+                prod_encoded *= encoded
+                continue
+
+            encoded = 1 << b_k
+            mult = []
+            for idx in range(n_k):
+                count = (encoded - 1 - idx) // n_k + 1
+                mult.append(int(count))
+            redundant = encoded - n_k
+
+            prod_encoded *= encoded
+            prod_decoded *= n_k
+
+            per_bucket.append(
+                {
+                    "bucket_index": k,
+                    "n_routes": n_k,
+                    "num_qubits": b_k,
+                    "num_encoded_states": encoded,
+                    "multiplicities": mult,
+                    "redundant_encodings": redundant,
+                    "global_column_indices": list(self._bucket_columns[k]),
+                }
+            )
+
+        excess = prod_encoded - prod_decoded
+        return {
+            "per_bucket": per_bucket,
+            "total_encoded_bitstrings": int(prod_encoded),
+            "total_decoded_assignments": int(prod_decoded),
+            "excess_encodings_over_assignments": int(excess),
+            "mean_encoded_per_assignment": float(prod_encoded) / float(prod_decoded),
+        }
 
     # -------------------------------------------------------------------------
     # Cost functions
