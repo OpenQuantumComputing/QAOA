@@ -44,7 +44,8 @@ class BucketExactCover(Problem):
         penalty_factor=None,
         allow_infeasible=False,
         scale_problem=False,
-        upper_bound_scaling=1.0
+        upper_bound_scaling=1.0,
+        penalty_factor_scaling=1.0
     ) -> None:
         super().__init__()
 
@@ -53,6 +54,7 @@ class BucketExactCover(Problem):
         self.allow_infeasible = allow_infeasible
         self.scale_problem = scale_problem
         self.upper_bound_scaling = upper_bound_scaling
+        self.penalty_factor_scaling = penalty_factor_scaling
 
         N_rows, N_routes = self.columns.shape
         n_orders = N_rows - num_buckets
@@ -132,7 +134,7 @@ class BucketExactCover(Problem):
             s = self.upper_bound_scaling / denom
 
             self.weights = s * omega
-            self.penalty_factor = s * lam
+            self.penalty_factor = s * lam * self.penalty_factor_scaling
 
     # -------------------------------------------------------------------------
     # Decoding

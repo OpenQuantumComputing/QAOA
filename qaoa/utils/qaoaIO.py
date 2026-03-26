@@ -96,6 +96,7 @@ class BucketExactCoverProblemData(ProblemData):
     solution: np.ndarray = None
     num_buckets: int = None
     upper_bound_scaling: float = 1.0
+    penalty_factor_scaling: float = 1.0
     problem_type: str = "BucketExactCover"
 
 
@@ -257,6 +258,9 @@ class QAOAResult:
                 solution=solution,
                 num_buckets=qaoa.problem.num_buckets,
                 upper_bound_scaling=getattr(qaoa.problem, "upper_bound_scaling", 1.0),
+                penalty_factor_scaling=getattr(
+                    qaoa.problem, "penalty_factor_scaling", 1.0
+                ),
             )
         else:
             problem_data = ExactCoverProblemData(
@@ -307,6 +311,9 @@ class QAOAResult:
                 scale_problem=True,
                 upper_bound_scaling=getattr(
                     self.problem, "upper_bound_scaling", 1.0
+                ),
+                penalty_factor_scaling=getattr(
+                    self.problem, "penalty_factor_scaling", 1.0
                 ),
             )
         elif isinstance(self.problem, ExactCoverProblemData):
