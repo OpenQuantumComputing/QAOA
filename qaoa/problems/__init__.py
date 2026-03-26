@@ -3,6 +3,7 @@ from .qubo_problem import QUBO
 from .graph_problem import GraphProblem
 from .exactcover_problem import ExactCover
 from .bucketexactcover_problem import BucketExactCover
+from .unweightedbucketexactcover_problem import UnweightedBucketExactCover
 from .portfolio_problem import PortfolioOptimization
 from .maxkcut_binary_powertwo import MaxKCutBinaryPowerOfTwo
 from .maxkcut_binary_fullH import MaxKCutBinaryFullH

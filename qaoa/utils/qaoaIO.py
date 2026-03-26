@@ -100,6 +100,17 @@ class BucketExactCoverProblemData(ProblemData):
 
 
 @dataclass
+class UnweightedBucketExactCoverProblemData(ProblemData):
+    columns: np.ndarray = None
+    weights: np.ndarray = None
+    solution: np.ndarray = None
+    num_buckets: int = None
+    allow_infeasible: bool = False
+    upper_bound_scaling: float = 1.0
+    problem_type: str = "UnweightedBucketExactCover"
+
+
+@dataclass
 class PortfolioOptimizationProblemData(ProblemData):
     risk: float = 0.0
     exp_returns: np.ndarray = None
@@ -112,6 +123,7 @@ class PortfolioOptimizationProblemData(ProblemData):
 problem_registry: Dict[str, Type[ProblemData]] = {
     "ExactCover": ExactCoverProblemData,
     "BucketExactCover": BucketExactCoverProblemData,
+    "UnweightedBucketExactCover": UnweightedBucketExactCoverProblemData,
     "PortfolioOptimization": PortfolioOptimizationProblemData,
 }
 
@@ -247,7 +259,18 @@ class QAOAResult:
                 opt_time = qaoa.optimization_results[k].opt_time
             )
 
-        if isinstance(qaoa.problem, problems.BucketExactCover):
+        if isinstance(qaoa.problem, problems.UnweightedBucketExactCover):
+            full_weights = np.zeros(qaoa.problem.columns.shape[1])
+            full_weights[qaoa.problem._valid_columns] = qaoa.problem.weights
+            problem_data = UnweightedBucketExactCoverProblemData(
+                columns=qaoa.problem.columns,
+                weights=full_weights,
+                solution=solution,
+                num_buckets=qaoa.problem.num_buckets,
+                allow_infeasible=getattr(qaoa.problem, "allow_infeasible", False),
+                upper_bound_scaling=getattr(qaoa.problem, "upper_bound_scaling", 1.0),
+            )
+        elif isinstance(qaoa.problem, problems.BucketExactCover):
             # Save full weights array (one per column); BucketExactCover expects this on load
             full_weights = np.zeros(qaoa.problem.columns.shape[1])
             full_weights[qaoa.problem._valid_columns] = qaoa.problem._original_weights
@@ -299,6 +322,16 @@ class QAOAResult:
     # def generate_qaoa_object(self) -> "QAOA"
 
     def get_problem_instance(self):
+        if isinstance(self.problem, UnweightedBucketExactCoverProblemData):
+            return problems.UnweightedBucketExactCover(
+                columns=self.problem.columns,
+                weights=self.problem.weights,
+                num_buckets=self.problem.num_buckets,
+                allow_infeasible=getattr(self.problem, "allow_infeasible", False),
+                upper_bound_scaling=getattr(
+                    self.problem, "upper_bound_scaling", 1.0
+                ),
+            )
         if isinstance(self.problem, BucketExactCoverProblemData):
             return problems.BucketExactCover(
                 columns=self.problem.columns,
@@ -328,8 +361,8 @@ class QAOAResult:
         """Return the most frequent bitstring from the histogram at the final depth.
         
         Args:
-            decode: If True and problem is BucketExactCover, return histogram with
-                        decoded (ExactCover-format) keys and combined counts.
+            decode: If True and problem is BucketExactCover or UnweightedBucketExactCover,
+                        return histogram with decoded (ExactCover-format) keys and combined counts.
                         Otherwise return raw encoded histogram.
         """
         if not self.qaoa_params.depths:
@@ -344,12 +377,15 @@ class QAOAResult:
 
         Args:
             depth: QAOA depth.
-            decode: If True and problem is BucketExactCover, return histogram with
-                        decoded (ExactCover-format) keys and combined counts.
+            decode: If True and problem is BucketExactCover or UnweightedBucketExactCover,
+                        return histogram with decoded (ExactCover-format) keys and combined counts.
                         Otherwise return raw encoded histogram.
         """
         hist = self.qaoa_params.depths[depth].histogram
-        if decode and isinstance(self.problem, BucketExactCoverProblemData):
+        if decode and isinstance(
+            self.problem,
+            (BucketExactCoverProblemData, UnweightedBucketExactCoverProblemData),
+        ):
             bec = self.get_problem_instance()
             return bec.decode_histogram(hist)
         return hist
