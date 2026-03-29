@@ -95,6 +95,15 @@ class TestBucketExactCoverIO(unittest.TestCase):
         loaded = QAOAResult.load(fname)
         self.assertEqual(loaded.problem.num_buckets, self._NUM_BUCKETS)
 
+    def test_save_load_mixer_bucketwise_grover(self):
+        """BucketwiseGrover serializes as BUCKETWISEGROVER and loads back."""
+        result = self._make_result()
+        result.qaoa_params.mixer_method = MixerMethod.BUCKETWISEGROVER
+        fname = self._temp_json()
+        result.save(fname)
+        loaded = QAOAResult.load(fname)
+        self.assertEqual(loaded.qaoa_params.mixer_method, MixerMethod.BUCKETWISEGROVER)
+
     def test_get_problem_instance_cost_matches(self):
         """Reconstruct via get_problem_instance() and verify cost() matches."""
         from qaoa.problems import BucketExactCover

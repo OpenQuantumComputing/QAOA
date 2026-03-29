@@ -1,4 +1,5 @@
 from .base_mixer import Mixer
+from .bucketwise_grover_mixer import BucketwiseGrover
 from .xy_mixer import XY
 from .x_mixer import X
 from .x_multiangle_mixer import XMultiAngle

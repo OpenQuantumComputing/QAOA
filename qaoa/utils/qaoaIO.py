@@ -127,6 +127,7 @@ class InitMethod(Enum):
 class MixerMethod(Enum):
     X = "X"
     GROVER = "GROVER"
+    BUCKETWISEGROVER = "BUCKETWISEGROVER"
     XYCHAIN = "XYCHAIN"
     XYRING = "XYRING"
 
