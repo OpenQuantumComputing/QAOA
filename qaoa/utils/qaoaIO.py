@@ -3,7 +3,7 @@ from qaoa import QAOA, problems
 import json
 import numpy as np
 from dataclasses import dataclass, asdict, field
-from typing import List, Dict, Type
+from typing import List, Dict, Type, Tuple
 from enum import Enum
 import os
 import subprocess
@@ -72,7 +72,10 @@ class ProblemData:
         subclass = problem_registry[problem_type]
         data = _list_to_numpy(data)
         data.pop("problem_type", None)
-        return subclass(**data)
+        # Only pass known fields for backward compatibility (missing keys use defaults)
+        known_fields = set(subclass.__dataclass_fields__.keys()) - {"problem_type"}
+        filtered = {k: v for k, v in data.items() if k in known_fields}
+        return subclass(**filtered)
 
 
 # ---------- Problem Data Subclasses ----------
@@ -87,6 +90,17 @@ class ExactCoverProblemData(ProblemData):
 
 
 @dataclass
+class BucketExactCoverProblemData(ProblemData):
+    columns: np.ndarray = None
+    weights: np.ndarray = None
+    solution: np.ndarray = None
+    num_buckets: int = None
+    upper_bound_scaling: float = 1.0
+    penalty_factor_scaling: float = 1.0
+    problem_type: str = "BucketExactCover"
+
+
+@dataclass
 class PortfolioOptimizationProblemData(ProblemData):
     risk: float = 0.0
     exp_returns: np.ndarray = None
@@ -98,6 +112,7 @@ class PortfolioOptimizationProblemData(ProblemData):
 # Register available problem types
 problem_registry: Dict[str, Type[ProblemData]] = {
     "ExactCover": ExactCoverProblemData,
+    "BucketExactCover": BucketExactCoverProblemData,
     "PortfolioOptimization": PortfolioOptimizationProblemData,
 }
 
@@ -112,6 +127,7 @@ class InitMethod(Enum):
 class MixerMethod(Enum):
     X = "X"
     GROVER = "GROVER"
+    BUCKETWISEGROVER = "BUCKETWISEGROVER"
     XYCHAIN = "XYCHAIN"
     XYRING = "XYRING"
 
@@ -131,8 +147,10 @@ class QAOAParameters:
     backend: str
     optimizer: str
     N_qubits: int
-    #depths: List[DepthResult] = field(default_factory=list)
     depths: Dict[int, DepthResult] = field(default_factory=dict)
+    landscape_p1_angles: Dict[str, List[float]] = field(default_factory=dict)
+    interpolate: bool = True
+    shots: int = 1024
 
 @dataclass
 class QAOAResult:
@@ -170,14 +188,18 @@ class QAOAResult:
         depths_data = data["qaoa_params"]["depths"]
         depths = {int(k): DepthResult(**v) for k, v in depths_data.items()}
 
+        qp = data["qaoa_params"]
         qaoa_params = QAOAParameters(
-            cvar=data["qaoa_params"]["cvar"],
-            init_method=InitMethod[data["qaoa_params"]["init_method"]],
-            mixer_method=MixerMethod[data["qaoa_params"]["mixer_method"]],
-            backend=data["qaoa_params"]["backend"],
-            optimizer=data["qaoa_params"]["optimizer"],
-            N_qubits=data["qaoa_params"]["N_qubits"],
+            cvar=qp["cvar"],
+            init_method=InitMethod[qp["init_method"]],
+            mixer_method=MixerMethod[qp["mixer_method"]],
+            backend=qp["backend"],
+            optimizer=qp["optimizer"],
+            N_qubits=qp["N_qubits"],
             depths=depths,
+            landscape_p1_angles=qp.get("landscape_p1_angles", {}),
+            interpolate=qp.get("interpolate", True),
+            shots=qp.get("shots", 1024),
         )
 
         return cls(problem=problem, qaoa_params=qaoa_params, metadata=data.get("metadata", {}))
@@ -227,12 +249,27 @@ class QAOAResult:
                 opt_time = qaoa.optimization_results[k].opt_time
             )
 
-        problem_data = ExactCoverProblemData(
-            columns = qaoa.problem.columns,
-            weights = qaoa.problem.weights,
-            solution = solution,
-            hamming_weight = qaoa.problem.hamming_weight
-        )
+        if isinstance(qaoa.problem, problems.BucketExactCover):
+            # Save full weights array (one per column); BucketExactCover expects this on load
+            full_weights = np.zeros(qaoa.problem.columns.shape[1])
+            full_weights[qaoa.problem._valid_columns] = qaoa.problem._original_weights
+            problem_data = BucketExactCoverProblemData(
+                columns=qaoa.problem.columns,
+                weights=full_weights,
+                solution=solution,
+                num_buckets=qaoa.problem.num_buckets,
+                upper_bound_scaling=getattr(qaoa.problem, "upper_bound_scaling", 1.0),
+                penalty_factor_scaling=getattr(
+                    qaoa.problem, "penalty_factor_scaling", 1.0
+                ),
+            )
+        else:
+            problem_data = ExactCoverProblemData(
+                columns=qaoa.problem.columns,
+                weights=qaoa.problem.weights,
+                solution=solution,
+                hamming_weight=qaoa.problem.hamming_weight,
+            )
 
         init_method = InitMethod(str(qaoa.initialstate).split(" ")[0].split(".")[-1].upper())
         mixer_str = str(qaoa.mixer).split(" ")[0].split(".")[-1].upper()
@@ -249,13 +286,16 @@ class QAOAResult:
         optimizer = "COBYLA"
 
         qaoa_params = QAOAParameters(
-            cvar = qaoa.cvar,
-            init_method = init_method,
-            mixer_method = mixer_method,
-            backend = qaoa.backend.name,
-            optimizer = optimizer,
-            N_qubits = qaoa.problem.N_qubits,
-            depths = depths
+            cvar=qaoa.cvar,
+            init_method=init_method,
+            mixer_method=mixer_method,
+            backend=qaoa.backend.name,
+            optimizer=optimizer,
+            N_qubits=qaoa.problem.N_qubits,
+            depths=depths,
+            landscape_p1_angles=getattr(qaoa, "landscape_p1_angles", {}) or {},
+            interpolate=getattr(qaoa, "interpolate", True),
+            shots=getattr(qaoa, "shots", 1024),
         )
 
         return cls(problem=problem_data, qaoa_params=qaoa_params)
@@ -264,7 +304,20 @@ class QAOAResult:
     # def generate_qaoa_object(self) -> "QAOA"
 
     def get_problem_instance(self):
-        if isinstance(self.problem, ExactCoverProblemData):
+        if isinstance(self.problem, BucketExactCoverProblemData):
+            return problems.BucketExactCover(
+                columns=self.problem.columns,
+                weights=self.problem.weights,
+                num_buckets=self.problem.num_buckets,
+                scale_problem=True,
+                upper_bound_scaling=getattr(
+                    self.problem, "upper_bound_scaling", 1.0
+                ),
+                penalty_factor_scaling=getattr(
+                    self.problem, "penalty_factor_scaling", 1.0
+                ),
+            )
+        elif isinstance(self.problem, ExactCoverProblemData):
             return problems.ExactCover(
                 columns = self.problem.columns,
                 weights = self.problem.weights,
@@ -279,4 +332,32 @@ class QAOAResult:
                 exp_return=self.problem.exp_return
             )
         
+    def best_bitstring(self, decode: bool = False) -> Tuple[str, int]:
+        """Return the most frequent bitstring from the histogram at the final depth.
         
+        Args:
+            decode: If True and problem is BucketExactCover, return histogram with
+                        decoded (ExactCover-format) keys and combined counts.
+                        Otherwise return raw encoded histogram.
+        """
+        if not self.qaoa_params.depths:
+            raise ValueError("No depth results available")
+        final_depth = max(self.qaoa_params.depths.keys())
+        hist = self.get_histogram(final_depth, decode=decode)
+        best_bs = max(hist, key=lambda bs: hist[bs])
+        return best_bs, hist[best_bs]
+
+    def get_histogram(self, depth: int, decode: bool = False) -> dict:
+        """Get histogram for a given depth.
+
+        Args:
+            depth: QAOA depth.
+            decode: If True and problem is BucketExactCover, return histogram with
+                        decoded (ExactCover-format) keys and combined counts.
+                        Otherwise return raw encoded histogram.
+        """
+        hist = self.qaoa_params.depths[depth].histogram
+        if decode and isinstance(self.problem, BucketExactCoverProblemData):
+            bec = self.get_problem_instance()
+            return bec.decode_histogram(hist)
+        return hist
