@@ -4,7 +4,7 @@ from qiskit import QuantumCircuit, QuantumRegister
 
 class BitFlip:
     """
-    BitFlip class for performing random bit flips on a string to increase cost.
+    BitFlip class for performing random bit flips on a string to reduce energy.
 
     Attributes:
         circuit (QuantumCircuit): Quantum circuit for bit flips.
@@ -24,7 +24,7 @@ class BitFlip:
 
     def boost_samples(self, problem, string, K=5):
         """
-        Random bitflips on string/list of strings to increase cost.
+        Random bitflips on string/list of strings to reduce energy.
 
         Args:
             problem: BaseType Problem.
@@ -36,7 +36,7 @@ class BitFlip:
         """
         string_arr = np.array([int(bit) for bit in string])
         old_string = string
-        cost = problem.cost(string[::-1])
+        energy = problem.energy(string[::-1])
 
         for _ in range(K):
             shuffled_indices = np.arange(self.N_qubits)
@@ -46,10 +46,10 @@ class BitFlip:
                 string_arr_altered = np.copy(string_arr)
                 string_arr_altered[i] = not (string_arr[i])
                 string_altered = "".join(map(str, string_arr_altered))
-                new_cost = problem.cost(string_altered[::-1])
+                new_energy = problem.energy(string_altered[::-1])
 
-                if new_cost > cost:
-                    cost = new_cost
+                if new_energy < energy:
+                    energy = new_energy
                     string_arr = string_arr_altered
                     string = string_altered
 

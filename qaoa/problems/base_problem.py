@@ -1,6 +1,14 @@
 from abc import ABC, abstractmethod
+from enum import Enum
+import itertools
+import warnings
 
 from qaoa.utils import validation
+
+
+class ObjectiveSense(str, Enum):
+    MINIMIZE = "minimize"
+    MAXIMIZE = "maximize"
 
 
 class BaseProblem(ABC):
@@ -65,21 +73,59 @@ class Problem(BaseProblem):
         ```
     """
 
-    @abstractmethod
+    def __init__(self, objective_sense: ObjectiveSense = ObjectiveSense.MINIMIZE) -> None:
+        super().__init__()
+        if not isinstance(objective_sense, ObjectiveSense):
+            try:
+                objective_sense = ObjectiveSense(objective_sense)
+            except Exception as exc:
+                raise ValueError(
+                    "objective_sense must be one of "
+                    f"{[s.value for s in ObjectiveSense]}"
+                ) from exc
+        self.objective_sense = objective_sense
+
+    def _has_objective_value_override(self) -> bool:
+        return self.__class__.objective_value is not Problem.objective_value
+
+    def _has_legacy_cost_override(self) -> bool:
+        return self.__class__.cost is not Problem.cost
+
+    def objective_value(self, string):
+        if self._has_legacy_cost_override():
+            warnings.warn(
+                "Implement objective_value() and objective_sense for custom problems. "
+                "Legacy cost() fallback is deprecated.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return self.cost(string)
+        raise NotImplementedError("Subclasses must implement objective_value().")
+
+    def energy(self, string):
+        if not self._has_objective_value_override() and self._has_legacy_cost_override():
+            return -self.cost(string)
+        value = self.objective_value(string)
+        if self.objective_sense is ObjectiveSense.MINIMIZE:
+            return value
+        return -value
+
+    def objective_from_energy(self, energy):
+        if self.objective_sense is ObjectiveSense.MINIMIZE:
+            return energy
+        return -energy
+
+    def score(self, string):
+        return -self.energy(string)
+
     def cost(self, string):
-        """
-        Abstract method to calculate the cost of a solution.
-
-        Subclasses must implement this method to define how the cost of a
-        solution is calculated for the specific optimization problem.
-
-        Args:
-            string (str): A solution string or configuration to evaluate.
-
-        Returns:
-            float: The cost of the given solution.
-        """
-        pass
+        warnings.warn(
+            "cost() is deprecated and kept for backward compatibility. "
+            "Use objective_value() or energy(). cost(x) == -energy(x).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.score(string)
 
     @abstractmethod
     def create_circuit(self):
@@ -120,25 +166,47 @@ class Problem(BaseProblem):
 
     def computeMinMaxCosts(self):
         """
-        Brute force method to compute min and max cost of feasible solution
+        Deprecated wrapper for objective_bounds(). Kept for backward compatibility.
         """
-        import itertools
+        warnings.warn(
+            "computeMinMaxCosts() is deprecated. Use objective_bounds().",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.objective_bounds()
 
-        max_cost = float("-inf")
-        min_cost = float("inf")
-        for s in ["".join(i) for i in itertools.product("01", repeat=self.N_qubits)]:
+    def objective_bounds(self):
+        min_objective = float("inf")
+        max_objective = float("-inf")
+        for s in map("".join, itertools.product("01", repeat=self.N_qubits)):
             if self.isFeasible(s):
-                cost = -self.cost(s)
-                max_cost = max(max_cost, cost)
-                min_cost = min(min_cost, cost)
-        return min_cost, max_cost
+                value = self.objective_value(s)
+                min_objective = min(min_objective, value)
+                max_objective = max(max_objective, value)
+        return min_objective, max_objective
+
+    def optimal_objective(self):
+        min_objective, max_objective = self.objective_bounds()
+        if self.objective_sense is ObjectiveSense.MINIMIZE:
+            return min_objective
+        return max_objective
+
+    def energy_bounds(self):
+        min_energy = float("inf")
+        max_energy = float("-inf")
+        for s in map("".join, itertools.product("01", repeat=self.N_qubits)):
+            if self.isFeasible(s):
+                value = self.energy(s)
+                min_energy = min(min_energy, value)
+                max_energy = max(max_energy, value)
+        return min_energy, max_energy
 
     def validate_circuit(self, t=1, flip=True, atol=1e-8, rtol=1e-8):
         """
         Exact check that the problem's circuit represents the problem's cost function.
         This tests checks that the unitary operator represented by the quantum circuit is
-        equal to the expected matrix with diagonal elements 
-        exp(-j*t*cost(e)),
+        equal to the expected matrix with diagonal elements
+        exp(-j*t*energy(e)),
         where e is the corresponding binary state, up to a global phase.
         
         Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).

@@ -15,10 +15,10 @@ def check_phase_separator_exact_qaoa(qaoa, *arg, **kwarg):
 
 def check_phase_separator_exact_problem(problem, t=1, flip=True, atol=1e-8, rtol=1e-8):
     """
-    Exact check that the problem's circuit represents the problem's cost function.
+    Exact check that the problem's circuit represents the problem's energy function.
     This tests checks that the unitary operator represented by the quantum circuit is
     equal to the expected matrix with diagonal elements 
-    exp(-j*t*cost(e)),
+    exp(-j*t*energy(e)),
     where e is the corresponding binary state, up to a global phase.
     
     Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).
@@ -30,17 +30,17 @@ def check_phase_separator_exact_problem(problem, t=1, flip=True, atol=1e-8, rtol
         {problem.circuit.parameters[0]: t},
         inplace = False
     )
-    cost_fn = problem.cost
+    energy_fn = problem.energy
 
     U = Operator(circ).data  # complex ndarray
     n = circ.num_qubits
     d = 2**n
     # Compare diagonal phases to expected, modulo a global phase
     # expected diag entries
-    costs = []
+    energies = []
     for i in range(d):
-        costs.append(cost_fn(_bitstring(i, n, flip=flip)))
-    expected = np.exp(1j * t * np.asarray(costs, dtype=float))
+        energies.append(energy_fn(_bitstring(i, n, flip=flip)))
+    expected = np.exp(-1j * t * np.asarray(energies, dtype=float))
     
 
     diag = np.diag(U)

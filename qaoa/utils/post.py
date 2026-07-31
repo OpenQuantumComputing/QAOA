@@ -34,7 +34,7 @@ def post_processing(instance, samples, K=5):
             count = 1
 
         instance.stat.add_sample(
-            instance.problem.cost(boosted[::-1]), count, boosted[::-1]
+            instance.problem.energy(boosted[::-1]), count, boosted[::-1]
         )
         hist_post[boosted] = hist_post.get(boosted, 0) + count
     return hist_post
@@ -65,7 +65,7 @@ def post_process_all_depths(instance, K=5):
                 samples=hist,
                 K=K,
             )
-            exp_in_layers[d] = exp_in_layers.get(d, []) + [-instance.stat.get_CVaR()]
+            exp_in_layers[d] = exp_in_layers.get(d, []) + [instance.stat.get_CVaR()]
         exp.append(stat.mean(exp_in_layers[d]))
         var.append(stat.variance(exp_in_layers[d]))
     return (np.array(exp), np.array(var))

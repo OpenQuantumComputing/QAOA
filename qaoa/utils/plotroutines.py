@@ -120,7 +120,7 @@ def plot_ApproximationRatio(
         tuple: ``(fig, ax)``.
     """
     if not shots:
-        exp = np.array(qaoa_instance.get_Exp())
+        exp = np.array(qaoa_instance.get_objective())
     else:
         exp = []
         for p in range(1, qaoa_instance.current_depth + 1):
@@ -130,13 +130,16 @@ def plot_ApproximationRatio(
 
     fig, ax = _get_fig_ax(fig)
     ax.hlines(1, 1, maxdepth, linestyles="solid", colors="black")
-    # Normalized approximation ratio for a minimization objective.
-    # Here mincost is the optimal (most negative) value and maxcost the worst.
-    # This maps exp = maxcost → 0 (worst) and exp = mincost → 1 (optimal).
-    # Hence we use (maxcost - exp) / (maxcost - mincost).
+    if np.isclose(maxcost, mincost):
+        appr_ratio = np.ones_like(exp)
+    elif qaoa_instance.problem.objective_sense.value == "maximize":
+        appr_ratio = (exp - mincost) / (maxcost - mincost)
+    else:
+        appr_ratio = (maxcost - exp) / (maxcost - mincost)
+
     ax.plot(
         np.arange(1, maxdepth + 1),
-        (maxcost - exp) / (maxcost - mincost),
+        appr_ratio,
         style,
         label=label,
     )
@@ -197,11 +200,11 @@ def _apprrat_successprob(qaoa_instance, depth, shots=10**4):
 
     for string in hist:
         if qaoa_instance.problem.isFeasible(string):
-            cost = qaoa_instance.problem.cost(string)
+            cost = qaoa_instance.problem.objective_value(string)
             counts += hist[string]
             stat.add_sample(cost, hist[string], string)
 
-    return -stat.get_CVaR(), counts / shots
+    return stat.get_CVaR(), counts / shots
 
 # Keep the old private name as an alias for internal backward compatibility.
 __apprrat_successprob = _apprrat_successprob
@@ -441,7 +444,7 @@ def printBestHistogramEntries(qaoa, classical_solution=None, num_solutions=10, s
     best_classical_sol = None
     if classical_solution is not None:
         best_classical_sol = _np2str(classical_solution)
-        print("Classical best result: ", (best_classical_sol, qaoa.problem.cost(best_classical_sol)))
+        print("Classical best result: ", (best_classical_sol, qaoa.problem.objective_value(best_classical_sol)))
         print(" --> points to the classical solution ")
     print("   * marks feasible solutions ")
     for p in range(1, qaoa.current_depth + 1):
@@ -454,13 +457,13 @@ def printBestHistogramEntries(qaoa, classical_solution=None, num_solutions=10, s
         best_classical_sol_i = None
         print("Results for depth " + str(p) + " using best angles:")
         for s, freq in sorted_hist.items():
-            cost = qaoa.problem.cost(s)
+            cost = qaoa.problem.objective_value(s)
             if i == 1:
                 best_sol = s
                 best_cost = cost
                 best_freq = freq
                 best_i = i
-            elif cost > best_cost:
+            elif qaoa.problem.energy(s) < qaoa.problem.energy(best_sol):
                 best_sol = s
                 best_cost = cost
                 best_freq = freq
@@ -561,5 +564,4 @@ def plotHitProbabilities_fromHist(hist, opt_sol,
     ax.legend()
     ax.grid(True, which="both", ls="--")
     return fig, ax
-
 

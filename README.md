@@ -13,6 +13,7 @@ A flexible, modular Python library for the [Quantum Approximate Optimization Alg
 - [Installation](#installation)
 - [Requirements](#requirements)
 - [Quick Example](#quick-example)
+- [Objective direction and sign convention](#objective-direction-and-sign-convention)
 - [Background](#background)
 - [Custom Ansatz](#custom-ansatz)
 - [Running Optimization](#running-optimization-at-depth-p)
@@ -81,7 +82,8 @@ qaoa.sample_cost_landscape()
 qaoa.optimize(depth=3)
 
 # Extract results
-print("Optimal expectation value:", qaoa.get_Exp(depth=3))
+print("Optimal energy:", qaoa.get_energy(depth=3))
+print("Optimal objective:", qaoa.get_objective(depth=3))
 print("Optimal parameters (gamma):", qaoa.get_gamma(depth=3))
 print("Optimal parameters (beta):", qaoa.get_beta(depth=3))
 ```
@@ -90,14 +92,41 @@ See [examples/](examples/) for more complete worked examples.
 
 ---
 
+## Objective direction and sign convention
+
+Each problem declares an explicit objective direction via `problem.objective_sense` (`"minimize"` or `"maximize"`).
+
+- `problem.objective_value(x)` is the natural mathematical objective.
+- `problem.energy(x)` is the canonical quantity minimized by QAOA.
+
+Conversion is centralized:
+
+- `MINIMIZE`: `energy(x) = objective_value(x)`
+- `MAXIMIZE`: `energy(x) = -objective_value(x)`
+
+Phase separators follow:
+
+$$U_P(\gamma)|x\rangle = e^{-i\gamma\,\mathrm{energy}(x)}|x\rangle.$$
+
+Examples:
+
+- **MaxCut**: natural objective is positive cut value; energy is its negative.
+- **QUBO**: natural objective is the un-negated polynomial
+  $x^\top Q x + c^\top x + b$.
+
+Legacy `cost(x)` is kept as a deprecated compatibility score with old behavior:
+`cost(x) = -energy(x)`.
+
+---
+
 ## Background
-Given a **cost function** 
-$$c: \lbrace 0, 1\rbrace^n \rightarrow \mathbb{R}$$
+Given an **energy function**
+$$E: \lbrace 0, 1\rbrace^n \rightarrow \mathbb{R}$$
 one defines a **problem Hamiltonian** $H_P$ through the action on computational basis states via
 
-$$ H_P |x\rangle = c(x) |x\rangle,$$
+$$ H_P |x\rangle = E(x) |x\rangle,$$
 
-which means that ground states minimize the cost function $c$.
+which means that ground states minimize the canonical energy.
 Given a parametrized ansatz $| \gamma, \beta \rangle$, a classical optimizer is used to minimize the energy
 
 $$ \langle \gamma, \beta | H_P | \gamma, \beta \rangle.$$
@@ -119,7 +148,7 @@ $U_M(\beta_l)=e^{-i\beta_l X^{\otimes n}}$,  $U_P(\gamma_l)=e^{-i\gamma_l H_P}$,
 
 ## Custom Ansatz
 
-To create a custom QAOA ansatz, specify a [problem](qaoa/problems/base_problem.py), a [mixer](qaoa/mixers/base_mixer.py), and an [initial state](qaoa/initialstates/base_initialstate.py). These base classes each have an abstract method `def create_circuit:` that must be implemented. The problem base class additionally requires `def cost:`.
+To create a custom QAOA ansatz, specify a [problem](qaoa/problems/base_problem.py), a [mixer](qaoa/mixers/base_mixer.py), and an [initial state](qaoa/initialstates/base_initialstate.py). These base classes each have an abstract method `def create_circuit:` that must be implemented. A custom problem should define `objective_sense` and `objective_value()`. The phase separator must encode `energy(x)` as above.
 
 This library already contains several standard implementations.
 
@@ -177,12 +206,12 @@ qaoa.sample_cost_landscape()
 
 Sampling high-dimensional target functions quickly becomes intractable for depth $p>1$. The library therefore **iteratively increases the depth**. At each depth a **local optimization** algorithm (e.g. COBYLA) finds a local minimum, using the following **initial guess**:
 
-- At depth $p=1$: parameters $(\gamma, \beta)$ are taken from the minimum of the sampled cost landscape.
+- At depth $p=1$: parameters $(\gamma, \beta)$ are taken from the minimum of the sampled energy landscape.
 - At depth $p>1$: two strategies are available, controlled by the `interpolate` parameter:
 
   * **Interpolation** (`interpolate=True`, default): uses the [INTERP heuristic](https://arxiv.org/pdf/1812.01041.pdf) to produce a smooth initial guess by interpolating the optimal angles from depth $p-1$. Works well for vanilla QAOA.
 
-  * **Layer-by-layer grid scan** (`interpolate=False`): the best angles from depth $p-1$ are *locked* and a 2-D grid search is performed over the new layer's parameters. Because the grid includes $(γ=0, β=0)$ — which adds an identity layer reproducing the depth-$(p-1)$ result — the initial cost at depth $p$ is guaranteed to be ≤ cost at depth $p-1$, ensuring a monotonically increasing approximation ratio. Recommended for multi-angle and orbit ansätze.
+  * **Layer-by-layer grid scan** (`interpolate=False`): the best angles from depth $p-1$ are *locked* and a 2-D grid search is performed over the new layer's parameters. Because the grid includes $(γ=0, β=0)$ — which adds an identity layer reproducing the depth-$(p-1)$ result — the initial energy at depth $p$ is guaranteed to be ≤ energy at depth $p-1$, ensuring a monotonically increasing approximation ratio. Recommended for multi-angle and orbit ansätze.
 
 ```python
 # Interpolation (default)

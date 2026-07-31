@@ -83,15 +83,17 @@ class ExactCoverProblemData(ProblemData):
     weights: np.ndarray = None
     solution: np.ndarray = None
     hamming_weight: int = None
+    objective_sense: str = "minimize"
     problem_type: str = "ExactCover"
 
 
 @dataclass
 class PortfolioOptimizationProblemData(ProblemData):
     risk: float = 0.0
-    exp_returns: np.ndarray = None
+    exp_return: np.ndarray = None
     cov_matrix: np.ndarray = None
     budget: int = 0
+    objective_sense: str = "minimize"
     problem_type: str = "PortfolioOptimization"
 
 
@@ -121,6 +123,8 @@ class DepthResult:
     optimal_angles: List[float]
     histogram: Dict[str, int]
     opt_time: float # runtime in seconds
+    best_energy: float | None = None
+    best_objective: float | None = None
 
 
 @dataclass
@@ -139,6 +143,7 @@ class QAOAResult:
     problem: ProblemData
     qaoa_params: QAOAParameters
     metadata: Dict[str, str] = field(default_factory=dict)
+    schema_version: int = 2
 
     def __post_init__(self):
         """Automatically populate metadata if not provided."""
@@ -150,6 +155,7 @@ class QAOAResult:
     def save(self, filename: str):
         """Save result (including problem type info) to JSON file."""
         data = {
+            "schema_version": self.schema_version,
             "problem": self.problem.to_dict(),
             "qaoa_params": _numpy_to_list(asdict(self.qaoa_params)),
             "metadata": self.metadata
@@ -166,7 +172,7 @@ class QAOAResult:
         # Rebuild problem instance from its dict
         problem = ProblemData.from_dict(data["problem"])
 
-        #depths = [DepthResult(**d) for d in data["qaoa_params"]["depths"]]
+        schema_version = data.get("schema_version", 1)
         depths_data = data["qaoa_params"]["depths"]
         depths = {int(k): DepthResult(**v) for k, v in depths_data.items()}
 
@@ -180,7 +186,12 @@ class QAOAResult:
             depths=depths,
         )
 
-        return cls(problem=problem, qaoa_params=qaoa_params, metadata=data.get("metadata", {}))
+        return cls(
+            problem=problem,
+            qaoa_params=qaoa_params,
+            metadata=data.get("metadata", {}),
+            schema_version=schema_version,
+        )
 
 
     def _generate_metadata(self) -> dict:
@@ -224,14 +235,17 @@ class QAOAResult:
             depths[k] = DepthResult(
                 optimal_angles = qaoa.optimization_results[k].get_best_angles(),
                 histogram = qaoa.hist(qaoa.optimization_results[k].get_best_angles(), hist_shots),
-                opt_time = qaoa.optimization_results[k].opt_time
+                opt_time = qaoa.optimization_results[k].opt_time,
+                best_energy = qaoa.get_energy(k),
+                best_objective = qaoa.get_objective(k),
             )
 
         problem_data = ExactCoverProblemData(
             columns = qaoa.problem.columns,
             weights = qaoa.problem.weights,
             solution = solution,
-            hamming_weight = qaoa.problem.hamming_weight
+            hamming_weight = qaoa.problem.hamming_weight,
+            objective_sense = qaoa.problem.objective_sense.value,
         )
 
         init_method = InitMethod(str(qaoa.initialstate).split(" ")[0].split(".")[-1].upper())
@@ -258,7 +272,7 @@ class QAOAResult:
             depths = depths
         )
 
-        return cls(problem=problem_data, qaoa_params=qaoa_params)
+        return cls(problem=problem_data, qaoa_params=qaoa_params, schema_version=2)
     
     # TODO: Implement
     # def generate_qaoa_object(self) -> "QAOA"
