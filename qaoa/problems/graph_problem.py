@@ -25,7 +25,7 @@ class GraphProblem(Problem):
         create_circuit(): Creates a circuit for the graph problem.
         same_color(str1, str2): Checks if two strings map to the same color.
         slice_string(string): Convert a binary string to a list of labels for each node.
-        cost(string): Creates a cost function for the given solution.
+        objective_value(string): Computes the natural objective value for the given solution.
         
     """
     def __init__(

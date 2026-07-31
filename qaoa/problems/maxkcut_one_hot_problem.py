@@ -20,7 +20,7 @@ class MaxKCutOneHot(Problem):
 
     Methods:
         binstringToLabels(string): Converts a binary string in one-hot encoding to a string of color labels for each node.
-        cost(string): Computes the Max k-Cut cost for a given binary string representing a coloring.
+        objective_value(string): Computes the Max k-Cut objective for a given binary string representing a coloring.
         create_circuit(): Creates the parameterized quantum circuit corresponding to the Max k-Cut cost function using one-hot encoding.
     """
     def __init__(self, G: nx.Graph, k_cuts: int) -> None:

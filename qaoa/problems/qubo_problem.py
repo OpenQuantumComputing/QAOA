@@ -29,7 +29,7 @@ class QUBO(Problem):
         QUBO_b (float): The scalar offset.
 
     Methods:
-        cost(string): Computes the cost of a given binary string according to the QUBO formulation.
+        objective_value(string): Computes the natural objective of a given binary string according to the QUBO formulation.
         create_circuit(): Creates a parametrized quantum circuit corresponding to the cost function of the QUBO problem.
         createParameterizedCostCircuitTril(): Creates a parameterized circuit of the triangularized QUBO problem.
     """

@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 import itertools
-import warnings
 
 from qaoa.utils import validation
 
@@ -39,15 +38,16 @@ class Problem(BaseProblem):
     Abstract subclass for defining specific optimization problems.
 
     This abstract subclass of `BaseProblem` is meant for defining concrete
-    optimization problems. Subclasses of `Problem` must implement the `cost`
-    and `create_circuit` methods to define the problem's cost function and
-    create the associated quantum circuit.
+    optimization problems. Subclasses of `Problem` must implement the
+    `objective_value` and `create_circuit` methods to define the natural
+    objective function and the associated quantum circuit.
 
     Attributes:
         circuit (QuantumCircuit): The quantum circuit associated with the problem.
 
     Methods:
-        cost(string): Abstract method to calculate the cost of a solution.
+        objective_value(string): Calculate the natural objective value of a
+            solution.
         create_circuit(): Abstract method to create the quantum circuit
             representing the problem.
         isFeasible(string): Checks if a given solution string is feasible.
@@ -57,14 +57,14 @@ class Problem(BaseProblem):
             corresponds to the given cost function. 
 
     Note:
-        Subclasses of `Problem` must provide implementations for the `cost`
-        and `create_circuit` methods.
+        Subclasses of `Problem` must provide implementations for the
+        `objective_value` and `create_circuit` methods.
 
     Example:
         ```python
         class MyProblem(Problem):
-            def cost(self, string):
-                # Define the cost calculation for the optimization problem.
+            def objective_value(self, string):
+                # Define the objective calculation for the optimization problem.
                 ...
 
             def create_circuit(self):
@@ -85,26 +85,10 @@ class Problem(BaseProblem):
                 ) from exc
         self.objective_sense = objective_sense
 
-    def _has_objective_value_override(self) -> bool:
-        return self.__class__.objective_value is not Problem.objective_value
-
-    def _has_legacy_cost_override(self) -> bool:
-        return self.__class__.cost is not Problem.cost
-
     def objective_value(self, string):
-        if self._has_legacy_cost_override():
-            warnings.warn(
-                "Implement objective_value() and objective_sense for custom problems. "
-                "Legacy cost() fallback is deprecated.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            return self.cost(string)
         raise NotImplementedError("Subclasses must implement objective_value().")
 
     def energy(self, string):
-        if not self._has_objective_value_override() and self._has_legacy_cost_override():
-            return -self.cost(string)
         value = self.objective_value(string)
         if self.objective_sense is ObjectiveSense.MINIMIZE:
             return value
@@ -114,18 +98,6 @@ class Problem(BaseProblem):
         if self.objective_sense is ObjectiveSense.MINIMIZE:
             return energy
         return -energy
-
-    def score(self, string):
-        return -self.energy(string)
-
-    def cost(self, string):
-        warnings.warn(
-            "cost() is deprecated and kept for backward compatibility. "
-            "Use objective_value() or energy(). cost(x) == -energy(x).",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.score(string)
 
     @abstractmethod
     def create_circuit(self):
@@ -163,17 +135,6 @@ class Problem(BaseProblem):
             int: Number of parameters per layer (default: 1).
         """
         return 1
-
-    def computeMinMaxCosts(self):
-        """
-        Deprecated wrapper for objective_bounds(). Kept for backward compatibility.
-        """
-        warnings.warn(
-            "computeMinMaxCosts() is deprecated. Use objective_bounds().",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.objective_bounds()
 
     def objective_bounds(self):
         min_objective = float("inf")

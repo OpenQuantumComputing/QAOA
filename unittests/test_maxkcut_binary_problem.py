@@ -98,10 +98,10 @@ class TestMaxKCutBinaryProblem(unittest.TestCase):
 
                         if binary_str_i == binary_str_j:
                             self.assertTrue(np.isclose(inner_product, -1))
-                            self.assertTrue(np.isclose(problem.cost(bitstring), 0))
+                            self.assertTrue(np.isclose(problem.objective_value(bitstring), 0))
                         else:
                             self.assertTrue(np.isclose(inner_product, 1))
-                            self.assertTrue(np.isclose(problem.cost(bitstring), 1))
+                            self.assertTrue(np.isclose(problem.objective_value(bitstring), 1))
 
     def test_MaxKCutBinaryPowerTwo_PauliBasisequalDiffusion(self):
         # This tests if the Hamiltonians of "method=PauliBasis" is equal to "method=Diffusion"
@@ -234,10 +234,10 @@ class TestMaxKCutBinaryProblem(unittest.TestCase):
 
                             if (binary_str_i == binary_str_j) or samecolor:
                                 self.assertTrue(np.isclose(inner_product, -1))
-                                self.assertTrue(np.isclose(problem.cost(bitstring), 0))
+                                self.assertTrue(np.isclose(problem.objective_value(bitstring), 0))
                             else:
                                 self.assertTrue(np.isclose(inner_product, 1))
-                                self.assertTrue(np.isclose(problem.cost(bitstring), 1))
+                                self.assertTrue(np.isclose(problem.objective_value(bitstring), 1))
 
     def test_MaxKCutBinaryPowerTwo_PauliBasisequalDiffusion(self):
         # This tests if the Hamiltonians of "method=PauliBasis" is equal to "method=Diffusion" is equal to "method="PowerOfTwo"

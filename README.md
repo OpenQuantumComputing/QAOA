@@ -114,9 +114,6 @@ Examples:
 - **QUBO**: natural objective is the un-negated polynomial
   $x^\top Q x + c^\top x + b$.
 
-Legacy `cost(x)` is kept as a deprecated compatibility score with old behavior:
-`cost(x) = -energy(x)`.
-
 ---
 
 ## Background
@@ -253,16 +250,24 @@ qaoa = QAOA(
 
 ## Extract Results
 
-Once `qaoa.optimize(depth=p)` is run, extract the expectation value, variance, and parameters for each depth $1\leq i \leq p$:
+Once `qaoa.optimize(depth=p)` is run, extract the best energy, variance,
+objective value, and parameters for each depth $1\leq i \leq p$:
 
 ```python
-qaoa.get_Exp(depth=i)
+qaoa.get_energy(depth=i)
+qaoa.get_objective(depth=i)
 qaoa.get_Var(depth=i)
 qaoa.get_gamma(depth=i)
 qaoa.get_beta(depth=i)
 ```
 
-Additionally, for every optimizer call at each depth, the **angles, expectation value, variance, maximum cost, minimum cost, and number of shots** are stored in:
+The legacy compatibility aliases `problem.cost()`, `problem.computeMinMaxCosts()`,
+and `qaoa.get_Exp()` are not part of the API anymore. Use
+`objective_value()`, `objective_bounds()`, `get_energy()`, and
+`get_objective()` directly.
+
+Additionally, for every optimizer call at each depth, the optimizer history,
+variance, best solutions, and shot counts are stored in:
 
 ```python
 qaoa.optimization_results[i]

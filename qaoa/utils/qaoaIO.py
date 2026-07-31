@@ -12,6 +12,8 @@ import platform
 
 # ---------- Utility functions ----------
 
+CURRENT_SCHEMA_VERSION = 3
+
 def _numpy_to_list(obj):
     """Recursively convert numpy arrays and Enums to JSON-serializable types."""
     if isinstance(obj, np.ndarray):
@@ -143,7 +145,7 @@ class QAOAResult:
     problem: ProblemData
     qaoa_params: QAOAParameters
     metadata: Dict[str, str] = field(default_factory=dict)
-    schema_version: int = 2
+    schema_version: int = CURRENT_SCHEMA_VERSION
 
     def __post_init__(self):
         """Automatically populate metadata if not provided."""
@@ -169,10 +171,18 @@ class QAOAResult:
         with open(filename, "r") as f:
             data = json.load(f)
 
+        schema_version = data.get("schema_version")
+        if schema_version != CURRENT_SCHEMA_VERSION:
+            raise ValueError(
+                "Unsupported qaoaIO schema version. "
+                f"Expected {CURRENT_SCHEMA_VERSION}, got {schema_version!r}."
+            )
+        if "objective_sense" not in data["problem"]:
+            raise ValueError("Serialized problem is missing required objective_sense.")
+
         # Rebuild problem instance from its dict
         problem = ProblemData.from_dict(data["problem"])
 
-        schema_version = data.get("schema_version", 1)
         depths_data = data["qaoa_params"]["depths"]
         depths = {int(k): DepthResult(**v) for k, v in depths_data.items()}
 
@@ -272,7 +282,11 @@ class QAOAResult:
             depths = depths
         )
 
-        return cls(problem=problem_data, qaoa_params=qaoa_params, schema_version=2)
+        return cls(
+            problem=problem_data,
+            qaoa_params=qaoa_params,
+            schema_version=CURRENT_SCHEMA_VERSION,
+        )
     
     # TODO: Implement
     # def generate_qaoa_object(self) -> "QAOA"

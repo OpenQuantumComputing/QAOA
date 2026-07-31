@@ -21,7 +21,7 @@ class PortfolioOptimization(QUBO):
         N_qubits (int): Number of assets/qubits in the problem.
 
     Methods:
-        cost(string): Computes the portfolio cost of a given bitstring (problem-specific, includes penalty).
+        objective_value(string): Computes the portfolio objective value of a given bitstring.
         isFeasible(string): Checks if a given bitstring satisfies the budget constraint.
         __str2np(s): Converts a bitstring to a numpy array of integers.
     """

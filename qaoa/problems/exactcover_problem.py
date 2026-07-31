@@ -22,7 +22,7 @@ class ExactCover(QUBO):
         scale_problem (bool): To scale the problem or not. Only implemented for problems with Hamming weight, and defaults therefore to false.
 
     Methods:
-        cost(): Calculates the cost of a given solution.
+        objective_value(): Calculates the natural objective value of a given solution.
         create_circuit(): Creates a parameterized circuit corresponding to the cost function.
         isFeasible(): Checks if a given bitstring represents a feasible solution to the problem.
         _exactCover(): Computes the penalty for a given solution vector x, measuring how far it is from being an exact cover.

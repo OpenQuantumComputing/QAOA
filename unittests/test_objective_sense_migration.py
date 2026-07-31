@@ -64,8 +64,10 @@ class TestObjectiveSenseMigration(unittest.TestCase):
         pmax = MaxToyProblem()
         self.assertEqual(pmin.energy("10"), pmin.objective_value("10"))
         self.assertEqual(pmax.energy("10"), -pmax.objective_value("10"))
-        self.assertEqual(pmin.cost("10"), -pmin.energy("10"))
-        self.assertEqual(pmax.cost("10"), -pmax.energy("10"))
+
+    def test_removed_compatibility_apis(self):
+        self.assertFalse(hasattr(MinToyProblem(), "cost"))
+        self.assertFalse(hasattr(MinToyProblem(), "computeMinMaxCosts"))
 
     def test_maxcut_objective_and_energy(self):
         G = nx.Graph()
@@ -150,7 +152,7 @@ class TestObjectiveSenseMigration(unittest.TestCase):
         self.assertEqual(pmin.optimal_objective(), 0.0)
         self.assertEqual(pmax.optimal_objective(), 2.0)
 
-    def test_qaoa_get_exp_alias_and_energy(self):
+    def test_qaoa_energy_and_objective(self):
         from qiskit_aer import AerSimulator
 
         G = nx.path_graph(3)
@@ -164,7 +166,7 @@ class TestObjectiveSenseMigration(unittest.TestCase):
             shots=128,
         )
         q.optimize(depth=1, angles={"gamma": [0, np.pi, 3], "beta": [0, np.pi, 3]})
-        self.assertAlmostEqual(q.get_Exp(depth=1), q.get_energy(depth=1))
+        self.assertFalse(hasattr(q, "get_Exp"))
         self.assertAlmostEqual(
             q.get_objective(depth=1), -q.get_energy(depth=1)
         )
@@ -190,8 +192,35 @@ class TestObjectiveSenseMigration(unittest.TestCase):
         with tempfile.NamedTemporaryFile(suffix=".json") as fp:
             result.save(fp.name)
             loaded = qaoaIO.QAOAResult.load(fp.name)
-        self.assertEqual(loaded.schema_version, 2)
+        self.assertEqual(loaded.schema_version, 3)
         self.assertEqual(loaded.problem.objective_sense, "minimize")
+
+    def test_legacy_serialization_is_rejected(self):
+        legacy_payload = {
+            "problem": {
+                "problem_type": "ExactCover",
+                "columns": [[1, 0], [0, 1]],
+                "weights": [1.0, 2.0],
+                "solution": [1, 1],
+                "hamming_weight": 1,
+            },
+            "qaoa_params": {
+                "cvar": 0.5,
+                "init_method": "PLUS",
+                "mixer_method": "X",
+                "backend": "sim",
+                "optimizer": "COBYLA",
+                "N_qubits": 2,
+                "depths": {"1": {"optimal_angles": [0.1, 0.2], "histogram": {"00": 1}, "opt_time": 0.01}},
+            },
+        }
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as fp:
+            import json
+
+            json.dump(legacy_payload, fp)
+            fp.flush()
+            with self.assertRaises(ValueError):
+                qaoaIO.QAOAResult.load(fp.name)
 
     def test_approximation_ratio_mapping_formula(self):
         best, worst = 10.0, 2.0
