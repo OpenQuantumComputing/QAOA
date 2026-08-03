@@ -108,8 +108,8 @@ def plot_ApproximationRatio(
     Args:
         qaoa_instance (QAOA): A QAOA instance that has been optimized.
         maxdepth (int): Maximum depth to plot.
-        mincost (float): Known minimum cost (for normalization).
-        maxcost (float): Known maximum cost (for normalization).
+        mincost (float): Known minimum objective value (for normalization).
+        maxcost (float): Known maximum objective value (for normalization).
         label (str): Legend label.
         style (str): Matplotlib line-style string.
         fig (matplotlib.figure.Figure, optional): Existing figure to draw on.
@@ -135,7 +135,7 @@ def plot_ApproximationRatio(
     elif qaoa_instance.problem.objective_sense.value == "maximize":
         appr_ratio = (exp - mincost) / (maxcost - mincost)
     else:
-        appr_ratio = (maxcost - exp) / (maxcost - mincost)
+        appr_ratio = (mincost - exp) / (mincost - maxcost)
 
     ax.plot(
         np.arange(1, maxdepth + 1),
@@ -564,4 +564,3 @@ def plotHitProbabilities_fromHist(hist, opt_sol,
     ax.legend()
     ax.grid(True, which="both", ls="--")
     return fig, ax
-
