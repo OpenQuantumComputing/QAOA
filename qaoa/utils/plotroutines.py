@@ -200,11 +200,11 @@ def _apprrat_successprob(qaoa_instance, depth, shots=10**4):
 
     for string in hist:
         if qaoa_instance.problem.isFeasible(string):
-            cost = qaoa_instance.problem.objective_value(string)
+            energy = qaoa_instance.problem.energy(string)
             counts += hist[string]
-            stat.add_sample(cost, hist[string], string)
+            stat.add_sample(energy, hist[string], string)
 
-    return stat.get_CVaR(), counts / shots
+    return qaoa_instance.problem.objective_from_energy(stat.get_CVaR()), counts / shots
 
 # Keep the old private name as an alias for internal backward compatibility.
 __apprrat_successprob = _apprrat_successprob
