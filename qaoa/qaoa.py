@@ -339,22 +339,22 @@ class QAOA:
         return self.Var_sampled_p1
 
     def get_energy(self, depth=None):
-        if not depth:
+        if depth is None:
             ret = []
             for i in range(1, self.current_depth + 1):
                 ret.append(self.optimization_results[i].get_best_energy())
             return ret
-        if depth > self.current_depth + 1:
+        if depth < 1 or depth > self.current_depth:
             raise ValueError
         return self.optimization_results[depth].get_best_energy()
 
     def get_objective(self, depth=None):
-        if not depth:
+        if depth is None:
             ret = []
             for i in range(1, self.current_depth + 1):
                 ret.append(self.optimization_results[i].get_best_objective())
             return ret
-        if depth > self.current_depth + 1:
+        if depth < 1 or depth > self.current_depth:
             raise ValueError
         return self.optimization_results[depth].get_best_objective()
 

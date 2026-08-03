@@ -166,7 +166,7 @@ class Problem(BaseProblem):
 
     def validate_circuit(self, t=1, flip=True, atol=1e-8, rtol=1e-8):
         """
-        Exact check that the problem's circuit represents the problem's cost function.
+        Exact check that the problem's circuit represents the problem's energy function.
         This tests checks that the unitary operator represented by the quantum circuit is
         equal to the expected matrix with diagonal elements
         exp(-j*t*energy(e)),

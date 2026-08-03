@@ -3,7 +3,7 @@ from qaoa import QAOA, problems
 import json
 import numpy as np
 from dataclasses import dataclass, asdict, field
-from typing import List, Dict, Type
+from typing import List, Dict, Type, Optional
 from enum import Enum
 import os
 import subprocess
@@ -125,8 +125,8 @@ class DepthResult:
     optimal_angles: List[float]
     histogram: Dict[str, int]
     opt_time: float # runtime in seconds
-    best_energy: float | None = None
-    best_objective: float | None = None
+    best_energy: Optional[float] = None
+    best_objective: Optional[float] = None
 
 
 @dataclass
