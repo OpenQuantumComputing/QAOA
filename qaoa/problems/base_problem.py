@@ -85,8 +85,10 @@ class Problem(BaseProblem):
                 ) from exc
         self.objective_sense = objective_sense
 
+    @abstractmethod
     def objective_value(self, string):
-        raise NotImplementedError("Subclasses must implement objective_value().")
+        """Return the natural objective value for a candidate solution bitstring."""
+        raise NotImplementedError
 
     def energy(self, string):
         value = self.objective_value(string)
