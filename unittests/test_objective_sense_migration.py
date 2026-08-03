@@ -8,7 +8,7 @@ from qiskit.circuit import Parameter
 
 from qaoa import QAOA, initialstates, mixers, problems
 from qaoa.problems.base_problem import ObjectiveSense, Problem
-from qaoa.utils import BitFlip, Statistic, qaoaIO
+from qaoa.utils import BitFlip, Statistic, qaoaIO, compute_approx_ratio
 
 
 class MinToyProblem(Problem):
@@ -223,6 +223,7 @@ class TestObjectiveSenseMigration(unittest.TestCase):
                 qaoaIO.QAOAResult.load(fp.name)
 
     def test_approximation_ratio_mapping_formula(self):
+        """Legacy inline-formula tests – kept for regression."""
         best, worst = 10.0, 2.0
         value_best, value_worst = 10.0, 2.0
         ratio_max_best = (value_best - worst) / (best - worst)
@@ -236,3 +237,46 @@ class TestObjectiveSenseMigration(unittest.TestCase):
         ratio_min_worst = (worst - value_worst) / (worst - best)
         self.assertAlmostEqual(ratio_min_best, 1.0)
         self.assertAlmostEqual(ratio_min_worst, 0.0)
+
+    def test_compute_approx_ratio_maximize(self):
+        # best value = max_objective (10), worst = min_objective (2)
+        self.assertAlmostEqual(compute_approx_ratio(10.0, 2.0, 10.0, ObjectiveSense.MAXIMIZE), 1.0)
+        self.assertAlmostEqual(compute_approx_ratio(2.0, 2.0, 10.0, ObjectiveSense.MAXIMIZE), 0.0)
+        self.assertAlmostEqual(compute_approx_ratio(6.0, 2.0, 10.0, ObjectiveSense.MAXIMIZE), 0.5)
+        # also accepts string sense
+        self.assertAlmostEqual(compute_approx_ratio(10.0, 2.0, 10.0, "maximize"), 1.0)
+
+    def test_compute_approx_ratio_minimize(self):
+        # best value = min_objective (2), worst = max_objective (10)
+        self.assertAlmostEqual(compute_approx_ratio(2.0, 2.0, 10.0, ObjectiveSense.MINIMIZE), 1.0)
+        self.assertAlmostEqual(compute_approx_ratio(10.0, 2.0, 10.0, ObjectiveSense.MINIMIZE), 0.0)
+        self.assertAlmostEqual(compute_approx_ratio(6.0, 2.0, 10.0, ObjectiveSense.MINIMIZE), 0.5)
+        # also accepts string sense
+        self.assertAlmostEqual(compute_approx_ratio(2.0, 2.0, 10.0, "minimize"), 1.0)
+
+    def test_compute_approx_ratio_trivial_landscape(self):
+        self.assertAlmostEqual(compute_approx_ratio(5.0, 5.0, 5.0, ObjectiveSense.MAXIMIZE), 1.0)
+        self.assertAlmostEqual(compute_approx_ratio(5.0, 5.0, 5.0, ObjectiveSense.MINIMIZE), 1.0)
+
+    def test_compute_approx_ratio_array(self):
+        values = np.array([2.0, 6.0, 10.0])
+        expected_max = np.array([0.0, 0.5, 1.0])
+        expected_min = np.array([1.0, 0.5, 0.0])
+        np.testing.assert_allclose(
+            compute_approx_ratio(values, 2.0, 10.0, ObjectiveSense.MAXIMIZE), expected_max
+        )
+        np.testing.assert_allclose(
+            compute_approx_ratio(values, 2.0, 10.0, ObjectiveSense.MINIMIZE), expected_min
+        )
+
+    def test_missing_sense_raises(self):
+        """Problem.__init__ must raise ValueError when objective_sense is omitted."""
+        with self.assertRaises(ValueError) as ctx:
+            # Anonymous concrete Problem subclass – no sense provided.
+            class _NakedProblem(Problem):
+                def objective_value(self, s):
+                    return 0.0
+                def create_circuit(self):
+                    pass
+            _NakedProblem()
+        self.assertIn("objective_sense", str(ctx.exception))

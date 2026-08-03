@@ -42,8 +42,7 @@ class GraphProblem(Problem):
                 the circuit size. The highest-degree node is chosen to maximize the number of
                 entangling gates eliminated (proportional to the degree of the fixed node).
         """
-        super().__init__()
-        self.objective_sense = ObjectiveSense.MAXIMIZE
+        super().__init__(objective_sense=ObjectiveSense.MAXIMIZE)
 
         # fixes the highest-degree node (node n-1 after relabeling) to "color1"
         self.fix_one_node = fix_one_node

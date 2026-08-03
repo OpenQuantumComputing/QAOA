@@ -10,6 +10,10 @@ class ObjectiveSense(str, Enum):
     MAXIMIZE = "maximize"
 
 
+# Sentinel used to detect when objective_sense is omitted entirely.
+_SENSE_NOT_SET = object()
+
+
 class BaseProblem(ABC):
     """
     Base class for defining optimization problems.
@@ -73,8 +77,13 @@ class Problem(BaseProblem):
         ```
     """
 
-    def __init__(self, objective_sense: ObjectiveSense = ObjectiveSense.MINIMIZE) -> None:
+    def __init__(self, objective_sense=_SENSE_NOT_SET) -> None:
         super().__init__()
+        if objective_sense is _SENSE_NOT_SET:
+            raise ValueError(
+                "objective_sense must be provided explicitly when constructing a Problem. "
+                f"Pass one of: {[s.value for s in ObjectiveSense]}"
+            )
         if not isinstance(objective_sense, ObjectiveSense):
             try:
                 objective_sense = ObjectiveSense(objective_sense)

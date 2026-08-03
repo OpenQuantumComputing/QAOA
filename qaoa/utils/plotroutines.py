@@ -9,6 +9,45 @@ from math import comb
 from .statistic import Statistic
 
 
+def compute_approx_ratio(value, min_objective, max_objective, sense):
+    """Compute the approximation ratio normalized to ``[0, 1]``.
+
+    The ratio is defined so that it equals **1** at the optimal solution and
+    **0** at the worst feasible value, regardless of whether the problem is a
+    minimization or maximization problem.
+
+    * **MAXIMIZE** – optimal is ``max_objective``:
+      ``ratio = (value - min_objective) / (max_objective - min_objective)``
+    * **MINIMIZE** – optimal is ``min_objective``:
+      ``ratio = (max_objective - value) / (max_objective - min_objective)``
+
+    When ``min_objective`` and ``max_objective`` are equal (trivial landscape)
+    the function returns ``1.0``.
+
+    Args:
+        value (float or np.ndarray): Objective value(s) to evaluate.
+        min_objective (float): Minimum (worst-for-max / best-for-min) objective.
+        max_objective (float): Maximum (best-for-max / worst-for-min) objective.
+        sense: Optimization sense – an :class:`~qaoa.problems.base_problem.ObjectiveSense`
+            instance or the strings ``"maximize"`` / ``"minimize"``.
+
+    Returns:
+        float or np.ndarray: Approximation ratio in ``[0, 1]`` (clipping is
+        **not** applied; out-of-range values indicate inconsistent inputs).
+    """
+    from qaoa.problems.base_problem import ObjectiveSense
+
+    if np.isclose(max_objective, min_objective):
+        return np.ones_like(value, dtype=float) if hasattr(value, "__len__") else 1.0
+
+    sense_val = sense.value if isinstance(sense, ObjectiveSense) else str(sense)
+    span = max_objective - min_objective
+    if sense_val == "maximize":
+        return (value - min_objective) / span
+    else:
+        return (max_objective - value) / span
+
+
 def _np2str(npBitString):
     """Cast binary numpy arrays to bitstrings.
 
@@ -130,12 +169,9 @@ def plot_ApproximationRatio(
 
     fig, ax = _get_fig_ax(fig)
     ax.hlines(1, 1, maxdepth, linestyles="solid", colors="black")
-    if np.isclose(maxcost, mincost):
-        appr_ratio = np.ones_like(exp)
-    elif qaoa_instance.problem.objective_sense.value == "maximize":
-        appr_ratio = (exp - mincost) / (maxcost - mincost)
-    else:
-        appr_ratio = (mincost - exp) / (mincost - maxcost)
+    appr_ratio = compute_approx_ratio(
+        exp, mincost, maxcost, qaoa_instance.problem.objective_sense
+    )
 
     ax.plot(
         np.arange(1, maxdepth + 1),
