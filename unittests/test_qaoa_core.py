@@ -52,7 +52,7 @@ class TestQAOACVaR(unittest.TestCase):
             cvar=0.5,
         )
         qaoa.optimize(depth=1, angles=angles)
-        exp = qaoa.get_Exp(depth=1)
+        exp = qaoa.get_energy(depth=1)
         # CVaR result should be a valid negative number for MaxCut
         self.assertIsInstance(exp, float)
         self.assertLess(exp, 0.0)
@@ -79,7 +79,7 @@ class TestQAOASPSAOptimizer(unittest.TestCase):
             shots=256,
         )
         qaoa.optimize(depth=1, angles=angles)
-        exp = qaoa.get_Exp(depth=1)
+        exp = qaoa.get_energy(depth=1)
         self.assertIsInstance(exp, float)
 
 
@@ -105,12 +105,12 @@ class TestQAOAFlipOption(unittest.TestCase):
         qaoa.optimize(depth=1, angles=angles)
         # bitflips list should have one entry after depth 1
         self.assertEqual(len(qaoa.bitflips), 1)
-        exp = qaoa.get_Exp(depth=1)
+        exp = qaoa.get_energy(depth=1)
         self.assertIsInstance(exp, float)
 
 
 class TestQAOAPostProcessing(unittest.TestCase):
-    """QAOA with post-processing should compute post-processed expectation."""
+    """QAOA with post-processing should compute post-processed energy."""
 
     def test_post_processing_enabled(self):
         from qaoa import QAOA
@@ -129,9 +129,9 @@ class TestQAOAPostProcessing(unittest.TestCase):
             post=5,  # 5 rounds of bit-flip boosting
         )
         qaoa.optimize(depth=1, angles=angles)
-        # Post-processed expectation should be set
-        self.assertIsNotNone(qaoa.Exp_post_processed)
-        self.assertIsInstance(qaoa.Exp_post_processed, float)
+        # Post-processed energy should be set
+        self.assertIsNotNone(qaoa.Energy_post_processed)
+        self.assertIsInstance(qaoa.Energy_post_processed, float)
 
 
 class TestQAOAGetOptimalSolutions(unittest.TestCase):
@@ -220,10 +220,10 @@ class TestQAOAExactCoverEndToEnd(unittest.TestCase):
             shots=256,
         )
         qaoa.optimize(depth=1, angles=angles)
-        exp = qaoa.get_Exp(depth=1)
+        exp = qaoa.get_energy(depth=1)
         self.assertIsInstance(exp, float)
 
-    def test_exact_cover_feasible_solution_has_zero_cost(self):
+    def test_exact_cover_feasible_solution_has_zero_objective(self):
         from qaoa.problems import ExactCover
 
         columns = np.array([
@@ -234,11 +234,11 @@ class TestQAOAExactCoverEndToEnd(unittest.TestCase):
         problem = ExactCover(columns)
         # No single subset covers all elements exactly once in this 3×3 problem
         # but all 3 subsets together cover each element twice (not exact), so
-        # we verify the cost function penalizes infeasible strings
-        cost_111 = problem.cost("111")
-        cost_000 = problem.cost("000")
-        self.assertLessEqual(cost_111, 0.0)
-        self.assertLessEqual(cost_000, 0.0)
+        # we verify the objective penalizes infeasible strings
+        objective_111 = problem.objective_value("111")
+        objective_000 = problem.objective_value("000")
+        self.assertGreaterEqual(objective_111, 0.0)
+        self.assertGreaterEqual(objective_000, 0.0)
 
 
 class TestQAOAPortfolioEndToEnd(unittest.TestCase):
@@ -264,7 +264,7 @@ class TestQAOAPortfolioEndToEnd(unittest.TestCase):
             shots=256,
         )
         qaoa.optimize(depth=1, angles=angles)
-        exp = qaoa.get_Exp(depth=1)
+        exp = qaoa.get_energy(depth=1)
         self.assertIsInstance(exp, float)
 
 
@@ -289,8 +289,8 @@ class TestQAOAOrbitEndToEnd(unittest.TestCase):
         )
         qaoa.optimize(depth=2, angles=angles)
         self.assertEqual(qaoa.current_depth, 2)
-        exp1 = qaoa.get_Exp(depth=1)
-        exp2 = qaoa.get_Exp(depth=2)
+        exp1 = qaoa.get_energy(depth=1)
+        exp2 = qaoa.get_energy(depth=2)
         # Both depths should produce valid floats
         self.assertIsInstance(exp1, float)
         self.assertIsInstance(exp2, float)
@@ -319,7 +319,7 @@ class TestQAOALandscapeAndInterp(unittest.TestCase):
         self.assertEqual(qaoa.var_landscape().shape, (4, 4))
 
     def test_landscape_values_are_negative(self):
-        """Landscape values should be ≤ 0 for MaxCut (all costs are ≤ 0)."""
+        """Landscape values should be ≤ 0 for MaxCut energies."""
         from qaoa import QAOA
         from qaoa import problems, mixers, initialstates
 
@@ -335,7 +335,7 @@ class TestQAOALandscapeAndInterp(unittest.TestCase):
             shots=128,
         )
         qaoa.sample_cost_landscape(angles=angles)
-        # All expected values should be ≤ 0
+        # All expected energies should be ≤ 0
         self.assertTrue(np.all(qaoa.exp_landscape() <= 0.0))
 
     def test_interp_from_depth1_to_depth2(self):
@@ -359,10 +359,10 @@ class TestQAOALandscapeAndInterp(unittest.TestCase):
         self.assertIn(2, qaoa.optimization_results)
 
 
-class TestQAOAMultidepthGetExp(unittest.TestCase):
-    """QAOA.get_Exp() with no depth argument should return a list."""
+class TestQAOAMultidepthGetEnergy(unittest.TestCase):
+    """QAOA.get_energy() with no depth argument should return a list."""
 
-    def test_get_exp_all_depths(self):
+    def test_get_energy_all_depths(self):
         from qaoa import QAOA
         from qaoa import problems, mixers, initialstates
 
@@ -378,9 +378,9 @@ class TestQAOAMultidepthGetExp(unittest.TestCase):
             shots=128,
         )
         qaoa.optimize(depth=2, angles=angles)
-        all_exps = qaoa.get_Exp()
-        self.assertIsInstance(all_exps, list)
-        self.assertEqual(len(all_exps), 2)
+        all_energies = qaoa.get_energy()
+        self.assertIsInstance(all_energies, list)
+        self.assertEqual(len(all_energies), 2)
 
 
 class TestQAOAHistMethod(unittest.TestCase):

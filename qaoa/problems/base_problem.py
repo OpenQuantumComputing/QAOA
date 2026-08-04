@@ -1,6 +1,17 @@
 from abc import ABC, abstractmethod
+from enum import Enum
+import itertools
 
 from qaoa.utils import validation
+
+
+class ObjectiveSense(str, Enum):
+    MINIMIZE = "minimize"
+    MAXIMIZE = "maximize"
+
+
+# Sentinel used to detect when objective_sense is omitted entirely.
+_SENSE_NOT_SET = object()
 
 
 class BaseProblem(ABC):
@@ -31,15 +42,16 @@ class Problem(BaseProblem):
     Abstract subclass for defining specific optimization problems.
 
     This abstract subclass of `BaseProblem` is meant for defining concrete
-    optimization problems. Subclasses of `Problem` must implement the `cost`
-    and `create_circuit` methods to define the problem's cost function and
-    create the associated quantum circuit.
+    optimization problems. Subclasses of `Problem` must implement the
+    `objective_value` and `create_circuit` methods to define the natural
+    objective function and the associated quantum circuit.
 
     Attributes:
         circuit (QuantumCircuit): The quantum circuit associated with the problem.
 
     Methods:
-        cost(string): Abstract method to calculate the cost of a solution.
+        objective_value(string): Calculate the natural objective value of a
+            solution.
         create_circuit(): Abstract method to create the quantum circuit
             representing the problem.
         isFeasible(string): Checks if a given solution string is feasible.
@@ -49,14 +61,14 @@ class Problem(BaseProblem):
             corresponds to the given cost function. 
 
     Note:
-        Subclasses of `Problem` must provide implementations for the `cost`
-        and `create_circuit` methods.
+        Subclasses of `Problem` must provide implementations for the
+        `objective_value` and `create_circuit` methods.
 
     Example:
         ```python
         class MyProblem(Problem):
-            def cost(self, string):
-                # Define the cost calculation for the optimization problem.
+            def objective_value(self, string):
+                # Define the objective calculation for the optimization problem.
                 ...
 
             def create_circuit(self):
@@ -65,21 +77,38 @@ class Problem(BaseProblem):
         ```
     """
 
+    def __init__(self, objective_sense=_SENSE_NOT_SET) -> None:
+        super().__init__()
+        if objective_sense is _SENSE_NOT_SET:
+            raise ValueError(
+                "objective_sense must be provided explicitly when constructing a Problem. "
+                f"Pass one of: {[s.value for s in ObjectiveSense]}"
+            )
+        if not isinstance(objective_sense, ObjectiveSense):
+            try:
+                objective_sense = ObjectiveSense(objective_sense)
+            except Exception as exc:
+                raise ValueError(
+                    "objective_sense must be one of "
+                    f"{[s.value for s in ObjectiveSense]}"
+                ) from exc
+        self.objective_sense = objective_sense
+
     @abstractmethod
-    def cost(self, string):
-        """
-        Abstract method to calculate the cost of a solution.
+    def objective_value(self, string):
+        """Return the natural objective value for a candidate solution bitstring."""
+        raise NotImplementedError
 
-        Subclasses must implement this method to define how the cost of a
-        solution is calculated for the specific optimization problem.
+    def energy(self, string):
+        value = self.objective_value(string)
+        if self.objective_sense is ObjectiveSense.MINIMIZE:
+            return value
+        return -value
 
-        Args:
-            string (str): A solution string or configuration to evaluate.
-
-        Returns:
-            float: The cost of the given solution.
-        """
-        pass
+    def objective_from_energy(self, energy):
+        if self.objective_sense is ObjectiveSense.MINIMIZE:
+            return energy
+        return -energy
 
     @abstractmethod
     def create_circuit(self):
@@ -118,27 +147,38 @@ class Problem(BaseProblem):
         """
         return 1
 
-    def computeMinMaxCosts(self):
-        """
-        Brute force method to compute min and max cost of feasible solution
-        """
-        import itertools
-
-        max_cost = float("-inf")
-        min_cost = float("inf")
-        for s in ["".join(i) for i in itertools.product("01", repeat=self.N_qubits)]:
+    def objective_bounds(self):
+        min_objective = float("inf")
+        max_objective = float("-inf")
+        for s in map("".join, itertools.product("01", repeat=self.N_qubits)):
             if self.isFeasible(s):
-                cost = -self.cost(s)
-                max_cost = max(max_cost, cost)
-                min_cost = min(min_cost, cost)
-        return min_cost, max_cost
+                value = self.objective_value(s)
+                min_objective = min(min_objective, value)
+                max_objective = max(max_objective, value)
+        return min_objective, max_objective
+
+    def optimal_objective(self):
+        min_objective, max_objective = self.objective_bounds()
+        if self.objective_sense is ObjectiveSense.MINIMIZE:
+            return min_objective
+        return max_objective
+
+    def energy_bounds(self):
+        min_energy = float("inf")
+        max_energy = float("-inf")
+        for s in map("".join, itertools.product("01", repeat=self.N_qubits)):
+            if self.isFeasible(s):
+                value = self.energy(s)
+                min_energy = min(min_energy, value)
+                max_energy = max(max_energy, value)
+        return min_energy, max_energy
 
     def validate_circuit(self, t=1, flip=True, atol=1e-8, rtol=1e-8):
         """
-        Exact check that the problem's circuit represents the problem's cost function.
+        Exact check that the problem's circuit represents the problem's energy function.
         This tests checks that the unitary operator represented by the quantum circuit is
-        equal to the expected matrix with diagonal elements 
-        exp(-j*t*cost(e)),
+        equal to the expected matrix with diagonal elements
+        exp(-j*t*energy(e)),
         where e is the corresponding binary state, up to a global phase.
         
         Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).

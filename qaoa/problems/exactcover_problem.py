@@ -22,7 +22,7 @@ class ExactCover(QUBO):
         scale_problem (bool): To scale the problem or not. Only implemented for problems with Hamming weight, and defaults therefore to false.
 
     Methods:
-        cost(): Calculates the cost of a given solution.
+        objective_value(): Calculates the natural objective value of a given solution.
         create_circuit(): Creates a parameterized circuit corresponding to the cost function.
         isFeasible(): Checks if a given bitstring represents a feasible solution to the problem.
         _exactCover(): Computes the penalty for a given solution vector x, measuring how far it is from being an exact cover.
@@ -86,9 +86,9 @@ class ExactCover(QUBO):
 
         self.N_qubits = numColumns
 
-    def cost(self, string):
+    def objective_value(self, string):
         """
-        Calculates the cost so that states where an element is not covered, or covered more than once, will be penalized, whereas
+        Calculates the natural objective so that states where an element is not covered, or covered more than once, will be penalized, whereas
         sets that contain elements that are covered exactly once are favored.
 
         Args:
@@ -97,7 +97,7 @@ class ExactCover(QUBO):
         x = np.array(list(map(int, string)))
         c_e = self.__exactCover(x)
 
-        return -(self.weights @ x + self.penalty_factor * c_e)
+        return self.weights @ x + self.penalty_factor * c_e
 
 
     def isFeasible(self, string):
@@ -161,14 +161,14 @@ class ExactCover(QUBO):
         bitstrings_generator = bitstrings_all_generator
         if self.hamming_weight is not None:
             bitstrings_generator = bitstrings_hamming_weight_generator
-        opt_val = -np.inf
+        opt_val = np.inf
         opt_sol = None
         num_feasible = 0
 
         for bs in bitstrings_generator(self.N_qubits, self.hamming_weight):
-            cost = self.cost(bs)
-            if cost > opt_val:
-                opt_val = cost
+            energy = self.energy(bs)
+            if energy < opt_val:
+                opt_val = energy
                 opt_sol = bs
             num_feasible += self.isFeasible(bs)
         

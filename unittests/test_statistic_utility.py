@@ -63,13 +63,13 @@ class TestStatistic(unittest.TestCase):
         self.assertAlmostEqual(stat.get_Variance(), 2.0)
 
     def test_cvar_below_one(self):
-        """CVaR with alpha=0.5 should average over top 50% of values."""
+        """CVaR with alpha=0.5 should average over lower 50% of values."""
         stat = self.Statistic(cvar=0.5)
         # add 4 samples: 1, 2, 3, 4
         for v in [1.0, 2.0, 3.0, 4.0]:
             stat.add_sample(v, 1.0, str(v))
-        # Top 50% = [3, 4], CVaR = 3.5
-        self.assertAlmostEqual(stat.get_CVaR(), 3.5)
+        # Lower 50% = [1, 2], CVaR = 1.5
+        self.assertAlmostEqual(stat.get_CVaR(), 1.5)
 
     def test_cvar_equal_one_is_expectation(self):
         stat = self.Statistic(cvar=1)

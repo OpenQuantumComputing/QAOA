@@ -113,8 +113,8 @@ class TestQAOAEndToEnd(unittest.TestCase):
         )
         qaoa.optimize(depth=1, angles=self.angles)
 
-        best_exp = qaoa.get_Exp(depth=1)
-        # For a path graph with 3 nodes the optimum is -2 (cost stored negated).
+        best_exp = qaoa.get_energy(depth=1)
+        # For a path graph with 3 nodes the optimum energy is -2.
         # A good QAOA should achieve at least -1 (approximation ratio >= 0.5).
         self.assertLessEqual(best_exp, -1.0)
 
@@ -184,7 +184,7 @@ class TestQAOAEndToEnd(unittest.TestCase):
         )
         # Should not raise ValueError about BaseSamplerV2
         qaoa_inst.optimize(depth=1, angles=self.angles)
-        best_exp = qaoa_inst.get_Exp(depth=1)
+        best_exp = qaoa_inst.get_energy(depth=1)
         self.assertIsInstance(best_exp, float)
 
 

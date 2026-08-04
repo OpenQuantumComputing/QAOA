@@ -135,8 +135,8 @@ class Statistic:
             float: The CVaR based on the samples.
         """
         if self.cvar < 1:
-            cvarK = int(np.round(self.cvar * len(self.all_values)))
-            cvar = np.sum(self.all_values[-cvarK:]) / cvarK
+            cvarK = max(1, int(np.round(self.cvar * len(self.all_values))))
+            cvar = np.sum(self.all_values[:cvarK]) / cvarK
             return cvar
         else:
             return self.get_E()

@@ -34,27 +34,26 @@ class OptResult:
     Attributes:
         depth (int): The depth p of the optimization.
         angles (list): List of angles used in the optimization.
-        Exp (list): List of expected values.
+        energy_history (list): List of expected energies.
         Var (list): List of variances.
-        WorstCost (list): List of worst costs.
-        BestCost (list): List of best costs.
+        worst_energy_history (list): List of worst sampled energies.
+        best_energy_history (list): List of best sampled energies.
         BestSols (list): List of best solutions.
         shots (list): List of shots taken for each iteration.
-        index_Exp_min (int): Index of the minimum expected value.
+        best_energy_index (int): Index of the minimum expected energy.
         opt_time (float): Time used for optimization on given depth
 
     Methods:
         add_iteration(): Adds an iteration's results to the OptResult object.
-        compute_best_index(): Computes the index of the minimum expected value in `Exp`.
-        get_best_Exp(): Returns the best expected value.
+        compute_best_index(): Computes the index of the minimum expected energy.
         get_best_Var(): Returns the best variance.
-        get_best_angles(): Returns the best angles corresponding to the minimum expected value.
+        get_best_angles(): Returns the best angles corresponding to the minimum expected energy.
         num_fval(): Returns the number of function evaluations.
         num_shots(): Returns the total number of shots taken.
-        get_best_solution(): Returns the best solutions and their corresponding cost.
+        get_best_solution(): Returns the best solutions and their corresponding energy.
     """
 
-    def __init__(self, depth):
+    def __init__(self, depth, problem):
         """
         Initializes the OptResult object with the given depth.
 
@@ -62,16 +61,20 @@ class OptResult:
             depth (int): The depth p of the optimization.
         """
         self.depth = depth
+        self.problem = problem
 
         self.angles = []
-        self.Exp = []
+        self.energy_history = []
+        self.objective_history = []
         self.Var = []
-        self.WorstCost = []
-        self.BestCost = []
+        self.worst_energy_history = []
+        self.best_energy_history = []
+        self.best_objective = []
+        self.worst_objective = []
         self.BestSols = []
         self.shots = []
 
-        self.index_Exp_min = -1
+        self.best_energy_index = -1
         self.opt_time = -1.0
 
     def add_iteration(self, angles, stat, shots):
@@ -84,47 +87,52 @@ class OptResult:
             shots (int): Number of shots taken in the iteration.
         """
         self.angles.append(angles)
-        self.Exp.append(-stat.get_CVaR())
+        cvar_energy = stat.get_CVaR()
+        self.energy_history.append(cvar_energy)
+        self.objective_history.append(self.problem.objective_from_energy(cvar_energy))
         self.Var.append(stat.get_Variance())
-        self.BestCost.append(-stat.get_max())
-        self.WorstCost.append(-stat.get_min())
-        self.BestSols.append(stat.get_max_sols())
+        best_energy = stat.get_min()
+        worst_energy = stat.get_max()
+        self.best_energy_history.append(best_energy)
+        self.worst_energy_history.append(worst_energy)
+        self.best_objective.append(self.problem.objective_from_energy(best_energy))
+        self.worst_objective.append(self.problem.objective_from_energy(worst_energy))
+        self.BestSols.append(stat.get_min_sols())
         self.shots.append(shots)
 
     def compute_best_index(self):
         """
-        Computes the index of the minimum expected value in `Exp`.
-        This index is used to retrieve the best angles, expected value, and variance.
+        Computes the index of the minimum expected energy.
+        This index is used to retrieve the best angles, energy, and variance.
         """
-        self.index_Exp_min = self.Exp.index(min(self.Exp))
+        self.best_energy_index = self.energy_history.index(min(self.energy_history))
 
-    def get_best_Exp(self):
-        """
-        Returns:
-            float: The best expected value from `Exp`.
-        """
-        return self.Exp[self.index_Exp_min]
+    def get_best_energy(self):
+        return self.energy_history[self.best_energy_index]
+
+    def get_best_objective(self):
+        return self.objective_history[self.best_energy_index]
 
     def get_best_Var(self):
         """
         Returns:
             float: The best variance from `Var`.
         """
-        return self.Var[self.index_Exp_min]
+        return self.Var[self.best_energy_index]
 
     def get_best_angles(self):
         """
         Returns:
-            list: The best angles from `angles` at the index of the minimum expected value.
+            list: The best angles from `angles` at the index of the minimum expected energy.
         """
-        return self.angles[self.index_Exp_min]
+        return self.angles[self.best_energy_index]
 
     def num_fval(self):
         """
         Returns:
-            int: The number of function evaluations (the length of `Exp`).
+            int: The number of function evaluations (the length of `energy_history`).
         """
-        return len(self.Exp)
+        return len(self.energy_history)
 
     def num_shots(self):
         """
@@ -135,15 +143,15 @@ class OptResult:
 
     def get_best_solution(self):
         """
-        Iterates through the best solutions and returns the best cost and the corresponding solutions.
+        Iterates through the best solutions and returns the best energy and the corresponding solutions.
 
         Returns:
             tuple: A tuple containing
-                - list: The best solutions (bit-strings) that yield the best cost.
-                - float: The best cost found.
+                - list: The best solutions (bit-strings) that yield the best energy.
+                - float: The best energy found.
         """
-        best_cost = np.min(self.BestCost)
-        iterations_with_best_cost = np.where(self.BestCost == best_cost)[0]
+        best_energy = np.min(self.best_energy_history)
+        iterations_with_best_cost = np.where(self.best_energy_history == best_energy)[0]
 
         all_best_sols = []
         for i in iterations_with_best_cost:
@@ -151,7 +159,7 @@ class OptResult:
         # flatten the list:
         all_best_sols = [item for sublist in all_best_sols for item in sublist]
         best_sols = np.unique(all_best_sols)
-        return best_sols, best_cost
+        return best_sols, best_energy
 
 
 class QAOA:
@@ -187,9 +195,9 @@ class QAOA:
 
     Main methods:
         - createParameterizedCircuit(): Creates the parameterized circuit for a given depth.
-        - sample_cost_landscape(): Samples the cost landscape for given angles at a specific depth.
+        - sample_cost_landscape(): Samples the energy landscape for given angles at a specific depth.
         - optimize(): Runs the optimization process for a given depth.
-        - get_Exp(): Returns the best expected value at a given depth.
+        - get_energy(): Returns the best expected energy at a given depth.
         - get_Var(): Returns the best variance at a given depth.
         - get_beta(): Returns the beta angles at a given depth.
         - get_gamma(): Returns the gamma angles at a given depth.
@@ -294,11 +302,11 @@ class QAOA:
         self.n_beta = 1
         self.n_init = 0
 
-        self.Exp_sampled_p1 = None
+        self.Energy_sampled_p1 = None
+        self.MinEnergy_sampled_p1 = None
+        self.MaxEnergy_sampled_p1 = None
         self.landscape_p1_angles = {}
         self.Var_sampled_p1 = None
-        self.MaxCost_sampled_p1 = None
-        self.MinCost_sampled_p1 = None
 
         self.optimization_results = {}
         self.memory_lists = []
@@ -308,7 +316,7 @@ class QAOA:
         self.bitflips = []
 
         self.post = post
-        self.Exp_post_processed = None
+        self.Energy_post_processed = None
         self.Var_post_processed = None
         self.samplecount_hists = {}
         self.last_hist = {}
@@ -317,37 +325,38 @@ class QAOA:
     def exp_landscape(self):
         """
         Returns:
-            float: The expected value of the cost landscape at depth p = 1.
+            float: The expected energy landscape at depth p = 1.
         """
         ### at depth p = 1
-        return self.Exp_sampled_p1
+        return self.Energy_sampled_p1
 
     def var_landscape(self):
         """
         Returns:
-            float: The variance of the cost landscape at depth p = 1.
+            float: The variance of the energy landscape at depth p = 1.
         """
         ### at depth p = 1
         return self.Var_sampled_p1
 
-    def get_Exp(self, depth=None):
-        """
-        Args:
-            depth (int, optional): The depth at which to retrieve the expected value.
-
-        Returns:
-            list/float: The best expected value(s) at the specified depth.
-            If depth is None, returns a list of best expected values for all depths up to the current depth.
-            If depth is specified, returns the best expected value at that depth.
-        """
-        if not depth:
+    def get_energy(self, depth=None):
+        if depth is None:
             ret = []
             for i in range(1, self.current_depth + 1):
-                ret.append(self.optimization_results[i].get_best_Exp())
+                ret.append(self.optimization_results[i].get_best_energy())
             return ret
-        if depth > self.current_depth + 1:
+        if depth < 1 or depth > self.current_depth:
             raise ValueError
-        return self.optimization_results[depth].get_best_Exp()
+        return self.optimization_results[depth].get_best_energy()
+
+    def get_objective(self, depth=None):
+        if depth is None:
+            ret = []
+            for i in range(1, self.current_depth + 1):
+                ret.append(self.optimization_results[i].get_best_objective())
+            return ret
+        if depth < 1 or depth > self.current_depth:
+            raise ValueError
+        return self.optimization_results[depth].get_best_objective()
 
     def get_Var(self, depth):
         """
@@ -523,7 +532,7 @@ class QAOA:
         self, angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]}
     ):
         """
-        Evaluates the cost function (landscape) at depth p = 1 for a grid of angles.
+        Evaluates the energy landscape at depth p = 1 for a grid of angles.
 
         The grid search is performed in the *vanilla (symmetric) subspace*: for every
         ``(gamma, beta)`` grid point, **all** gamma parameters for that layer are set
@@ -534,9 +543,9 @@ class QAOA:
         and multi-angle ansätze.
 
         **Sequential mode**: If `sequential` is set to True, CVaR, variance and
-        max/min cost are calculated sequentially for each (gamma, beta) combination
-        and stored in `Exp_sampled_p1`, `Var_sampled_p1`, `MaxCost_sampled_p1`,
-        and `MinCost_sampled_p1`.
+        max/min energy are calculated sequentially for each (gamma, beta)
+        combination and stored in `Energy_sampled_p1`, `Var_sampled_p1`,
+        `MaxEnergy_sampled_p1`, and `MinEnergy_sampled_p1`.
 
         **Batch mode**: If `sequential` is set to False, all parameter binds are
         prepared and a single batched job is submitted to the backend.
@@ -565,8 +574,8 @@ class QAOA:
             if self.sequential:
                 expectations = []
                 variances = []
-                maxcosts = []
-                mincosts = []
+                max_energies = []
+                min_energies = []
 
                 self.createParameterizedCircuit(depth)
                 logger.info("Executing sample_cost_landscape")
@@ -602,28 +611,28 @@ class QAOA:
 
                         self.stat.reset()
                         for string in counts_list:
-                            # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                            cost = self.problem.cost(string[::-1])
+                            # qiskit binary strings use little endian encoding, but our energy function expects big endian encoding. Therefore, we reverse the order
+                            energy = self.problem.energy(string[::-1])
                             self.stat.add_sample(
-                                cost, counts_list[string], string[::-1]
+                                energy, counts_list[string], string[::-1]
                             )
 
                         expectations.append(self.stat.get_CVaR())
                         variances.append(self.stat.get_Variance())
-                        maxcosts.append(self.stat.get_max())
-                        mincosts.append(self.stat.get_min())
+                        max_energies.append(self.stat.get_max())
+                        min_energies.append(self.stat.get_min())
 
                 angles = self.landscape_p1_angles
-                self.Exp_sampled_p1 = -np.array(expectations).reshape(
+                self.Energy_sampled_p1 = np.array(expectations).reshape(
                     angles["beta"][2], angles["gamma"][2]
                 )
                 self.Var_sampled_p1 = np.array(variances).reshape(
                     angles["beta"][2], angles["gamma"][2]
                 )
-                self.MaxCost_sampled_p1 = -np.array(maxcosts).reshape(
+                self.MaxEnergy_sampled_p1 = np.array(max_energies).reshape(
                     angles["beta"][2], angles["gamma"][2]
                 )
-                self.MinCost_sampled_p1 = -np.array(mincosts).reshape(
+                self.MinEnergy_sampled_p1 = np.array(min_energies).reshape(
                     angles["beta"][2], angles["gamma"][2]
                 )
                 logger.info("Done measurement")
@@ -674,11 +683,15 @@ class QAOA:
         # :return: expectation and variance, if the job is a list
         # """
         """
-        Processes the results of a job to extract measurement statistics -- CVar, variance and max/min costs.
+        Processes the results of a job to extract measurement statistics --
+        CVar, variance and max/min energies.
 
         Extracts the job result and retrieves the counts of measurement outcomes (stored in `last_hist` for future reference), determining whether the result is a dictionary
         (single execution) or a list of dictionaries (batched executions with parameter sweeps).
-        - If the result is a list of dictionaries, it computes the measurement statistics for each set of counts, which are stored in `Exp_sampled_p1`, `Var_sampled_p1`, `MaxCost_sampled_p1`, and `MinCost_sampled_p1`.
+        - If the result is a list of dictionaries, it computes the measurement
+          statistics for each set of counts, which are stored in
+          `Energy_sampled_p1`, `Var_sampled_p1`, `MaxEnergy_sampled_p1`, and
+          `MinEnergy_sampled_p1`.
         - If the result is a single dictionary, it computes the measurement statistics for that single set of counts, storing the results in `stat`.
 
         The function also handles the memory of measurement outcomes and stores them in `memory_lists` if memory is enabled
@@ -697,7 +710,7 @@ class QAOA:
                 if self.memorysize > 0:
                     for measurement in memory_list:
                         self.memory_lists.append(
-                            [measurement, self.problem.cost(measurement[::-1])]
+                            [measurement, self.problem.energy(measurement[::-1])]
                         )
                         self.memorysize -= 1
                         if self.memorysize < 1:
@@ -708,36 +721,36 @@ class QAOA:
         if isinstance(counts_list, list):
             expectations = []
             variances = []
-            maxcosts = []
-            mincosts = []
+            max_energies = []
+            min_energies = []
             for i, counts in enumerate(counts_list):
                 self.stat.reset()
                 for string in counts:
-                    # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                    cost = self.problem.cost(string[::-1])
-                    self.stat.add_sample(cost, counts[string], string[::-1])
+                    # qiskit binary strings use little endian encoding, but our energy function expects big endian encoding. Therefore, we reverse the order
+                    energy = self.problem.energy(string[::-1])
+                    self.stat.add_sample(energy, counts[string], string[::-1])
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
-                maxcosts.append(self.stat.get_max())
-                mincosts.append(self.stat.get_min())
+                max_energies.append(self.stat.get_max())
+                min_energies.append(self.stat.get_min())
             angles = self.landscape_p1_angles
-            self.Exp_sampled_p1 = -np.array(expectations).reshape(
+            self.Energy_sampled_p1 = np.array(expectations).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
             self.Var_sampled_p1 = np.array(variances).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
-            self.MaxCost_sampled_p1 = -np.array(maxcosts).reshape(
+            self.MaxEnergy_sampled_p1 = np.array(max_energies).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
-            self.MinCost_sampled_p1 = -np.array(mincosts).reshape(
+            self.MinEnergy_sampled_p1 = np.array(min_energies).reshape(
                 angles["beta"][2], angles["gamma"][2]
             )
         else:
             for string in counts_list:
-                # qiskit binary strings use little endian encoding, but our cost function expects big endian encoding. Therefore, we reverse the order
-                cost = self.problem.cost(string[::-1])
-                self.stat.add_sample(cost, counts_list[string], string[::-1])
+                # qiskit binary strings use little endian encoding, but our energy function expects big endian encoding. Therefore, we reverse the order
+                energy = self.problem.energy(string[::-1])
+                self.stat.add_sample(energy, counts_list[string], string[::-1])
 
     def optimize(
         self,
@@ -791,10 +804,11 @@ class QAOA:
             n_per_layer = n_gamma + n_beta
             start_time = time.perf_counter()
             if self.current_depth == 0:
-                if self.Exp_sampled_p1 is None:
+                if self.Energy_sampled_p1 is None:
                     self.sample_cost_landscape(angles=angles)
                 ind_Emin = np.unravel_index(
-                    np.argmin(self.Exp_sampled_p1, axis=None), self.Exp_sampled_p1.shape
+                    np.argmin(self.Energy_sampled_p1, axis=None),
+                    self.Energy_sampled_p1.shape,
                 )
                 # Build initial angles with init params (zeros) followed by first-layer params.
                 # For multi-angle QAOA (n_gamma > 1 or n_beta > 1), the best vanilla angles
@@ -815,11 +829,11 @@ class QAOA:
                     # Layer-by-layer grid search: lock previous layers at their
                     # best angles and do a 2-D grid search over the new layer.
                     # The grid includes (0, 0) which is equivalent to the depth
-                    # p-1 circuit, so cost(p) ≤ cost(p-1) is guaranteed.
+                    # p-1 circuit, so energy(p) ≤ energy(p-1) is guaranteed.
                     angles0 = self._grid_search_layer(best_angles, angles)
 
             self.optimization_results[self.current_depth + 1] = OptResult(
-                self.current_depth + 1
+                self.current_depth + 1, self.problem
             )
             # Create parameterized circuit at new depth
             new_depth = int((len(angles0) - n_init) / n_per_layer)
@@ -833,7 +847,7 @@ class QAOA:
             self.optimization_results[self.current_depth + 1].opt_time = time.perf_counter() - start_time
 
             LOG.info(
-                f"cost(depth { self.current_depth + 1} = {res.fun}",
+                f"energy(depth { self.current_depth + 1}) = {res.fun}",
                 func=self.optimize.__name__,
             )
 
@@ -852,7 +866,7 @@ class QAOA:
         if self.post:
             samples = self.samplecount_hists[self.current_depth]
             post_processing(self, samples=samples, K=self.post)
-            self.Exp_post_processed = -self.stat.get_CVaR()
+            self.Energy_post_processed = self.stat.get_CVaR()
             self.Var_post_processed = self.stat.get_Variance()
 
     def local_opt(self, angles0):
@@ -890,7 +904,7 @@ class QAOA:
             angles (list): List of angles (gamma and beta).
 
         Returns:
-            float: The negative expected value of the cost function (CVaR) for the given angles.
+            float: The expected energy CVaR for the given angles.
             This is used as the objective function to be minimized during optimization.
 
         Raises:
@@ -932,7 +946,7 @@ class QAOA:
             angles.copy(), self.stat, shots_taken
         )
 
-        return -self.stat.get_CVaR()
+        return self.stat.get_CVaR()
 
     def getParametersToBind(self, angles, depth, asList=False):
         """
@@ -1026,9 +1040,9 @@ class QAOA:
 
         return np.concatenate([init_part, result_layers.flatten()])
 
-    def _eval_cost(self, angle_array):
+    def _eval_energy(self, angle_array):
         """
-        Evaluate the expected cost (CVaR) for a specific angle array without
+        Evaluate the expected energy (CVaR) for a specific angle array without
         recording the result in ``optimization_results``.
 
         Intended for use during grid searches where many candidate points are
@@ -1039,7 +1053,7 @@ class QAOA:
                 be consistent with the current ``parametrized_circuit_depth``.
 
         Returns:
-            float: Negative expected cost (CVaR), i.e. the value to minimise.
+            float: Expected energy (CVaR), i.e. the value to minimise.
 
         Raises:
             NotImplementedError: If the backend is not local.
@@ -1061,16 +1075,17 @@ class QAOA:
         counts = jres.get_counts()
         self.stat.reset()
         for string in counts:
-            cost = self.problem.cost(string[::-1])
-            self.stat.add_sample(cost, counts[string], string[::-1])
-        return -self.stat.get_CVaR()
+            energy = self.problem.energy(string[::-1])
+            self.stat.add_sample(energy, counts[string], string[::-1])
+        return self.stat.get_CVaR()
 
     def _grid_search_layer(self, prev_angles, angles):
         """
         Grid search over a single new layer's parameters with all previous
         layers locked at ``prev_angles``.
 
-        For each ``(gamma, beta)`` point on the 2-D grid the cost is evaluated
+        For each ``(gamma, beta)`` point on the 2-D grid the energy is
+        evaluated
         with layers ``1 … p-1`` fixed to ``prev_angles`` and the new layer
         ``p`` initialised in the *symmetric (vanilla) subspace*: all
         ``n_gamma`` gamma parameters are set equal to ``gamma`` and all
@@ -1078,9 +1093,9 @@ class QAOA:
 
         Because the grid always includes the point ``(0, 0)`` — which adds an
         identity layer and therefore reproduces the depth-``(p-1)`` circuit —
-        the best grid cost satisfies ``cost_grid ≤ cost(p-1)``.  The
+        the best grid energy satisfies ``energy_grid ≤ energy(p-1)``.  The
         subsequent full local optimisation can only improve on this, so
-        ``cost(p) ≤ cost(p-1)`` is guaranteed, giving a monotonically
+        ``energy(p) ≤ energy(p-1)`` is guaranteed, giving a monotonically
         increasing approximation ratio.
 
         Args:
@@ -1114,7 +1129,7 @@ class QAOA:
             f"{len(gamma_grid)}×{len(beta_grid)} points"
         )
 
-        best_cost = np.inf
+        best_energy = np.inf
         best_angles = None
 
         for beta_val in beta_grid:
@@ -1123,12 +1138,12 @@ class QAOA:
                     [gamma_val] * self.n_gamma + [beta_val] * self.n_beta
                 )
                 candidate = np.concatenate([prev_angles, new_layer])
-                cost = self._eval_cost(candidate)
-                if cost < best_cost:
-                    best_cost = cost
+                energy = self._eval_energy(candidate)
+                if energy < best_energy:
+                    best_energy = energy
                     best_angles = candidate.copy()
 
-        logger.info(f"Layer grid search done, best cost: {-best_cost:.6f}")
+        logger.info(f"Layer grid search done, best energy: {best_energy:.6f}")
         return best_angles
 
     def hist(self, angles, shots):

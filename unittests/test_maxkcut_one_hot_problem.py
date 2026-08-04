@@ -52,29 +52,29 @@ class TestMaxKCutOneHotProblem(unittest.TestCase):
             msg = f"string: {binstring}, expected: {expected}, computed: {computed}"
             self.assertEqual(expected, computed, msg)
 
-    def test_cost_k2_barbell(self):
+    def test_objective_k2_barbell(self):
         """
         Test that the cost funciton in MaxKCutBinaryOneHot is correct for k = 2 with the barbell graph.
         """
         prob = MaxKCutOneHot(self.barbell, 2)
         strings = {"0101": 0, "1001": 1, "0110": 1, "1010": 0}
         for string, expected in strings.items():
-            computed = prob.cost(string[::-1])
+            computed = prob.objective_value(string[::-1])
             msg = f"string: {string}, expected: {expected}, computed: {computed}"
             self.assertEqual(expected, computed, msg)
 
-    def test_cost_k2_three_node_graph(self):
+    def test_objective_k2_three_node_graph(self):
         """
         Test that the cost funciton in MaxKCutBinaryOntHot is correct for k = 2 with three-node graph.
         """
         prob = MaxKCutOneHot(self.three_node_graph, 2)
         strings = {"010101": 0, "100110": 2, "011010": 1, "101010": 0}
         for string, expected in strings.items():
-            computed = prob.cost(string[::-1])
+            computed = prob.objective_value(string[::-1])
             msg = f"string: {string}, expected: {expected}, computed: {computed}"
             self.assertEqual(expected, computed, msg)
 
-    def test_cost_k3_three_node_graph(self):
+    def test_objective_k3_three_node_graph(self):
         """
         Test that the cost funciton in MaxKCutBinaryOntHot is correct for k = 3 with three-node graph.
         """
@@ -88,11 +88,11 @@ class TestMaxKCutOneHotProblem(unittest.TestCase):
             "100100100": 0,
         }
         for string, expected in strings.items():
-            computed = prob.cost(string[::-1])
+            computed = prob.objective_value(string[::-1])
             msg = f"string: {string}, expected: {expected}, computed: {computed}"
             self.assertEqual(expected, computed, msg)
 
-    def test_cost_k6_three_node_graph(self):
+    def test_objective_k6_three_node_graph(self):
         """
         Test that the cost funciton in MaxKCutBinaryOntHot is correct for k = 3 with three-node graph.
         """
@@ -104,7 +104,7 @@ class TestMaxKCutOneHotProblem(unittest.TestCase):
             "000001100000010000": 2,
         }
         for string, expected in strings.items():
-            computed = prob.cost(string[::-1])
+            computed = prob.objective_value(string[::-1])
             msg = f"string: {string}, expected: {expected}, computed: {computed}"
             self.assertEqual(expected, computed, msg)
 

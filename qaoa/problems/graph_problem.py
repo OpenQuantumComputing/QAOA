@@ -2,7 +2,7 @@ from qiskit import QuantumCircuit, QuantumRegister, AncillaRegister
 from qiskit.circuit import Parameter
 from abc import abstractmethod
 
-from .base_problem import Problem
+from .base_problem import ObjectiveSense, Problem
 from qaoa.utils import *
 
 
@@ -25,7 +25,7 @@ class GraphProblem(Problem):
         create_circuit(): Creates a circuit for the graph problem.
         same_color(str1, str2): Checks if two strings map to the same color.
         slice_string(string): Convert a binary string to a list of labels for each node.
-        cost(string): Creates a cost function for the given solution.
+        objective_value(string): Computes the natural objective value for the given solution.
         
     """
     def __init__(
@@ -42,7 +42,7 @@ class GraphProblem(Problem):
                 the circuit size. The highest-degree node is chosen to maximize the number of
                 entangling gates eliminated (proportional to the degree of the fixed node).
         """
-        super().__init__()
+        super().__init__(objective_sense=ObjectiveSense.MAXIMIZE)
 
         # fixes the highest-degree node (node n-1 after relabeling) to "color1"
         self.fix_one_node = fix_one_node
@@ -149,9 +149,9 @@ class GraphProblem(Problem):
             labels.append(self.colors["color1"][0])
         return labels
 
-    def cost(self, string: str) -> float | int:
+    def objective_value(self, string: str) -> float | int:
         """
-        Compute the cost for a given solution.
+        Compute the natural objective value for a given solution.
 
         Args:
             string (str): Binary string.
@@ -160,7 +160,7 @@ class GraphProblem(Problem):
             ValueError: If the length of the string does not match the number of qubits.
             
         Returns:
-            float | int: The cost of the given solution.
+            float | int: The weighted cut value of the given solution.
         """
         if len(string) != self.N_qubits:
             raise ValueError(

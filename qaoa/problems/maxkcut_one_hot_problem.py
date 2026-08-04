@@ -2,7 +2,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter
 import networkx as nx
 
-from .base_problem import Problem
+from .base_problem import ObjectiveSense, Problem
 
 
 class MaxKCutOneHot(Problem):
@@ -20,7 +20,7 @@ class MaxKCutOneHot(Problem):
 
     Methods:
         binstringToLabels(string): Converts a binary string in one-hot encoding to a string of color labels for each node.
-        cost(string): Computes the Max k-Cut cost for a given binary string representing a coloring.
+        objective_value(string): Computes the Max k-Cut objective for a given binary string representing a coloring.
         create_circuit(): Creates the parameterized quantum circuit corresponding to the Max k-Cut cost function using one-hot encoding.
     """
     def __init__(self, G: nx.Graph, k_cuts: int) -> None:
@@ -32,7 +32,7 @@ class MaxKCutOneHot(Problem):
         Raises: 
             ValueError: If k_cuts is less than 2 or greater than 8.
         """
-        super().__init__()
+        super().__init__(objective_sense=ObjectiveSense.MAXIMIZE)
         if (k_cuts < 2) or (k_cuts > 8):
             raise ValueError(
                 "k_cuts must be 2 or more, and is not implemented for k_cuts > 8"
@@ -68,9 +68,9 @@ class MaxKCutOneHot(Problem):
             labels += str(idx)
         return labels
 
-    def cost(self, string: str) -> float | int:
+    def objective_value(self, string: str) -> float | int:
         """
-        Computes the Max k-Cut cost for a given binary string representing a coloring.
+        Computes the Max k-Cut objective for a given binary string representing a coloring.
 
         Args:
             string (str): The binary string representing the one-hot encoding of node colors.

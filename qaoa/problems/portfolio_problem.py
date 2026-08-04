@@ -21,7 +21,7 @@ class PortfolioOptimization(QUBO):
         N_qubits (int): Number of assets/qubits in the problem.
 
     Methods:
-        cost(string): Computes the portfolio cost of a given bitstring (problem-specific, includes penalty).
+        objective_value(string): Computes the portfolio objective value of a given bitstring.
         isFeasible(string): Checks if a given bitstring satisfies the budget constraint.
         __str2np(s): Converts a bitstring to a numpy array of integers.
     """
@@ -53,22 +53,21 @@ class PortfolioOptimization(QUBO):
 
         super().__init__(Q=Q, c=c, b=b)
 
-    def cost(self, string):
+    def objective_value(self, string):
         """
-        Computes the portfolio cost of a given bitstring. This overrides the QUBO base class
-        cost to use the problem-specific formula directly.
+        Computes the portfolio natural objective of a given bitstring.
 
         Args:
             string (str): Bitstring representing the selected assets (portfolio).
 
         Returns:
-            cost (float): The negative of the portfolio objective value (including penalty).
+            float: The portfolio objective value (including penalty).
         """
         x = np.array(list(map(int, string)))
         cost = self.risk * (x.T @ self.cov_matrix @ x) - self.exp_return.T @ x
         cost += self.penalty * (x.sum() - self.budget) ** 2
 
-        return -cost
+        return cost
 
     def isFeasible(self, string):
         """
@@ -97,12 +96,12 @@ class PortfolioOptimization(QUBO):
                     s[i] = '1'
                 yield ''.join(s)
     
-        opt_val = -np.inf
+        opt_val = np.inf
         opt_sol = None
         for bs in bitstrings_hamming_weight_generator(self.N_qubits, self.budget):
-            cost = self.cost(bs)
-            if cost > opt_val:
-                opt_val = cost
+            energy = self.energy(bs)
+            if energy < opt_val:
+                opt_val = energy
                 opt_sol = bs
         
         return opt_sol

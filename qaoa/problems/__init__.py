@@ -1,4 +1,4 @@
-from .base_problem import Problem
+from .base_problem import Problem, ObjectiveSense
 from .qubo_problem import QUBO
 from .graph_problem import GraphProblem
 from .exactcover_problem import ExactCover

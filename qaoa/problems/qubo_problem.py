@@ -1,10 +1,11 @@
 import math
 import numpy as np
+import warnings
 
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
-from .base_problem import Problem
+from .base_problem import ObjectiveSense, Problem
 
 import structlog
 LOG = structlog.get_logger(file=__name__)
@@ -28,11 +29,11 @@ class QUBO(Problem):
         QUBO_b (float): The scalar offset.
 
     Methods:
-        cost(string): Computes the cost of a given binary string according to the QUBO formulation.
+        objective_value(string): Computes the natural objective of a given binary string according to the QUBO formulation.
         create_circuit(): Creates a parametrized quantum circuit corresponding to the cost function of the QUBO problem.
         createParameterizedCostCircuitTril(): Creates a parameterized circuit of the triangularized QUBO problem.
     """
-    def __init__(self, Q=None, c=None, b=None) -> None:
+    def __init__(self, Q=None, c=None, b=None, objective_sense=ObjectiveSense.MINIMIZE) -> None:
         """
         Implements the mapping from the parameters in params to the QUBO problem.
         Is expected to be called by the child class.
@@ -49,7 +50,7 @@ class QUBO(Problem):
             AssertionError: If c is not a 1D numpy ndarray of compatible size.
             AssertionError: If b is not a scalar.
         """
-        super().__init__()
+        super().__init__(objective_sense=objective_sense)
         assert type(Q) is np.ndarray, "Q needs to be a numpy ndarray, but is " + str(
             type(Q)
         )
@@ -86,17 +87,22 @@ class QUBO(Problem):
         assert np.isscalar(b), "b is expected to be scalar, but is " + str(b)
         self.QUBO_b = b
 
-    def cost(self, string):
+    def objective_value(self, string):
         """
-        Computes the cost of a given binary string according to the QUBO formulation.
+        Computes the natural objective value of a given binary string according to the QUBO formulation.
 
         Args:
             string (str): Binary string representing a candidate solution to the QUBO problem.
 
         Returns:
-            float: The cost of the solution.
+            float: The natural objective value of the solution.
         """
-        return self.qubo_cost(string)
+        x = np.array(list(map(int, string)))
+        return x.T @ self.QUBO_Q @ x + self.QUBO_c.T @ x + self.QUBO_b
+
+    def qubo_objective(self, string):
+        x = np.array(list(map(int, string)))
+        return x.T @ self.QUBO_Q @ x + self.QUBO_c.T @ x + self.QUBO_b
 
     def qubo_cost(self, string):
         """
@@ -104,8 +110,12 @@ class QUBO(Problem):
         original cost function is equivalent to the qubo-transformed cost function.
         This wrapper enables that validation check
         """
-        x = np.array(list(map(int, string)))
-        return -(x.T @ self.QUBO_Q @ x + self.QUBO_c.T @ x + self.QUBO_b)
+        warnings.warn(
+            "qubo_cost() is deprecated. Use objective_value() or energy().",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.objective_value(string)
 
 
     def create_circuit(self):
@@ -118,8 +128,9 @@ class QUBO(Problem):
 
         # To simplify notation:
         N = self.N_qubits
-        Q = self.QUBO_Q
-        c = self.QUBO_c
+        sign = 1.0 if self.objective_sense is ObjectiveSense.MINIMIZE else -1.0
+        Q = sign * self.QUBO_Q
+        c = sign * self.QUBO_c
         gamma = Parameter("x_gamma")
 
         # Ensure that Q is symmetric and add c to its diagonal
@@ -153,13 +164,13 @@ class QUBO(Problem):
         """
         Validates two elements:
 
-        1) That the QUBO cost function (self.qubo_cost) is equivalent to the problem-specific 
-        cost function (self.cost) 
+        1) That the natural QUBO polynomial is equivalent to the problem-specific
+        natural objective function (self.objective_value)
 
-        2) Exact check that the problem's circuit represents the problem's cost function.
+        2) Exact check that the problem's circuit represents the problem's canonical energy.
         This tests checks that the unitary operator represented by the quantum circuit is
         equal to the expected matrix with diagonal elements 
-        exp(-j*t*cost(e)),
+        exp(-j*t*energy(e)),
         where e is the corresponding binary state, up to a global phase.
         
         Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).
@@ -173,17 +184,17 @@ class QUBO(Problem):
         n = self.N_qubits
         for i in range(2**n):
             bitstring = format(i, f'0{n}b')
-            cost = self.cost(bitstring)
-            qubo_cost = self.qubo_cost(bitstring)
-            abs_error = np.abs(cost - qubo_cost)
+            objective = self.objective_value(bitstring)
+            qubo_objective = self.qubo_objective(bitstring)
+            abs_error = np.abs(objective - qubo_objective)
             if (abs_error > atol):
                 qubo_mapping_errors += 1
                 max_abs_error = max(max_abs_error, abs_error)
                 if qubo_mapping_errors < 9:
                     mismatches.append({
                         "bitstring": list(bitstring),
-                        "cost": cost,
-                        "qubo_cost": qubo_cost,
+                        "objective": objective,
+                        "qubo_objective": qubo_objective,
                         "abs_error": abs_error
                     })
 
@@ -191,12 +202,12 @@ class QUBO(Problem):
         if qubo_mapping_errors > 0:
             report = {
                 "n_qubits": self.N_qubits,
-                "max_error": abs_error,
+                "max_error": max_abs_error,
                 "examples": mismatches
             }
             return False, report
 
-        # Validate mapping from cost function to quantum circuit:
+        # Validate mapping from energy function to quantum circuit:
         circ_ok, circ_report = super().validate_circuit(t=t, flip=flip, atol=atol, rtol=rtol)
-        circ_report["max_qubo_cost_vs_cost_error"] = max_abs_error
+        circ_report["max_qubo_objective_error"] = max_abs_error
         return circ_ok, circ_report

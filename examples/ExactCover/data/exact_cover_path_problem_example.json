@@ -73,7 +73,8 @@
       0.0,
       0.0
     ],
-    "hamming_weight": 2
+    "hamming_weight": 2,
+    "objective_sense": "minimize"
   },
   "qaoa_params": {
     "cvar": 0.7,
@@ -118,7 +119,9 @@
           "00000011": 19,
           "01000010": 503
         },
-        "opt_time": 0.7518182500207331
+        "opt_time": 0.7518182500207331,
+        "best_energy": null,
+        "best_objective": null
       },
       "2": {
         "optimal_angles": [
@@ -157,7 +160,9 @@
           "10000100": 224,
           "00000011": 150
         },
-        "opt_time": 0.31045849999645725
+        "opt_time": 0.31045849999645725,
+        "best_energy": null,
+        "best_objective": null
       },
       "3": {
         "optimal_angles": [
@@ -195,7 +200,9 @@
           "01010000": 102,
           "00000110": 439
         },
-        "opt_time": 0.438680374994874
+        "opt_time": 0.438680374994874,
+        "best_energy": null,
+        "best_objective": null
       },
       "4": {
         "optimal_angles": [
@@ -238,7 +245,9 @@
           "00010010": 33,
           "01100000": 3335
         },
-        "opt_time": 0.6514912919956259
+        "opt_time": 0.6514912919956259,
+        "best_energy": null,
+        "best_objective": null
       },
       "5": {
         "optimal_angles": [
@@ -283,7 +292,9 @@
           "00011000": 103,
           "00000110": 146
         },
-        "opt_time": 0.9302357080159709
+        "opt_time": 0.9302357080159709,
+        "best_energy": null,
+        "best_objective": null
       },
       "6": {
         "optimal_angles": [
@@ -330,7 +341,9 @@
           "00010010": 14,
           "01100000": 2922
         },
-        "opt_time": 1.1260944169771392
+        "opt_time": 1.1260944169771392,
+        "best_energy": null,
+        "best_objective": null
       },
       "7": {
         "optimal_angles": [
@@ -379,7 +392,9 @@
           "00001001": 143,
           "00000110": 132
         },
-        "opt_time": 1.5074970000132453
+        "opt_time": 1.5074970000132453,
+        "best_energy": null,
+        "best_objective": null
       },
       "8": {
         "optimal_angles": [
@@ -430,7 +445,9 @@
           "10000010": 56,
           "10000001": 17
         },
-        "opt_time": 1.9193396670161746
+        "opt_time": 1.9193396670161746,
+        "best_energy": null,
+        "best_objective": null
       },
       "9": {
         "optimal_angles": [
@@ -482,7 +499,9 @@
           "00000011": 29,
           "00000110": 180
         },
-        "opt_time": 2.4477102090022527
+        "opt_time": 2.4477102090022527,
+        "best_energy": null,
+        "best_objective": null
       },
       "10": {
         "optimal_angles": [
@@ -537,7 +556,9 @@
           "00100001": 5,
           "10010000": 4087
         },
-        "opt_time": 2.9181083750154357
+        "opt_time": 2.9181083750154357,
+        "best_energy": null,
+        "best_objective": null
       }
     }
   },
@@ -551,5 +572,6 @@
     "conda_env": "neqst-kongsberg-2025",
     "qaoa_repo_dir": "/Users/havahol/playground/quantum/QAOA/qaoa/utils",
     "qaoa_git_commit": "ff2d04cf2aa5069dcb58ba57ab7d2fc79c465513"
-  }
+  },
+  "schema_version": 3
 }
