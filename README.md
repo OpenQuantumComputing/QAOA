@@ -43,6 +43,16 @@ cd QAOA
 pip install -e .
 ```
 
+### GPU simulation (optional)
+On **Linux** with an NVIDIA GPU and matching CUDA, install the CUDA-enabled Aer extra, then **remove CPU `qiskit-aer`** so only one Aer distribution is present. Uninstalling CPU Aer can remove shared `qiskit_aer` files, so **reinstall the GPU wheel** afterward:
+
+```bash
+pip install "qaoa[gpu-cu12]"
+pip uninstall -y qiskit-aer
+pip install --force-reinstall qiskit-aer-gpu
+```
+Also supports CUDA 11 by replacing `gpu-cu12` with `gpu-cu11`.
+
 ---
 
 ## Requirements
