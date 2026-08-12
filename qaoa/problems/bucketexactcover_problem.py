@@ -473,6 +473,7 @@ class BucketExactCover(Problem):
         best_val = -np.inf
         best_sol = None
         num_feasible = 0
+        feasible_costs = []
 
         for combo in itertools.product(*bucket_ranges):
             parts = []
@@ -488,9 +489,11 @@ class BucketExactCover(Problem):
                 best_sol = bitstring
             if self.isFeasible(bitstring):
                 num_feasible += 1
+                feasible_costs.append(val)
 
         if return_num_feasible:
-            return best_sol, num_feasible
+            num_optimal = feasible_costs.count(best_val)
+            return best_sol, num_feasible, num_optimal
         return best_sol
 
 
