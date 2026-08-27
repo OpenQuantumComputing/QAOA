@@ -1,4 +1,3 @@
-from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
 
 import numpy as np
@@ -62,8 +61,6 @@ def check_phase_separator_exact_problem(
         {problem.circuit.parameters[0]: t},
         inplace = False
     )
-    energy_fn = problem.energy
-
     U = Operator(circ).data  # complex ndarray
     n = circ.num_qubits
     d = 2**n
