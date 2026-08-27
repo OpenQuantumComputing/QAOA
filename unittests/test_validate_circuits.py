@@ -251,7 +251,7 @@ class MaxFeasibleOnlyToyProblem(Problem):
         self.circuit.p(0.7 * gamma, q[0])
 
 
-class TestValidateInfeasibleStates(unittest.TestCase):
+class TestValidateFeasibleStatesOnly(unittest.TestCase):
     def test_checks_feasible_states_only(self):
         problem = MaxFeasibleOnlyToyProblem()
         problem.create_circuit()
