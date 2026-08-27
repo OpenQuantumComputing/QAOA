@@ -11,13 +11,11 @@ def _bitstring(i, n, flip=False):
 
 def phase_cost(problem, bitstring, global_phase, omit_invalid_states, flip):
     idx = int(bitstring[::-1] if flip else bitstring, 2)
-    try:
-        energy = problem.objective_value(bitstring)
-        energies[idx] = energy
-    except:
+    if omit_invalid_states and not problem.isFeasible(bitstring):
         energies[idx] = global_phase
-        if omit_invalid_states:
-            mask[idx] = False
+        mask[idx] = False
+        return
+    energies[idx] = problem.energy(bitstring)
  
 def check_phase_separator_exact_qaoa(qaoa, *arg, **kwarg):
     return check_phase_separator_exact_problem(qaoa.problem, *arg, **kwarg)
