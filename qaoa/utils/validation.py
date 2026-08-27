@@ -46,7 +46,8 @@ def check_phase_separator_exact_problem(
     """
     if global_phase is not None:
         warnings.warn(
-            "global_phase is deprecated, use infeasible_energy instead.",
+            "global_phase was historically used as the placeholder energy for "
+            "infeasible states and is deprecated; use infeasible_energy instead.",
             DeprecationWarning,
             stacklevel=2,
         )

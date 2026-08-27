@@ -233,9 +233,12 @@ class MaxFeasibleOnlyToyProblem(Problem):
         self.N_qubits = 1
 
     def objective_value(self, string):
-        if string == "1":
-            raise ValueError("infeasible")
         return 2.0
+
+    def energy(self, string):
+        if string == "1":
+            raise ValueError("energy must not be evaluated for infeasible states")
+        return super().energy(string)
 
     def isFeasible(self, string):
         return string == "0"
@@ -252,14 +255,21 @@ class TestValidateInfeasibleStates(unittest.TestCase):
     def test_omit_infeasible_states(self):
         problem = MaxFeasibleOnlyToyProblem()
         problem.create_circuit()
+        with self.assertRaises(ValueError):
+            problem.energy("1")
 
         ok_omit, report_omit = check_phase_separator_exact_problem(
             problem, omit_infeasible_states=True
         )
         self.assertTrue(ok_omit, f"Expected pass when omitting infeasible states: {report_omit}")
 
-        ok_all, _ = check_phase_separator_exact_problem(problem, omit_infeasible_states=False)
-        self.assertFalse(ok_all)
+        ok_all, report_all = check_phase_separator_exact_problem(
+            problem, omit_infeasible_states=False
+        )
+        self.assertFalse(
+            ok_all,
+            f"Expected failure when infeasible states are included: {report_all}",
+        )
 
 
 if __name__ == "__main__":
