@@ -1,7 +1,6 @@
 from qiskit.quantum_info import Operator
 
 import numpy as np
-import warnings
 
 def _bitstring(i, n, flip=False):
     if flip:
@@ -13,48 +12,23 @@ def _bitstring(i, n, flip=False):
 def check_phase_separator_exact_qaoa(qaoa, *arg, **kwarg):
     return check_phase_separator_exact_problem(qaoa.problem, *arg, **kwarg)
 
-def _validation_energy(problem, bitstring, infeasible_energy, omit_infeasible_states):
-    if problem.isFeasible(bitstring):
-        return problem.energy(bitstring), True
-    return infeasible_energy, not omit_infeasible_states
-
-
 def check_phase_separator_exact_problem(
     problem,
     t=1,
     flip=True,
     atol=1e-8,
     rtol=1e-8,
-    infeasible_energy=0.0,
-    omit_infeasible_states=False,
-    global_phase=None,
 ):
     """
     Exact check that the problem's circuit represents the problem's energy function.
     This test checks that the unitary operator represented by the quantum circuit is
     equal to the expected matrix with diagonal elements 
     exp(-j*t*energy(e)),
-    where e is the corresponding binary state, up to a global phase.
-
-    For infeasible states, a fixed placeholder energy can be used
-    (infeasible_energy), and these states can optionally be omitted
-    from the phase comparison by setting omit_infeasible_states=True.
+    where e is the corresponding feasible binary state, up to a global phase.
     
     Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).
     Returns: (ok: bool, report: dict)
     """
-    if global_phase is not None:
-        warnings.warn(
-            "global_phase was historically used as the placeholder energy for "
-            "infeasible states and is deprecated; use infeasible_energy instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if not np.isclose(infeasible_energy, 0.0):
-            raise ValueError(
-                "Use either infeasible_energy or global_phase, not both."
-            )
-        infeasible_energy = global_phase
 
     paramed_circ = problem.circuit
     circ = paramed_circ.assign_parameters(
@@ -65,18 +39,14 @@ def check_phase_separator_exact_problem(
     n = circ.num_qubits
     d = 2**n
     # Compare diagonal phases to expected, modulo a global phase
-    # expected diag entries
+    # expected diag entries for feasible states
     energies = np.zeros(d, dtype=float)
-    mask = np.ones(d, dtype=bool)
+    mask = np.zeros(d, dtype=bool)
     for i in range(d):
-        energy, include_state = _validation_energy(
-            problem,
-            _bitstring(i, n, flip=flip),
-            infeasible_energy=infeasible_energy,
-            omit_infeasible_states=omit_infeasible_states,
-        )
-        energies[i] = energy
-        mask[i] = include_state
+        bitstring = _bitstring(i, n, flip=flip)
+        if problem.isFeasible(bitstring):
+            energies[i] = problem.energy(bitstring)
+            mask[i] = True
     expected = np.exp(-1j * t * energies)
     
 

@@ -252,24 +252,14 @@ class MaxFeasibleOnlyToyProblem(Problem):
 
 
 class TestValidateInfeasibleStates(unittest.TestCase):
-    def test_omit_infeasible_states(self):
+    def test_checks_feasible_states_only(self):
         problem = MaxFeasibleOnlyToyProblem()
         problem.create_circuit()
         with self.assertRaises(ValueError):
             problem.energy("1")
 
-        ok_omit, report_omit = check_phase_separator_exact_problem(
-            problem, omit_infeasible_states=True
-        )
-        self.assertTrue(ok_omit, f"Expected pass when omitting infeasible states: {report_omit}")
-
-        ok_all, report_all = check_phase_separator_exact_problem(
-            problem, omit_infeasible_states=False
-        )
-        self.assertFalse(
-            ok_all,
-            f"Expected failure when infeasible states are included: {report_all}",
-        )
+        ok, report = check_phase_separator_exact_problem(problem)
+        self.assertTrue(ok, f"Expected pass when validating feasible states only: {report}")
 
 
 if __name__ == "__main__":
