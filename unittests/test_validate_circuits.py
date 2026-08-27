@@ -2,8 +2,12 @@ import unittest
 import os
 import numpy as np
 import networkx as nx
+from qiskit import QuantumCircuit, QuantumRegister
+from qiskit.circuit import Parameter
 
 from qaoa import QAOA, problems, mixers, initialstates
+from qaoa.problems.base_problem import ObjectiveSense, Problem
+from qaoa.utils.validation import check_phase_separator_exact_problem
 
 
 class TestValidateMaxCut(unittest.TestCase):
@@ -221,6 +225,41 @@ class TestValidatePortfolioOptimization(unittest.TestCase):
         )
         ok, report = qaoa_inst.validate_circuit()
         self.assertTrue(ok, f"PortOpt Grover failed: {report}")
+
+
+class MaxFeasibleOnlyToyProblem(Problem):
+    def __init__(self):
+        super().__init__(objective_sense=ObjectiveSense.MAXIMIZE)
+        self.N_qubits = 1
+
+    def objective_value(self, string):
+        return 2.0
+
+    def energy(self, string):
+        if string == "1":
+            raise ValueError("energy must not be evaluated for infeasible states")
+        return super().energy(string)
+
+    def isFeasible(self, string):
+        return string == "0"
+
+    def create_circuit(self):
+        q = QuantumRegister(1)
+        gamma = Parameter("x_gamma")
+        self.circuit = QuantumCircuit(q)
+        self.circuit.global_phase = 2 * gamma
+        self.circuit.p(0.7 * gamma, q[0])
+
+
+class TestValidateFeasibleStatesOnly(unittest.TestCase):
+    def test_checks_feasible_states_only(self):
+        problem = MaxFeasibleOnlyToyProblem()
+        problem.create_circuit()
+        with self.assertRaises(ValueError):
+            problem.energy("1")
+
+        ok, report = check_phase_separator_exact_problem(problem)
+        self.assertTrue(ok, f"Expected pass when validating feasible states only: {report}")
 
 
 if __name__ == "__main__":

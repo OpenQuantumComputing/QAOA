@@ -1,4 +1,3 @@
-from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
 
 import numpy as np
@@ -13,13 +12,19 @@ def _bitstring(i, n, flip=False):
 def check_phase_separator_exact_qaoa(qaoa, *arg, **kwarg):
     return check_phase_separator_exact_problem(qaoa.problem, *arg, **kwarg)
 
-def check_phase_separator_exact_problem(problem, t=1, flip=True, atol=1e-8, rtol=1e-8):
+def check_phase_separator_exact_problem(
+    problem,
+    t=1,
+    flip=True,
+    atol=1e-8,
+    rtol=1e-8,
+):
     """
     Exact check that the problem's circuit represents the problem's energy function.
-    This tests checks that the unitary operator represented by the quantum circuit is
+    This test checks that the unitary operator represented by the quantum circuit is
     equal to the expected matrix with diagonal elements 
     exp(-j*t*energy(e)),
-    where e is the corresponding binary state, up to a global phase.
+    where e is the corresponding feasible binary state, up to a global phase.
     
     Suitable for <= 10 qubits as this check uses the full unitary matrix of size 2^n x 2^n).
     Returns: (ok: bool, report: dict)
@@ -30,31 +35,35 @@ def check_phase_separator_exact_problem(problem, t=1, flip=True, atol=1e-8, rtol
         {problem.circuit.parameters[0]: t},
         inplace = False
     )
-    energy_fn = problem.energy
-
     U = Operator(circ).data  # complex ndarray
     n = circ.num_qubits
     d = 2**n
     # Compare diagonal phases to expected, modulo a global phase
-    # expected diag entries
-    energies = []
+    # expected diag entries for feasible states
+    energies = np.zeros(d, dtype=float)
+    mask = np.zeros(d, dtype=bool)
     for i in range(d):
-        energies.append(energy_fn(_bitstring(i, n, flip=flip)))
-    expected = np.exp(-1j * t * np.asarray(energies, dtype=float))
+        bitstring = _bitstring(i, n, flip=flip)
+        if problem.isFeasible(bitstring):
+            energies[i] = problem.energy(bitstring)
+            mask[i] = True
+    expected = np.exp(-1j * t * energies)
     
 
     diag = np.diag(U)
-    # if n < 4: 
-    #     for i in range(d):
-    #         print(expected[i]* diag[0], diag[i])
+    if not np.any(mask):
+        return False, {"n_qubits": n, "error": "No states selected for validation."}
+
     # Remove global phase by aligning first nonzero expected
-    ref_idx = 0
+    ref_idx = int(np.flatnonzero(mask)[0])
     g = diag[ref_idx] / expected[ref_idx]  # global phase factor
     ratios = diag / (expected * g)
 
     # Errors
-    mag_err = np.max(np.abs(np.abs(diag) - 1.0))
-    phase_err = np.max(np.abs(np.angle(ratios)))  # max residual phase after removing global
+    mag_err = np.max(np.abs(np.abs(diag[mask]) - 1.0))
+    phase_err = np.max(
+        np.abs(np.angle(ratios[mask]))
+    )  # max residual phase after removing global
     ok = (mag_err <= rtol) and (phase_err <= atol)
 
     report = {
@@ -65,7 +74,7 @@ def check_phase_separator_exact_problem(problem, t=1, flip=True, atol=1e-8, rtol
     }
     if not ok:
         # include a few worst offenders
-        idx_sorted = np.argsort(-np.abs(np.angle(ratios)))
+        idx_sorted = np.flatnonzero(mask)[np.argsort(-np.abs(np.angle(ratios[mask])))]
         bad = []
         for k in idx_sorted[:8]:
             bad.append({
