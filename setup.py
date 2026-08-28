@@ -31,5 +31,10 @@ setup(
             "build>=1.0.0",
             "pytest>=7.0.0",
         ],
+        # Mutually exclusive: install at most one of gpu-cu11 / gpu-cu12 (see qiskit-aer GPU
+        # docs). They replace CPU qiskit-aer; use a dedicated venv or pip uninstall
+        # qiskit-aer if both wheels appear.
+        "gpu-cu11": ["qiskit-aer-gpu-cu11>=0.17.0"],
+        "gpu-cu12": ["qiskit-aer-gpu>=0.17.0"],
     },
 )

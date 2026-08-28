@@ -359,18 +359,23 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
     return fig, axs
 
 
-def plot_optimalHitRatios(qaoa, optimal_solution, shots=1024, fig=None, label=None, style="", title=None, **kwargs):
+def plot_optimalHitRatios(qaoa, optimal_solution, shots=1024, fig=None, label=None, style="", title=None, decode=False, **kwargs):
     """Plot the hit ratio for the optimal solution as a function of depth.
 
     Args:
         qaoa (QAOA): A QAOA instance that has been optimized.
         optimal_solution (array-like): Binary array representing the optimal
-            solution (will be converted to a bitstring).
+            solution (will be converted to a bitstring). When ``decode=True``
+            and the problem uses encoded bitstrings (e.g. BucketExactCover),
+            pass the optimal in decoded (one-hot) format.
         shots (int): Number of shots for sampling.
         fig (matplotlib.figure.Figure, optional): Existing figure to draw on.
         label (str, optional): Legend label.
         style (str): Matplotlib line-style string.
         title (str, optional): Plot title.
+        decode (bool): If True, apply the problem's histogram preprocessing
+            (e.g. decode encoded bitstrings to one-hot for BucketExactCover).
+            Default False.
 
     Returns:
         tuple: ``(fig, ax)``.
@@ -379,6 +384,8 @@ def plot_optimalHitRatios(qaoa, optimal_solution, shots=1024, fig=None, label=No
     hit_rates = np.zeros(qaoa.current_depth)
     for d in range(qaoa.current_depth):
         hist = qaoa.hist(qaoa.optimization_results[d + 1].get_best_angles(), shots)
+        if decode:
+            hist = qaoa.problem.preprocess_histogram(hist)
         if optimal_sol in hist:
             num_hits = hist[optimal_sol]
             hit_rates[d] = num_hits / shots
@@ -483,14 +490,19 @@ def printBestHistogramEntries(qaoa, classical_solution=None, num_solutions=10, s
             print(str(best_i) + "\t" + toprint + str(best_sol) + ", " + str(best_cost) + ",   " + str(best_freq) + "<-- Best obtained solution")
 
 
-def plotHitProbabilities(qaoa, opt_sol, depth=None, hist_shots=2**13, **kwargs):
+def plotHitProbabilities(qaoa, opt_sol, depth=None, hist_shots=2**13, decode=False, **kwargs):
     """Plot hit probability for the optimal solution (delegates to :func:`plotHitProbabilities_fromHist`).
 
     Args:
         qaoa (QAOA): A QAOA instance that has been optimized.
-        opt_sol (str): Optimal solution bitstring.
+        opt_sol (str): Optimal solution bitstring. When ``decode=True`` and the
+            problem uses encoded bitstrings (e.g. BucketExactCover), pass the
+            optimal in decoded (one-hot) format.
         depth (int, optional): Depth to use; defaults to ``qaoa.current_depth``.
         hist_shots (int): Number of shots for sampling.
+        decode (bool): If True, apply the problem's histogram preprocessing
+            (e.g. decode encoded bitstrings to one-hot for BucketExactCover).
+            Default False.
         **kwargs: Forwarded to :func:`plotHitProbabilities_fromHist`.
 
     Returns:
@@ -499,6 +511,8 @@ def plotHitProbabilities(qaoa, opt_sol, depth=None, hist_shots=2**13, **kwargs):
     if depth is None:
         depth = qaoa.current_depth
     hist = qaoa.hist(qaoa.get_angles(depth), hist_shots)
+    if decode:
+        hist = qaoa.problem.preprocess_histogram(hist)
 
     return plotHitProbabilities_fromHist(hist, opt_sol, **kwargs)
 

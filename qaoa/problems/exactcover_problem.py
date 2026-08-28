@@ -164,14 +164,18 @@ class ExactCover(QUBO):
         opt_val = -np.inf
         opt_sol = None
         num_feasible = 0
+        feasible_costs = []
 
         for bs in bitstrings_generator(self.N_qubits, self.hamming_weight):
             cost = self.cost(bs)
             if cost > opt_val:
                 opt_val = cost
                 opt_sol = bs
-            num_feasible += self.isFeasible(bs)
+            if self.isFeasible(bs):
+                num_feasible += 1
+                feasible_costs.append(cost)
         
         if return_num_feasible:
-            return opt_sol, num_feasible
+            num_optimal = feasible_costs.count(opt_val)
+            return opt_sol, num_feasible, num_optimal
         return opt_sol

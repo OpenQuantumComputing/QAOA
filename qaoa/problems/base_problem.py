@@ -147,3 +147,23 @@ class Problem(BaseProblem):
         if self.circuit is None:
             self.create_circuit()
         return validation.check_phase_separator_exact_problem(self, t=t, flip=flip, atol=atol, rtol=rtol)
+
+
+    def preprocess_histogram(self, hist: dict) -> dict:
+        """
+        Optionally transform a measurement histogram before plotting or analysis.
+
+        Subclasses that use encoded bitstrings (e.g. binary-encoded formulations
+        with modular wrapping as in BucketExactCover) may override this to decode 
+        keys into a canonical format and combine counts for equivalent solutions. 
+        The default implementation returns the histogram unchanged.
+
+        Args:
+            hist (dict): Raw histogram mapping bitstrings to hit counts.
+
+        Returns:
+            dict: Histogram with keys in the format used for plotting and
+                comparison. For problems without encoding, returns ``hist``
+                unchanged.
+        """
+        return hist
