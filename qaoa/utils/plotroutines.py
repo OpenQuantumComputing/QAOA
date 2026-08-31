@@ -87,8 +87,8 @@ def _plot_landscape(A, extent, fig=None, title=None):
         tuple: ``(fig, ax)`` – the figure and axes objects.
     """
     fig, ax = _get_fig_ax(fig, figsize=(6, 6), dpi=80, facecolor="w", edgecolor="k")
-    ax.set_xlabel(r"$\gamma$")
-    ax.set_ylabel(r"$\beta$")
+    ax.set_xlabel(r"$H_{\text{problem}} \sim \gamma$")
+    ax.set_ylabel(r"$H_{\text{mixer}} \sim \beta$")
     ax.set_title(title if title else "Expectation value")
     im = ax.imshow(A, interpolation="bicubic", origin="lower", extent=extent)
     divider = make_axes_locatable(ax)
@@ -267,13 +267,13 @@ def plot_angles(qaoa_instance, depth, label, style="", fig=None):
         np.arange(1, depth + 1),
         angles[::2],
         "--" + style,
-        label=r"$\gamma$ " + label,
+        label=r"$H_{\text{problem}} \sim \gamma$ " + label,
     )
     ax.plot(
         np.arange(1, depth + 1),
         angles[1::2],
         "-" + style,
-        label=r"$\beta$ " + label,
+        label=r"$H_{\text{mixer}} \sim \beta$ " + label,
     )
     ax.set_xlim(1 - 0.25, depth + 0.25)
     ax.set_ylabel("parameter")
@@ -351,14 +351,14 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
     for p in range(1, maxdepth + 1):
         labelsLeft.append("p = " + str(p))
         axs[0].plot(np.arange(1, p + 1), qaoa.get_gamma(p), label=labelsLeft[-1], linestyle="-", marker="o")
-    axs[0].set_ylabel(r"$\gamma_j$")
+    axs[0].set_ylabel(r"$H_{\text{problem}} \sim \gamma_j$")
     axs[0].grid()
 
     axs[1] = plt.subplot(2, 2, 3)
     for p in range(1, maxdepth + 1):
         axs[1].plot(np.arange(1, p + 1), qaoa.get_beta(p), linestyle="-", marker="o")
     axs[1].grid()
-    axs[1].set_ylabel(r"$\beta_j$")
+    axs[1].set_ylabel(r"$H_{\text{mixer}} \sim \beta_j$")
     axs[1].set_xlabel("Parameter index, $j$")
 
     plt.xticks(np.arange(1, maxdepth + 1))
@@ -375,7 +375,7 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
         indexDevelopment = [allGammas[i][p - 1] for i in range(p - 1, maxdepth)]
         labelsRight.append("j = " + str(p))
         axs[2].plot(np.arange(p, maxdepth + 1), indexDevelopment, label=labelsRight[-1], linestyle="-", marker="o")
-    axs[2].set_ylabel(r"$\gamma_j$")
+    axs[2].set_ylabel(r"$H_{\text{problem}} \sim \gamma_j$")
     axs[2].grid()
 
     axs[3] = plt.subplot(2, 2, 4)
@@ -383,7 +383,7 @@ def plot_AllOptimalParameters(qaoa, figsize=(14, 6), title=None):
         indexDevelopment = [allBetas[i][p - 1] for i in range(p - 1, maxdepth)]
         axs[3].plot(np.arange(p, maxdepth + 1), indexDevelopment, label=labelsRight[-1], linestyle="-", marker="o")
     axs[3].grid()
-    axs[3].set_ylabel(r"$\beta_j$")
+    axs[3].set_ylabel(r"$H_{\text{mixer}} \sim \beta_j$")
     axs[3].set_xlabel("Circuit depth, $p$")
 
     plt.xticks(np.arange(1, maxdepth + 1))
