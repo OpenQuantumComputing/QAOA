@@ -805,7 +805,6 @@ class QAOA:
             else:
                 best_energy = np.inf
                 angles0 = candidates[0]
-                n_total = n_init + target_depth * n_per_layer
                 self.createParameterizedCircuit(target_depth)
                 for c in candidates:
                     e = self._eval_energy(c)

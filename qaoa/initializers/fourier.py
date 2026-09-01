@@ -80,7 +80,7 @@ class Fourier(Initializer):
 
         init_part = [0.0] * qaoa.n_init
         layer_part = []
-        for l in range(depth):
-            layer_part += [gammas[l], betas[l]]
+        for layer in range(depth):
+            layer_part += [gammas[layer], betas[layer]]
 
         return [np.array(init_part + layer_part)]

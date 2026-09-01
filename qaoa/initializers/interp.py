@@ -31,7 +31,8 @@ class Interp(Initializer):
 
     def get_candidates(self, qaoa, depth: int) -> list:
         """
-        Return one candidate obtained by interpolating depth-1 angles.
+        Return one candidate obtained by interpolating the previous depth's
+        optimised angles.
 
         At depth 1 a grid search is always performed first (same as
         ``LayerGrid``) to obtain a meaningful starting point.

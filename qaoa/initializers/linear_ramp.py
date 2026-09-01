@@ -42,9 +42,9 @@ class LinearRamp(Initializer):
 
         init_part = [0.0] * n_init
         layer_part = []
-        for l in range(1, depth + 1):
-            gamma_val = l * t / depth
-            beta_val = (1.0 - l / depth) * t
+        for layer in range(1, depth + 1):
+            gamma_val = layer * t / depth
+            beta_val = (1.0 - layer / depth) * t
             layer_part += [gamma_val] * n_gamma + [beta_val] * n_beta
 
         return [np.array(init_part + layer_part)]
