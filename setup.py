@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="qaoa",
-    version="2.0.0",
+    version="2.1.0",
     license="GNU General Public License v3.0",
     author="Franz Georg Fuchs",
     author_email="franzgeorgfuchs@gmail.com",

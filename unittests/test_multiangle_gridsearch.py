@@ -3,7 +3,7 @@ import numpy as np
 import networkx as nx
 
 from qaoa import QAOA
-from qaoa import problems, mixers, initialstates
+from qaoa import problems, mixers, initialstates, initializers
 from qiskit_aer import AerSimulator
 
 
@@ -106,7 +106,7 @@ class TestMultiAngleGridSearch(unittest.TestCase):
 
     def test_layer_grid_search_depth2(self):
         """
-        Layer-by-layer grid search (interpolate=False) at depth 2 should:
+        Layer-by-layer grid search (LayerGrid initializer) at depth 2 should:
           1. Complete without error.
           2. Store results at depth 2.
           3. Yield energy(2) ≤ energy(1) (monotonic) because the grid includes (0,0).
@@ -120,7 +120,7 @@ class TestMultiAngleGridSearch(unittest.TestCase):
             initialstates.Plus(),
             backend=self.backend,
             sequential=True,
-            interpolate=False,
+            initializer=initializers.LayerGrid(),
         )
 
         qaoa.optimize(depth=2, angles=self.angles)
@@ -144,7 +144,7 @@ class TestMultiAngleGridSearch(unittest.TestCase):
             initialstates.Plus(),
             backend=self.backend,
             sequential=True,
-            interpolate=False,
+            initializer=initializers.LayerGrid(),
         )
 
         qaoa.optimize(depth=2, angles=self.angles)

@@ -204,19 +204,37 @@ qaoa.sample_cost_landscape()
 Sampling high-dimensional target functions quickly becomes intractable for depth $p>1$. The library therefore **iteratively increases the depth**. At each depth a **local optimization** algorithm (e.g. COBYLA) finds a local minimum, using the following **initial guess**:
 
 - At depth $p=1$: parameters $(\gamma, \beta)$ are taken from the minimum of the sampled energy landscape.
-- At depth $p>1$: two strategies are available, controlled by the `interpolate` parameter:
+- At depth $p>1$: the configured **initializer** produces one or more candidate starting points; the best is passed to the local optimiser.
 
-  * **Interpolation** (`interpolate=True`, default): uses the [INTERP heuristic](https://arxiv.org/pdf/1812.01041.pdf) to produce a smooth initial guess by interpolating the optimal angles from depth $p-1$. Works well for vanilla QAOA.
+The initializer is set via the `initializer=` argument (from `qaoa.initializers`):
 
-  * **Layer-by-layer grid scan** (`interpolate=False`): the best angles from depth $p-1$ are *locked* and a 2-D grid search is performed over the new layer's parameters. Because the grid includes $(γ=0, β=0)$ — which adds an identity layer reproducing the depth-$(p-1)$ result — the initial energy at depth $p$ is guaranteed to be ≤ energy at depth $p-1$, ensuring a monotonically increasing approximation ratio. Recommended for multi-angle and orbit ansätze.
+| Initializer | Purpose | Monotonic | Extra evals |
+|---|---|---|---|
+| `Interp()` (default) | [INTERP heuristic](https://arxiv.org/pdf/1812.01041.pdf) – interpolate prev. angles | no | 0 |
+| `LayerGrid()` | 2-D grid search over new layer; always evaluates (γ=0, β=0) | **yes** | O(N²) |
+| `LinearRamp()` | Linear annealing schedule | no | 0 |
+| `TQA()` | Trotterised Quantum Annealing schedule | no | 0 |
+| `Random()` | Uniformly random angles (supports multistart) | no | 0 |
+| `FixedAngles(angles)` | User-supplied / transferred angles | no | 0 |
+| `Fourier(u, v)` | Fourier (u, v) parameterisation | no | 0 |
 
 ```python
-# Interpolation (default)
-qaoa = QAOA(..., interpolate=True)
+import numpy as np
+from qaoa import QAOA, initializers
+
+# INTERP heuristic (default)
+qaoa = QAOA(..., initializer=initializers.Interp())
 qaoa.optimize(depth=p)
 
-# Layer-by-layer grid scan
-qaoa = QAOA(..., interpolate=False)
+# Layer-by-layer grid scan (monotonic guarantee)
+qaoa = QAOA(..., initializer=initializers.LayerGrid(
+    gamma_values=[0, 2*np.pi, 20],
+    beta_values=[0, 2*np.pi, 20],
+))
+qaoa.optimize(depth=p)
+
+# Random multistart (5 candidates evaluated, best chosen)
+qaoa = QAOA(..., initializer=initializers.Random(seed=42, n_candidates=5))
 qaoa.optimize(depth=p)
 ```
 
