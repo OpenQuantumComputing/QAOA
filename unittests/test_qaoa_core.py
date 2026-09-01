@@ -273,7 +273,7 @@ class TestQAOAOrbitEndToEnd(unittest.TestCase):
 
     def test_orbit_optimize_depth2(self):
         from qaoa import QAOA
-        from qaoa import problems, mixers, initialstates
+        from qaoa import problems, mixers, initialstates, initializers
 
         G = nx.cycle_graph(4)  # C4: all nodes are in the same orbit
         problem = problems.MaxCutOrbit(G)
@@ -285,7 +285,7 @@ class TestQAOAOrbitEndToEnd(unittest.TestCase):
             initialstates.Plus(),
             backend=_make_backend(),
             shots=256,
-            interpolate=True,
+            initializer=initializers.Interp(),
         )
         qaoa.optimize(depth=2, angles=angles)
         self.assertEqual(qaoa.current_depth, 2)
