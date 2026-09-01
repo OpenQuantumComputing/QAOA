@@ -23,7 +23,16 @@ class Initializer(ABC):
          …]
 
     where the leading ``n_init`` values belong to the initial state.
+
+    Attributes:
+        monotone (bool): When ``True``, :meth:`QAOA.optimize` will enforce a
+            strict monotone guarantee after local optimisation: if the depth-p
+            result is worse than depth-(p-1), the optimizer falls back to the
+            zero-new-layer candidate (which is circuit-equivalent to depth p-1).
+            Only :class:`LayerGrid` sets this to ``True``.
     """
+
+    monotone: bool = False
 
     @abstractmethod
     def get_candidates(self, qaoa, depth: int) -> list:

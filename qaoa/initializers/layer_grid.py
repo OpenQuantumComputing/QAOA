@@ -57,6 +57,8 @@ class LayerGrid(Initializer):
     # Initializer protocol
     # ------------------------------------------------------------------
 
+    monotone: bool = True
+
     def get_candidates(self, qaoa, depth: int) -> list:
         """
         Return a single best candidate for *depth*.

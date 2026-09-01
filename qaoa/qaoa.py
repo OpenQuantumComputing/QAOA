@@ -101,6 +101,34 @@ class OptResult:
         self.BestSols.append(stat.get_min_sols())
         self.shots.append(shots)
 
+    def inject_zero_candidate(self, zero_angles, prev_result):
+        """Inject the zero-new-layer candidate as an additional iteration.
+
+        The depth-p circuit with all new-layer parameters set to zero is
+        circuit-equivalent to the depth-(p-1) circuit.  When the local
+        optimiser at depth p produces a result worse than depth p-1 (due to
+        shot noise), this method records the zero candidate using the *stored*
+        depth-(p-1) statistics.  This guarantees deterministic monotonicity
+        without additional circuit evaluations.
+
+        Args:
+            zero_angles (np.ndarray): Depth-p angle array with the new layer
+                set to zero (i.e. ``prev_best_angles + [0]*n_per_layer``).
+            prev_result (OptResult): The depth-(p-1) :class:`OptResult`.
+        """
+        idx = prev_result.best_energy_index
+        self.angles.append(zero_angles.copy())
+        self.energy_history.append(prev_result.get_best_energy())
+        self.objective_history.append(prev_result.get_best_objective())
+        self.Var.append(prev_result.get_best_Var())
+        self.best_energy_history.append(prev_result.best_energy_history[idx])
+        self.worst_energy_history.append(prev_result.worst_energy_history[idx])
+        self.best_objective.append(prev_result.best_objective[idx])
+        self.worst_objective.append(prev_result.worst_objective[idx])
+        self.BestSols.append(prev_result.BestSols[idx])
+        self.shots.append(prev_result.shots[idx])
+        self.compute_best_index()
+
     def compute_best_index(self):
         """
         Computes the index of the minimum expected energy.
@@ -829,10 +857,41 @@ class QAOA:
             self.samplecount_hists[self.current_depth + 1] = self.last_hist
 
             self.optimization_results[self.current_depth + 1].compute_best_index()
+
+            # Enforce the monotone guarantee for initializers that claim it
+            # (currently only LayerGrid).  With finite shots the local
+            # optimiser can wander from the zero-candidate starting point and
+            # produce a result worse than depth p-1.  When that happens we
+            # inject the zero-new-layer candidate — which is circuit-equivalent
+            # to depth p-1 — using the already-stored p-1 statistics, so no
+            # additional circuit evaluations are needed and monotonicity is
+            # guaranteed exactly.
+            if (
+                getattr(self.initializer, "monotone", False)
+                and target_depth > 1
+                and (
+                    self.optimization_results[target_depth].get_best_energy()
+                    > self.optimization_results[target_depth - 1].get_best_energy()
+                )
+            ):
+                zero_angles = np.concatenate(
+                    [self.get_angles(target_depth - 1), np.zeros(n_per_layer)]
+                )
+                self.optimization_results[target_depth].inject_zero_candidate(
+                    zero_angles,
+                    self.optimization_results[target_depth - 1],
+                )
+                LOG.info(
+                    f"Monotone fallback applied at depth {target_depth}: "
+                    f"result clipped to depth-{target_depth - 1} energy "
+                    f"({self.optimization_results[target_depth - 1].get_best_energy():.6f})",
+                    func=self.optimize.__name__,
+                )
+
             self.optimization_results[self.current_depth + 1].opt_time = time.perf_counter() - start_time
 
             LOG.info(
-                f"energy(depth { self.current_depth + 1}) = {res.fun}",
+                f"energy(depth { self.current_depth + 1}) = {self.optimization_results[self.current_depth + 1].get_best_energy()}",
                 func=self.optimize.__name__,
             )
 
