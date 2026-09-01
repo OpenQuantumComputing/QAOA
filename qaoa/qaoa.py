@@ -796,6 +796,10 @@ class QAOA:
             start_time = time.perf_counter()
             target_depth = self.current_depth + 1
 
+            # Build the circuit first so that self.n_gamma/n_beta/n_init are
+            # always correct before the initializer reads them.
+            self.createParameterizedCircuit(target_depth)
+
             # Ask the initializer for candidates.
             candidates = self.initializer.get_candidates(self, target_depth)
 
@@ -805,7 +809,6 @@ class QAOA:
             else:
                 best_energy = np.inf
                 angles0 = candidates[0]
-                self.createParameterizedCircuit(target_depth)
                 for c in candidates:
                     e = self._eval_energy(c)
                     if e < best_energy:
@@ -815,9 +818,11 @@ class QAOA:
             self.optimization_results[self.current_depth + 1] = OptResult(
                 self.current_depth + 1, self.problem
             )
-            # Create parameterized circuit at new depth
+            # Circuit is already built at target_depth; assert consistency.
             new_depth = int((len(angles0) - n_init) / n_per_layer)
-            self.createParameterizedCircuit(new_depth)
+            if new_depth != target_depth:
+                # Initializer returned wrong-length candidate; rebuild.
+                self.createParameterizedCircuit(new_depth)
 
             res = self.local_opt(angles0)
 
