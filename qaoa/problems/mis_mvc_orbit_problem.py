@@ -27,7 +27,7 @@ class MIS_MVC_Orbit(MIS_MVC_Problem):
             tuple(self.node_order[node] for node in orbit) for orbit in self.node_orbits
         )
         self.parameter_nodes = tuple(
-            self.node_order[min(orbit)] for orbit in self.node_orbits
+            self.node_order[orbit[0]] for orbit in self.node_orbits
         )
 
     def get_num_parameters(self):

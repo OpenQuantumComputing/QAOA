@@ -17,7 +17,7 @@ class VertexSubsetOrbitLXMixer(VertexSubsetLXMixer):
             tuple(self.node_order[node] for node in orbit) for orbit in self.node_orbits
         )
         self.parameter_nodes = tuple(
-            self.node_order[min(orbit)] for orbit in self.node_orbits
+            self.node_order[orbit[0]] for orbit in self.node_orbits
         )
 
         width = max(1, len(str(len(self.node_orbits) - 1)))

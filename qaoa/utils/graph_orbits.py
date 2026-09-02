@@ -10,6 +10,7 @@ def _orbit_partition(items, merge_fn):
 
     n_items = len(items)
     parent = list(range(n_items))
+    components = n_items
 
     def find(index):
         while parent[index] != index:
@@ -18,14 +19,18 @@ def _orbit_partition(items, merge_fn):
         return index
 
     def union(left, right):
+        nonlocal components
         root_left = find(left)
         root_right = find(right)
         if root_left != root_right:
             parent[root_left] = root_right
+            components -= 1
+            return True
+        return False
 
     for left, right in merge_fn():
         union(left, right)
-        if len({find(index) for index in range(n_items)}) == 1:
+        if components == 1:
             break
 
     groups_by_root = defaultdict(list)
