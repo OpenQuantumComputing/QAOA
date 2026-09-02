@@ -28,8 +28,9 @@ def _orbit_partition(items, merge_fn):
             return True
         return False
 
-    for left, right in merge_fn():
-        union(left, right)
+    for batch in merge_fn():
+        for left, right in batch:
+            union(left, right)
         if components == 1:
             break
 
@@ -57,8 +58,10 @@ def compute_node_orbits(graph, nodes=None):
 
     def merge_pairs():
         for automorphism in matcher.isomorphisms_iter():
-            for index, node in enumerate(nodes):
-                yield index, node_to_index[automorphism[node]]
+            yield tuple(
+                (index, node_to_index[automorphism[node]])
+                for index, node in enumerate(nodes)
+            )
 
     return _orbit_partition(nodes, merge_pairs)
 
@@ -81,8 +84,10 @@ def compute_edge_orbits(graph, edges=None):
 
     def merge_pairs():
         for automorphism in matcher.isomorphisms_iter():
-            for index, (u, v) in enumerate(edges):
-                yield index, edge_to_index[(automorphism[u], automorphism[v])]
+            yield tuple(
+                (index, edge_to_index[(automorphism[u], automorphism[v])])
+                for index, (u, v) in enumerate(edges)
+            )
 
     edge_orbits, edge_to_orbit = _orbit_partition(edges, merge_pairs)
     for u, v in edges:

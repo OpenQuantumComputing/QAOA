@@ -22,6 +22,8 @@ class MIS_MVC_Orbit(MIS_MVC_Problem):
             weights=np.ones(node_count, dtype=float),
             objective_sense=objective_sense,
         )
+        # ``self.G`` is the integer-labelled canonical graph from
+        # ``vertex_subset.canonical_graph``, so qubit indices and graph nodes match.
         self.orbit_qubits = tuple(range(self.N_qubits))
         self.node_orbits, self.node_to_orbit = compute_node_orbits(
             self.G, nodes=self.orbit_qubits
