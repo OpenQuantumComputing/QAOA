@@ -8,3 +8,4 @@ from .xy_tensor import XYTensor
 from .maxkcut_grover_mixer import MaxKCutGrover
 from .maxkcut_lx_mixer import MaxKCutLX
 from .vertex_subset_lx_mixer import VertexSubsetLXMixer
+from .vertex_subset_orbit_lx_mixer import VertexSubsetOrbitLXMixer

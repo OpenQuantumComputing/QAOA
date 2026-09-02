@@ -1,12 +1,10 @@
-from collections import defaultdict
-
 import networkx as nx
-from networkx.algorithms.isomorphism import GraphMatcher
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
 from .base_mixer import Mixer
 from qaoa.utils import GraphHandler
+from qaoa.utils.graph_orbits import compute_node_orbits
 
 
 class XOrbit(Mixer):
@@ -60,55 +58,7 @@ class XOrbit(Mixer):
             self.node_to_orbit: dict mapping each canonical node label to
                 its orbit index.
         """
-        G = self._canonical_G
-        # Use sorted node list so indices are stable
-        nodes: list = sorted(G.nodes())
-        n_nodes = len(nodes)
-
-        # --- Union-Find -----------------------------------------------
-        parent = list(range(n_nodes))
-
-        def find(x: int) -> int:
-            while parent[x] != x:
-                parent[x] = parent[parent[x]]
-                x = parent[x]
-            return x
-
-        def union(x: int, y: int) -> None:
-            rx, ry = find(x), find(y)
-            if rx != ry:
-                parent[rx] = ry
-
-        node_to_idx: dict[int, int] = {v: i for i, v in enumerate(nodes)}
-
-        # --- Enumerate automorphisms and union equivalent nodes --------
-        # Note: for graphs with large automorphism groups the enumeration can
-        # be expensive.  For typical QAOA problem graphs (tens of nodes) this
-        # is fast; for highly symmetric graphs (e.g. complete graphs) the
-        # number of automorphisms can be n! and you may want to limit
-        # iterations via early termination once all nodes are merged.
-        gm = GraphMatcher(G, G)
-        for auto in gm.isomorphisms_iter():
-            for idx, v in enumerate(nodes):
-                mapped_v = auto[v]
-                mapped_idx = node_to_idx[mapped_v]
-                union(idx, mapped_idx)
-            # Early exit: if all nodes are already in one orbit, stop
-            if len({find(i) for i in range(n_nodes)}) == 1:
-                break
-
-        # --- Group nodes by orbit root ---------------------------------
-        orbit_groups: dict[int, list] = defaultdict(list)
-        for idx in range(n_nodes):
-            orbit_groups[find(idx)].append(nodes[idx])
-
-        self.node_orbits: list[list] = list(orbit_groups.values())
-
-        # Build node → orbit index map
-        self.node_to_orbit: dict[int, int] = {}
-        for orbit_idx, orbit_nodes in enumerate(self.node_orbits):
-            for v in orbit_nodes:
-                self.node_to_orbit[v] = orbit_idx
+        self.node_orbits, self.node_to_orbit = compute_node_orbits(self._canonical_G)
 
     # ------------------------------------------------------------------
     # Overrides
