@@ -1,11 +1,9 @@
-from collections import defaultdict
-
 import networkx as nx
-from networkx.algorithms.isomorphism import GraphMatcher
 from qiskit import AncillaRegister, QuantumCircuit, QuantumRegister
 from qiskit.circuit import Parameter
 
 from .maxcut_problem import MaxCut
+from qaoa.utils.graph_orbits import compute_edge_orbits
 
 
 class MaxCutOrbit(MaxCut):
@@ -58,58 +56,7 @@ class MaxCutOrbit(MaxCut):
             self.edge_to_orbit: dict mapping each (directed) edge to its
                 orbit index.
         """
-        G = self.graph_handler.G  # relabelled graph used by the circuit
-        edges = list(G.edges())
-        n_edges = len(edges)
-
-        # --- Union-Find -----------------------------------------------
-        parent = list(range(n_edges))
-
-        def find(x: int) -> int:
-            while parent[x] != x:
-                parent[x] = parent[parent[x]]
-                x = parent[x]
-            return x
-
-        def union(x: int, y: int) -> None:
-            rx, ry = find(x), find(y)
-            if rx != ry:
-                parent[rx] = ry
-
-        # Build a fast edge -> index lookup (both orientations)
-        edge_to_idx: dict[tuple[int, int], int] = {}
-        for idx, (u, v) in enumerate(edges):
-            edge_to_idx[(u, v)] = idx
-            edge_to_idx[(v, u)] = idx
-
-        # --- Enumerate automorphisms and union equivalent edges --------
-        # Note: for graphs with large automorphism groups the enumeration can
-        # be expensive.  Early exit when all edges are already merged.
-        gm = GraphMatcher(G, G)
-        for auto in gm.isomorphisms_iter():
-            for idx, (u, v) in enumerate(edges):
-                mapped_u = auto[u]
-                mapped_v = auto[v]
-                mapped_idx = edge_to_idx.get((mapped_u, mapped_v))
-                if mapped_idx is not None:
-                    union(idx, mapped_idx)
-            # Early exit: stop once all edges are in a single orbit
-            if len({find(i) for i in range(n_edges)}) == 1:
-                break
-
-        # --- Group edges by orbit root ---------------------------------
-        orbit_groups: dict[int, list[tuple[int, int]]] = defaultdict(list)
-        for idx in range(n_edges):
-            orbit_groups[find(idx)].append(edges[idx])
-
-        self.edge_orbits: list[list[tuple[int, int]]] = list(orbit_groups.values())
-
-        # Build edge -> orbit index map (both orientations)
-        self.edge_to_orbit: dict[tuple[int, int], int] = {}
-        for orbit_idx, orbit_edges in enumerate(self.edge_orbits):
-            for u, v in orbit_edges:
-                self.edge_to_orbit[(u, v)] = orbit_idx
-                self.edge_to_orbit[(v, u)] = orbit_idx
+        self.edge_orbits, self.edge_to_orbit = compute_edge_orbits(self.graph_handler.G)
 
     # ------------------------------------------------------------------
     # Overrides
