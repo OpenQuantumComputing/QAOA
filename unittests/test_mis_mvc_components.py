@@ -7,8 +7,8 @@ import numpy as np
 from qiskit.quantum_info import Operator, Statevector
 
 from qaoa.initialstates import MIS_MVC_InitialState
-from qaoa.mixers import VertexSubsetLXMixer
-from qaoa.problems import MIS_MVC_Problem
+from qaoa.mixers import VertexSubsetLXMixer, VertexSubsetOrbitLXMixer
+from qaoa.problems import MIS_MVC_MultiAngle, MIS_MVC_Orbit, MIS_MVC_Problem
 
 
 def q0_first(index, num_qubits):
@@ -102,6 +102,84 @@ class TestProblem(unittest.TestCase):
         u_mvc = Operator(mvc.circuit.assign_parameters({gamma_mvc: 0.37})).data
 
         np.testing.assert_allclose(u_mvc, u_mis.conj(), atol=1e-10)
+
+    def test_multiangle_problem_reduces_to_shared_problem(self):
+        multiangle = MIS_MVC_MultiAngle(self.graph, problem_kind="mis")
+        multiangle.create_circuit()
+        shared = MIS_MVC_Problem(self.graph, problem_kind="mis")
+        shared.create_circuit()
+
+        t = 0.29
+        multiangle_bound = multiangle.circuit.assign_parameters(
+            {parameter: t for parameter in multiangle.circuit.parameters}
+        )
+        shared_gamma = next(iter(shared.circuit.parameters))
+        shared_bound = shared.circuit.assign_parameters({shared_gamma: t})
+
+        np.testing.assert_allclose(
+            Operator(multiangle_bound).data,
+            Operator(shared_bound).data,
+            atol=1e-10,
+        )
+
+
+class TestOrbitProblem(unittest.TestCase):
+    def setUp(self):
+        self.graph = nx.path_graph(4)
+
+    def test_orbit_computation_and_parameter_count(self):
+        for problem_kind in ("mis", "mvc"):
+            with self.subTest(problem_kind=problem_kind):
+                problem = MIS_MVC_Orbit(self.graph, problem_kind=problem_kind)
+                self.assertEqual(problem.get_num_parameters(), 2)
+                self.assertEqual(
+                    {frozenset(orbit) for orbit in problem.orbits},
+                    {frozenset((0, 3)), frozenset((1, 2))},
+                )
+
+    def test_phase_circuit_matches_energy(self):
+        for problem_kind in ("mis", "mvc"):
+            with self.subTest(problem_kind=problem_kind):
+                orbit_problem = MIS_MVC_Orbit(self.graph, problem_kind=problem_kind)
+                orbit_problem.create_circuit()
+                base_problem = MIS_MVC_Problem(self.graph, problem_kind=problem_kind)
+                base_problem.create_circuit()
+
+                t = 0.37
+                orbit_bound = orbit_problem.circuit.assign_parameters(
+                    {parameter: t for parameter in orbit_problem.circuit.parameters}
+                )
+                base_gamma = next(iter(base_problem.circuit.parameters))
+                base_bound = base_problem.circuit.assign_parameters({base_gamma: t})
+
+                np.testing.assert_allclose(
+                    Operator(orbit_bound).data,
+                    Operator(base_bound).data,
+                    atol=1e-10,
+                )
+
+    def test_symmetry_related_vertices_share_gamma_parameter(self):
+        problem = MIS_MVC_Orbit(self.graph, problem_kind="mis")
+        problem.create_circuit()
+
+        params_by_target = {
+            problem.circuit.find_bit(instruction.qubits[0]).index: str(
+                instruction.operation.params[0]
+            )
+            for instruction in problem.circuit.data
+        }
+        self.assertEqual(params_by_target[0], params_by_target[3])
+        self.assertEqual(params_by_target[1], params_by_target[2])
+        self.assertNotEqual(params_by_target[0], params_by_target[1])
+
+    def test_single_orbit_reduction(self):
+        graph = nx.complete_graph(4)
+        problem = MIS_MVC_Orbit(graph, problem_kind="mvc")
+        problem.create_circuit()
+
+        self.assertEqual(problem.get_num_parameters(), 1)
+        self.assertEqual(len(problem.circuit.parameters), 1)
+        self.assertEqual(problem.parameter_nodes, (0,))
 
 
 class TestInitialState(unittest.TestCase):
@@ -269,6 +347,54 @@ class TestLXMixer(unittest.TestCase):
                     problem_kind=problem_kind,
                 )
                 self.assert_preserves_feasibility(mixer, problem)
+
+
+class TestOrbitLXMixer(TestLXMixer):
+    def test_orbit_computation_and_parameter_count(self):
+        for problem_kind in ("mis", "mvc"):
+            with self.subTest(problem_kind=problem_kind):
+                mixer = VertexSubsetOrbitLXMixer(self.graph, problem_kind=problem_kind)
+                self.assertEqual(mixer.vertex_order, (1, 2, 0, 3))
+                self.assertEqual(mixer.get_num_parameters(), 2)
+                self.assertEqual(
+                    {frozenset(orbit) for orbit in mixer.orbits},
+                    {frozenset((0, 3)), frozenset((1, 2))},
+                )
+                self.assertEqual(mixer.parameter_nodes, (0, 1))
+                self.assertEqual(
+                    [parameter.name for parameter in mixer.mixer_params],
+                    ["x_beta_orbit_0", "x_beta_orbit_1"],
+                )
+
+    def test_orbit_mixers_preserve_feasibility(self):
+        for problem_kind in ("mis", "mvc"):
+            with self.subTest(problem_kind=problem_kind):
+                mixer = VertexSubsetOrbitLXMixer(self.graph, problem_kind=problem_kind)
+                problem = MIS_MVC_Problem(self.graph, problem_kind=problem_kind)
+                self.assert_preserves_feasibility(mixer, problem)
+
+    def test_symmetry_related_vertices_share_beta_parameter(self):
+        mixer = VertexSubsetOrbitLXMixer(self.graph, problem_kind="mis")
+        mixer.create_circuit()
+
+        params_by_target = {
+            mixer.circuit.find_bit(instruction.qubits[-1]).index: str(
+                instruction.operation.base_gate.params[0]
+            )
+            for instruction in mixer.circuit.data
+        }
+        self.assertEqual(params_by_target[0], params_by_target[3])
+        self.assertEqual(params_by_target[1], params_by_target[2])
+        self.assertNotEqual(params_by_target[0], params_by_target[1])
+
+    def test_single_orbit_reduction(self):
+        graph = nx.complete_graph(4)
+        mixer = VertexSubsetOrbitLXMixer(graph, problem_kind="mvc")
+        mixer.create_circuit()
+
+        self.assertEqual(mixer.get_num_parameters(), 1)
+        self.assertEqual(len(mixer.circuit.parameters), 1)
+        self.assertEqual(mixer.parameter_nodes, (0,))
 
 
 if __name__ == "__main__":

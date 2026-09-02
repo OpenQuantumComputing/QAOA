@@ -43,6 +43,9 @@ class VertexSubsetLXMixer(Mixer):
     def get_num_parameters(self):
         return self.N_qubits if self.multi_angle else 1
 
+    def _beta_for_target(self, rank, target):
+        return self.mixer_params[rank] if self.multi_angle else self.mixer_params[0]
+
     def create_circuit(self):
         if self.N_qubits != self.G.number_of_nodes():
             raise ValueError(
@@ -54,7 +57,7 @@ class VertexSubsetLXMixer(Mixer):
 
         for rank, target in enumerate(self.vertex_order):
             controls = sorted(self.G.neighbors(target))
-            beta = self.mixer_params[rank] if self.multi_angle else self.mixer_params[0]
+            beta = self._beta_for_target(rank, target)
             if not controls:
                 self.circuit.rx(-2 * beta, q[target])
                 continue
