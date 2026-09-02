@@ -12,7 +12,10 @@ class VertexSubsetOrbitLXMixer(VertexSubsetLXMixer):
 
     def __init__(self, graph, problem_kind, label=None):
         super().__init__(graph, problem_kind=problem_kind, multi_angle=False, label=label)
-        self.node_orbits, self.node_to_orbit = compute_node_orbits(self.G)
+        self.orbit_qubits = tuple(range(self.N_qubits))
+        self.node_orbits, self.node_to_orbit = compute_node_orbits(
+            self.G, nodes=self.orbit_qubits
+        )
         self.orbits = tuple(
             tuple(self.node_order[node] for node in orbit) for orbit in self.node_orbits
         )

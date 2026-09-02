@@ -22,7 +22,10 @@ class MIS_MVC_Orbit(MIS_MVC_Problem):
             weights=np.ones(node_count, dtype=float),
             objective_sense=objective_sense,
         )
-        self.node_orbits, self.node_to_orbit = compute_node_orbits(self.G)
+        self.orbit_qubits = tuple(range(self.N_qubits))
+        self.node_orbits, self.node_to_orbit = compute_node_orbits(
+            self.G, nodes=self.orbit_qubits
+        )
         self.orbits = tuple(
             tuple(self.node_order[node] for node in orbit) for orbit in self.node_orbits
         )
@@ -44,6 +47,6 @@ class MIS_MVC_Orbit(MIS_MVC_Problem):
         self.circuit = QuantumCircuit(q)
 
         direction = -1.0 if self.objective_sense is ObjectiveSense.MINIMIZE else 1.0
-        for node in range(self.N_qubits):
-            gamma = gamma_params[self.node_to_orbit[node]]
-            self.circuit.rz(direction * gamma, q[node])
+        for qubit in self.orbit_qubits:
+            gamma = gamma_params[self.node_to_orbit[qubit]]
+            self.circuit.rz(direction * gamma, q[qubit])
