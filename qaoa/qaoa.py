@@ -622,34 +622,36 @@ class QAOA:
 
         self.best_init_val = float(self.init_grid[0])
 
+        n_init_pts = len(self.init_grid)
+        n_beta_pts = angles["beta"][2]
+        n_gamma_pts = angles["gamma"][2]
+
         if self.backend.configuration().local:
+            self.createParameterizedCircuit(depth)
             if self.sequential:
-                best_energy_matrix = None
+                # Iterate over every (init, beta, gamma) triple sequentially.
+                # Shape of accumulators: (n_init_pts, n_beta_pts, n_gamma_pts)
+                all_exp = np.zeros((n_init_pts, n_beta_pts, n_gamma_pts))
+                all_var = np.zeros_like(all_exp)
+                all_max = np.zeros_like(all_exp)
+                all_min = np.zeros_like(all_exp)
 
-                self.createParameterizedCircuit(depth)
-                logger.info("Executing sample_cost_landscape")
-                for init_val in self.init_grid:
-                    expectations = []
-                    variances = []
-                    max_energies = []
-                    min_energies = []
-
-                    for b in range(angles["beta"][2]):
-                        for g in range(angles["gamma"][2]):
-                            gamma = self.gamma_grid[g]
-                            beta = self.beta_grid[b]
-                            # Vanilla (symmetric) subspace: all gamma/beta equal;
-                            # all init params equal to the current init_val.
+                logger.info(
+                    f"Executing sample_cost_landscape "
+                    f"(init×beta×gamma = {n_init_pts}×{n_beta_pts}×{n_gamma_pts})"
+                )
+                for i, init_val in enumerate(self.init_grid):
+                    for bi in range(n_beta_pts):
+                        for gi in range(n_gamma_pts):
                             angle_array = (
                                 [init_val] * self.n_init
-                                + [gamma] * self.n_gamma
-                                + [beta] * self.n_beta
+                                + [self.gamma_grid[gi]] * self.n_gamma
+                                + [self.beta_grid[bi]] * self.n_beta
                             )
                             params = self.getParametersToBind(
                                 angle_array, self.parametrized_circuit_depth, asList=False
                             )
                             bound_circuit = self.parameterized_circuit.assign_parameters(params)
-
                             job = self.backend.run(
                                 bound_circuit,
                                 noise_model=self.noisemodel,
@@ -657,51 +659,44 @@ class QAOA:
                                 optimization_level=0,
                                 memory=self.memory,
                             )
-
                             jres = job.result()
-                            counts_list = jres.get_counts()
-
+                            counts = jres.get_counts()
                             self.stat.reset()
-                            for string in counts_list:
-                                energy = self.problem.energy(string[::-1])
+                            for string in counts:
                                 self.stat.add_sample(
-                                    energy, counts_list[string], string[::-1]
+                                    self.problem.energy(string[::-1]),
+                                    counts[string],
+                                    string[::-1],
                                 )
+                            all_exp[i, bi, gi] = self.stat.get_CVaR()
+                            all_var[i, bi, gi] = self.stat.get_Variance()
+                            all_max[i, bi, gi] = self.stat.get_max()
+                            all_min[i, bi, gi] = self.stat.get_min()
 
-                            expectations.append(self.stat.get_CVaR())
-                            variances.append(self.stat.get_Variance())
-                            max_energies.append(self.stat.get_max())
-                            min_energies.append(self.stat.get_min())
+                    logger.info(
+                        f"init grid point {i + 1}/{n_init_pts} done "
+                        f"(init={init_val:.4f}, best slice min={all_exp[i].min():.4f})"
+                    )
 
-                    n_beta = angles["beta"][2]
-                    n_gamma = angles["gamma"][2]
-                    energy_matrix = np.array(expectations).reshape(n_beta, n_gamma)
-                    var_matrix = np.array(variances).reshape(n_beta, n_gamma)
-                    max_matrix = np.array(max_energies).reshape(n_beta, n_gamma)
-                    min_matrix = np.array(min_energies).reshape(n_beta, n_gamma)
-
-                    if best_energy_matrix is None or energy_matrix.min() < best_energy_matrix.min():
-                        best_energy_matrix = energy_matrix
-                        self.Var_sampled_p1 = var_matrix
-                        self.MaxEnergy_sampled_p1 = max_matrix
-                        self.MinEnergy_sampled_p1 = min_matrix
-                        self.best_init_val = float(init_val)
-
-                self.Energy_sampled_p1 = best_energy_matrix
+                # Pick the init slice with the lowest minimum energy.
+                best_i = int(np.argmin(all_exp.min(axis=(1, 2))))
+                self.best_init_val = float(self.init_grid[best_i])
+                self.Energy_sampled_p1 = all_exp[best_i]
+                self.Var_sampled_p1 = all_var[best_i]
+                self.MaxEnergy_sampled_p1 = all_max[best_i]
+                self.MinEnergy_sampled_p1 = all_min[best_i]
                 logger.info("Done measurement")
             else:
-                self.createParameterizedCircuit(depth)
-
-                best_energy_matrix = None
+                # Build ALL circuits in one flat list: iterate init → beta → gamma.
+                # Total circuits = n_init_pts × n_beta_pts × n_gamma_pts
+                bound_circuits = []
                 for init_val in self.init_grid:
-                    # Build a list of fully-bound circuits, one per grid point.
-                    bound_circuits = []
-                    for b in range(angles["beta"][2]):
-                        for g in range(angles["gamma"][2]):
+                    for bi in range(n_beta_pts):
+                        for gi in range(n_gamma_pts):
                             angle_array = (
                                 [init_val] * self.n_init
-                                + [self.gamma_grid[g]] * self.n_gamma
-                                + [self.beta_grid[b]] * self.n_beta
+                                + [self.gamma_grid[gi]] * self.n_gamma
+                                + [self.beta_grid[bi]] * self.n_beta
                             )
                             params = self.getParametersToBind(
                                 angle_array, self.parametrized_circuit_depth, asList=False
@@ -710,30 +705,57 @@ class QAOA:
                                 self.parameterized_circuit.assign_parameters(params)
                             )
 
-                    logger.info("Executing sample_cost_landscape")
-                    logger.info(f"circuits: {len(bound_circuits)}")
-                    job = self.backend.run(
-                        bound_circuits,
-                        noise_model=self.noisemodel,
-                        shots=self.shots,
-                        optimization_level=0,
-                        memory=self.memory,
-                    )
-                    logger.info("Done execute")
+                logger.info(
+                    f"Executing sample_cost_landscape — "
+                    f"{len(bound_circuits)} circuits "
+                    f"(init×beta×gamma = {n_init_pts}×{n_beta_pts}×{n_gamma_pts})"
+                )
+                job = self.backend.run(
+                    bound_circuits,
+                    noise_model=self.noisemodel,
+                    shots=self.shots,
+                    optimization_level=0,
+                    memory=self.memory,
+                )
+                logger.info("Done execute")
+
+                if n_init_pts == 1:
+                    # Single init point — delegate to measurementStatistics as before.
                     self.measurementStatistics(job)
                     logger.info("Done measurement")
+                else:
+                    # Multiple init points — extract the full 3-D tensor from results.
+                    jres = job.result()
+                    counts_all = jres.get_counts()
+                    flat_exp, flat_var, flat_max, flat_min = [], [], [], []
+                    for counts in counts_all:
+                        self.stat.reset()
+                        for string in counts:
+                            self.stat.add_sample(
+                                self.problem.energy(string[::-1]),
+                                counts[string],
+                                string[::-1],
+                            )
+                        flat_exp.append(self.stat.get_CVaR())
+                        flat_var.append(self.stat.get_Variance())
+                        flat_max.append(self.stat.get_max())
+                        flat_min.append(self.stat.get_min())
 
-                    if best_energy_matrix is None or self.Energy_sampled_p1.min() < best_energy_matrix.min():
-                        best_energy_matrix = self.Energy_sampled_p1.copy()
-                        best_var = self.Var_sampled_p1.copy()
-                        best_max = self.MaxEnergy_sampled_p1.copy()
-                        best_min = self.MinEnergy_sampled_p1.copy()
-                        self.best_init_val = float(init_val)
+                    all_exp = np.array(flat_exp).reshape(n_init_pts, n_beta_pts, n_gamma_pts)
+                    all_var = np.array(flat_var).reshape(n_init_pts, n_beta_pts, n_gamma_pts)
+                    all_max = np.array(flat_max).reshape(n_init_pts, n_beta_pts, n_gamma_pts)
+                    all_min = np.array(flat_min).reshape(n_init_pts, n_beta_pts, n_gamma_pts)
 
-                self.Energy_sampled_p1 = best_energy_matrix
-                self.Var_sampled_p1 = best_var
-                self.MaxEnergy_sampled_p1 = best_max
-                self.MinEnergy_sampled_p1 = best_min
+                    best_i = int(np.argmin(all_exp.min(axis=(1, 2))))
+                    self.best_init_val = float(self.init_grid[best_i])
+                    self.Energy_sampled_p1 = all_exp[best_i]
+                    self.Var_sampled_p1 = all_var[best_i]
+                    self.MaxEnergy_sampled_p1 = all_max[best_i]
+                    self.MinEnergy_sampled_p1 = all_min[best_i]
+                    logger.info(
+                        f"Done measurement — best init value: {self.best_init_val:.4f} "
+                        f"(index {best_i}/{n_init_pts - 1})"
+                    )
 
         else:
             raise NotImplementedError
