@@ -7,3 +7,4 @@ from .maxkcut_feasible_initialstate import MaxKCutFeasible
 from .tensor_initialstate import Tensor
 from .lessthank_initialstate import LessThanK
 from .mis_mvc_initialstate import MIS_MVC_InitialState
+from .mis_mvc_parameterized_initialstate import MIS_MVC_ParameterizedInitialState
