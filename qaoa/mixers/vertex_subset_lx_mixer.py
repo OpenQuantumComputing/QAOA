@@ -17,7 +17,7 @@ class VertexSubsetLXMixer(Mixer):
 
     problem_kind = None
 
-    def __init__(self, graph, problem_kind, multi_angle=True, label=None):
+    def __init__(self, graph, problem_kind, multi_angle=False, label=None):
         super().__init__(label=label)
         self.problem_kind = problem_kind
         if self.problem_kind not in ("mis", "mvc"):

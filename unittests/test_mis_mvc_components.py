@@ -6,9 +6,10 @@ import networkx as nx
 import numpy as np
 from qiskit.quantum_info import Operator, Statevector
 
-from qaoa.initialstates import MIS_MVC_InitialState
+from qaoa.initialstates import MIS_MVC_InitialState, MIS_MVC_ParameterizedInitialState
 from qaoa.mixers import VertexSubsetLXMixer, VertexSubsetOrbitLXMixer
 from qaoa.problems import MIS_MVC_MultiAngle, MIS_MVC_Orbit, MIS_MVC_Problem
+from qaoa.utils.vertex_subset import canonical_graph, degree_buckets, mis_mvc_warm_start_angle
 
 
 def q0_first(index, num_qubits):
@@ -395,6 +396,138 @@ class TestOrbitLXMixer(TestLXMixer):
         self.assertEqual(mixer.get_num_parameters(), 1)
         self.assertEqual(len(mixer.circuit.parameters), 1)
         self.assertEqual(mixer.parameter_nodes, (0,))
+
+
+class TestDegreeBuckets(unittest.TestCase):
+    def test_path_graph_buckets(self):
+        # path_graph(4): nodes 0,3 have degree 1; nodes 1,2 have degree 2
+        canonical, _ = canonical_graph(nx.path_graph(4))
+        buckets = degree_buckets(canonical)
+        self.assertEqual(buckets, [[0, 3], [1, 2]])
+
+    def test_complete_graph_single_bucket(self):
+        canonical, _ = canonical_graph(nx.complete_graph(4))
+        buckets = degree_buckets(canonical)
+        self.assertEqual(len(buckets), 1)
+        self.assertEqual(sorted(buckets[0]), [0, 1, 2, 3])
+
+
+class TestMisVcWarmStartAngle(unittest.TestCase):
+    def test_uniform_returns_scalar(self):
+        angle = mis_mvc_warm_start_angle(nx.path_graph(4), grouping="uniform")
+        self.assertIsInstance(angle, float)
+        self.assertGreater(angle, 0)
+        self.assertLess(angle, np.pi / 2)
+
+    def test_degree_returns_list(self):
+        angles = mis_mvc_warm_start_angle(nx.path_graph(4), grouping="degree")
+        self.assertEqual(len(angles), 2)  # two distinct degrees in path_graph(4)
+
+    def test_per_vertex_returns_list_of_length_n(self):
+        G = nx.path_graph(4)
+        angles = mis_mvc_warm_start_angle(G, grouping="per_vertex")
+        self.assertEqual(len(angles), G.number_of_nodes())
+
+    def test_isolated_vertex_defaults_to_pi_over_4(self):
+        G = nx.Graph()
+        G.add_node(0)
+        angle = mis_mvc_warm_start_angle(G, grouping="uniform")
+        self.assertAlmostEqual(angle, np.pi / 4)
+
+    def test_invalid_grouping_raises(self):
+        with self.assertRaises(ValueError):
+            mis_mvc_warm_start_angle(nx.path_graph(4), grouping="bad")
+
+
+class TestParameterizedInitialState(unittest.TestCase):
+    def setUp(self):
+        self.graph = nx.path_graph(4)
+
+    def _bound_statevector(self, initial_state, angle_val):
+        """Bind all parameters to *angle_val* and return the Statevector."""
+        initial_state.create_circuit()
+        bound = initial_state.circuit.assign_parameters(
+            {p: angle_val for p in initial_state.circuit.parameters}
+        )
+        return Statevector.from_instruction(bound)
+
+    def test_rejects_invalid_problem_kind(self):
+        with self.assertRaises(TypeError):
+            MIS_MVC_ParameterizedInitialState(self.graph, problem_kind="bad")
+
+    def test_rejects_invalid_grouping(self):
+        with self.assertRaises(ValueError):
+            MIS_MVC_ParameterizedInitialState(
+                self.graph, problem_kind="mis", grouping="bad"
+            )
+
+    def test_uniform_has_one_parameter(self):
+        init = MIS_MVC_ParameterizedInitialState(
+            self.graph, problem_kind="mis", grouping="uniform"
+        )
+        self.assertEqual(init.get_num_parameters(), 1)
+        init.create_circuit()
+        self.assertEqual(len(init.circuit.parameters), 1)
+
+    def test_degree_parameter_count(self):
+        # path_graph(4) has 2 distinct degrees
+        init = MIS_MVC_ParameterizedInitialState(
+            self.graph, problem_kind="mis", grouping="degree"
+        )
+        self.assertEqual(init.get_num_parameters(), 2)
+        init.create_circuit()
+        self.assertEqual(len(init.circuit.parameters), 2)
+
+    def test_per_vertex_parameter_count(self):
+        init = MIS_MVC_ParameterizedInitialState(
+            self.graph, problem_kind="mis", grouping="per_vertex"
+        )
+        self.assertEqual(init.get_num_parameters(), self.graph.number_of_nodes())
+
+    def test_rejects_incompatible_qubit_count(self):
+        init = MIS_MVC_ParameterizedInitialState(self.graph, problem_kind="mis")
+        with self.assertRaises(ValueError):
+            init.setNumQubits(5)
+
+    def test_mis_feasible_support_uniform(self):
+        problem = MIS_MVC_Problem(self.graph, problem_kind="mis")
+        init = MIS_MVC_ParameterizedInitialState(
+            self.graph, problem_kind="mis", grouping="uniform"
+        )
+        sv = self._bound_statevector(init, np.pi / 5)
+        for idx, amp in enumerate(sv.data):
+            bitstring = format(idx, f"0{problem.N_qubits}b")[::-1]
+            if not problem.isFeasible(bitstring):
+                self.assertAlmostEqual(abs(amp), 0.0)
+
+    def test_mvc_feasible_support_degree(self):
+        problem = MIS_MVC_Problem(self.graph, problem_kind="mvc")
+        init = MIS_MVC_ParameterizedInitialState(
+            self.graph, problem_kind="mvc", grouping="degree"
+        )
+        sv = self._bound_statevector(init, np.pi / 6)
+        for idx, amp in enumerate(sv.data):
+            bitstring = format(idx, f"0{problem.N_qubits}b")[::-1]
+            if not problem.isFeasible(bitstring):
+                self.assertAlmostEqual(abs(amp), 0.0)
+
+    def test_uniform_matches_fixed_angle_initialstate(self):
+        """When bound to angle θ, parameterized uniform == fixed-angle variant."""
+        theta = np.pi / 5
+        fixed = MIS_MVC_InitialState(
+            self.graph, problem_kind="mis", angle=theta, phase_correct=True
+        )
+        fixed.create_circuit()
+        sv_fixed = Statevector.from_instruction(fixed.circuit)
+
+        param_init = MIS_MVC_ParameterizedInitialState(
+            self.graph, problem_kind="mis", grouping="uniform", phase_correct=True
+        )
+        sv_param = self._bound_statevector(param_init, theta)
+
+        # Both circuits are identical in structure, so amplitudes (including
+        # phases) should match exactly, not just in absolute value.
+        np.testing.assert_allclose(sv_param.data, sv_fixed.data, atol=1e-10)
 
 
 if __name__ == "__main__":

@@ -314,6 +314,10 @@ class QAOA:
         self.shots = shots
         self.precision = precision
         self.stat = Statistic(cvar=cvar)
+        # A QAOA instance owns one problem, so energies of measured bitstrings
+        # are invariant for its lifetime.  Reuse them across optimisation and
+        # landscape jobs instead of recalculating the same objective values.
+        self._energy_cache = {}
         self.cvar = cvar
         self.memorysize = memorysize
         self.memory = self.memorysize > 0
@@ -338,6 +342,8 @@ class QAOA:
         self.MaxEnergy_sampled_p1 = None
         self.landscape_p1_angles = {}
         self.Var_sampled_p1 = None
+        self.init_grid = np.array([0.0])
+        self.best_init_val = 0.0
 
         self.optimization_results = {}
         self.memory_lists = []
@@ -473,8 +479,9 @@ class QAOA:
             depth (int): The depth p (number of alternating mixing and phase separating layers) of the QAOA circuit.
         """
         if self.parameterized_circuit_depth == depth:
-            LOG.info(
-                "Circuit is already of depth " + str(self.parameterized_circuit_depth)
+            LOG.debug(
+                "Reusing parameterized circuit",
+                depth=self.parameterized_circuit_depth,
             )
             return
 
@@ -549,7 +556,7 @@ class QAOA:
                 self.parameterized_circuit.barrier()
 
             if self.usebarrier:
-                self.circuit.barrier()
+                self.parameterized_circuit.barrier()
 
         self.parameterized_circuit.barrier()
         self.parameterized_circuit.measure(q, c)
@@ -557,7 +564,7 @@ class QAOA:
             self.parameterized_circuit, self.backend
             #basis_gates=['cx', 'u', 'p', 'cp', 'id', 'x', 'h', 'ry', 'cry', 'cu']
         )
-        self.parametrized_circuit_depth = depth
+        self.parameterized_circuit_depth = depth
 
     def sample_cost_landscape(
         self, angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]}
@@ -573,17 +580,26 @@ class QAOA:
         same landscape as vanilla QAOA, providing a valid warm-start for both single-
         and multi-angle ansätze.
 
+        When the initial state has variational parameters (``n_init > 0``) and the
+        ``angles`` dict contains an ``"init"`` key, the search is extended with an
+        outer loop over initial-state parameter values.  All init parameters are set
+        to the same value at each grid point (same philosophy as gamma/beta).  The
+        best (init, gamma, beta) triple is found and:
+
+        * ``Energy_sampled_p1`` stores the gamma×beta energy matrix at the best init
+          value (2-D, backward-compatible).
+        * ``best_init_val`` stores the scalar init value that achieved the global
+          minimum, so that :class:`~qaoa.initializers.Interp` can pick it up.
+
         **Sequential mode**: If `sequential` is set to True, CVaR, variance and
-        max/min energy are calculated sequentially for each (gamma, beta)
-        combination and stored in `Energy_sampled_p1`, `Var_sampled_p1`,
-        `MaxEnergy_sampled_p1`, and `MinEnergy_sampled_p1`.
+        max/min energy are calculated sequentially for each combination.
 
         **Batch mode**: If `sequential` is set to False, all parameter binds are
         prepared and a single batched job is submitted to the backend.
 
         Args:
-            angles (dict[str, list], optional): Grid specification for gamma and beta,
-                each as ``[start, stop, num]``.
+            angles (dict[str, list], optional): Grid specification for gamma and beta
+                (and optionally init), each as ``[start, stop, num]``.
                 Defaults to ``{"gamma": [0, 2π, 20], "beta": [0, 2π, 20]}``.
 
         Raises:
@@ -601,110 +617,171 @@ class QAOA:
         tmp = angles["beta"]
         self.beta_grid = np.linspace(tmp[0], tmp[1], tmp[2], endpoint=False)
 
+        # Build the init grid: a single value [0.0] when no init spec is given
+        # or n_init == 0, otherwise the user-supplied grid.
+        if "init" in angles and self.n_init > 0:
+            tmp = angles["init"]
+            self.init_grid = np.linspace(tmp[0], tmp[1], tmp[2], endpoint=False)
+        else:
+            self.init_grid = np.array([0.0])
+
+        self.best_init_val = float(self.init_grid[0])
+
+        n_init_pts = len(self.init_grid)
+        n_beta_pts = angles["beta"][2]
+        n_gamma_pts = angles["gamma"][2]
+
         if self.backend.configuration().local:
+            self.createParameterizedCircuit(depth)
             if self.sequential:
-                expectations = []
-                variances = []
-                max_energies = []
-                min_energies = []
+                # Iterate over every (init, beta, gamma) triple sequentially.
+                # Shape of accumulators: (n_init_pts, n_beta_pts, n_gamma_pts)
+                all_exp = np.zeros((n_init_pts, n_beta_pts, n_gamma_pts))
+                all_var = np.zeros_like(all_exp)
+                all_max = np.zeros_like(all_exp)
+                all_min = np.zeros_like(all_exp)
 
-                self.createParameterizedCircuit(depth)
-                logger.info("Executing sample_cost_landscape")
-                for b in range(angles["beta"][2]):
-                    for g in range(angles["gamma"][2]):
-                        gamma = self.gamma_grid[g]
-                        beta = self.beta_grid[b]
-                        # Build angle array in the symmetric (vanilla) subspace: all
-                        # gamma parameters equal to the grid value and all beta
-                        # parameters equal to the grid value.  This ensures the grid
-                        # search explores the vanilla subspace so the best grid point
-                        # is a valid warm-start for both vanilla and multi-angle ansätze.
-                        angle_array = (
-                            [0.0] * self.n_init
-                            + [gamma] * self.n_gamma
-                            + [beta] * self.n_beta
-                        )
-                        params = self.getParametersToBind(
-                            angle_array, self.parametrized_circuit_depth, asList=False
-                        )
-                        bound_circuit = self.parameterized_circuit.assign_parameters(params)
-
-                        job = self.backend.run(
-                            bound_circuit,
-                            noise_model=self.noisemodel,
-                            shots=self.shots,
-                            optimization_level=0,
-                            memory=self.memory,
-                        )
-
-                        jres = job.result()
-                        counts_list = jres.get_counts()
-
-                        self.stat.reset()
-                        for string in counts_list:
-                            # qiskit binary strings use little endian encoding, but our energy function expects big endian encoding. Therefore, we reverse the order
-                            energy = self.problem.energy(string[::-1])
-                            self.stat.add_sample(
-                                energy, counts_list[string], string[::-1]
+                logger.info(
+                    f"Executing sample_cost_landscape "
+                    f"(init×beta×gamma = {n_init_pts}×{n_beta_pts}×{n_gamma_pts})"
+                )
+                for i, init_val in enumerate(self.init_grid):
+                    for bi in range(n_beta_pts):
+                        for gi in range(n_gamma_pts):
+                            angle_array = (
+                                [init_val] * self.n_init
+                                + [self.gamma_grid[gi]] * self.n_gamma
+                                + [self.beta_grid[bi]] * self.n_beta
                             )
+                            params = self.getParametersToBind(
+                                angle_array, self.parameterized_circuit_depth, asList=False
+                            )
+                            bound_circuit = self.parameterized_circuit.assign_parameters(params)
+                            job = self.backend.run(
+                                bound_circuit,
+                                noise_model=self.noisemodel,
+                                shots=self.shots,
+                                optimization_level=1,
+                                memory=self.memory,
+                            )
+                            jres = job.result()
+                            counts = jres.get_counts()
+                            self.stat.reset()
+                            self._add_counts_to_stat(counts)
+                            all_exp[i, bi, gi] = self.stat.get_CVaR()
+                            all_var[i, bi, gi] = self.stat.get_Variance()
+                            all_max[i, bi, gi] = self.stat.get_max()
+                            all_min[i, bi, gi] = self.stat.get_min()
 
-                        expectations.append(self.stat.get_CVaR())
-                        variances.append(self.stat.get_Variance())
-                        max_energies.append(self.stat.get_max())
-                        min_energies.append(self.stat.get_min())
+                    logger.info(
+                        f"init grid point {i + 1}/{n_init_pts} done "
+                        f"(init={init_val:.4f}, best slice min={all_exp[i].min():.4f})"
+                    )
 
-                angles = self.landscape_p1_angles
-                self.Energy_sampled_p1 = np.array(expectations).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                )
-                self.Var_sampled_p1 = np.array(variances).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                )
-                self.MaxEnergy_sampled_p1 = np.array(max_energies).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                )
-                self.MinEnergy_sampled_p1 = np.array(min_energies).reshape(
-                    angles["beta"][2], angles["gamma"][2]
-                )
+                # Pick the init slice with the lowest minimum energy.
+                best_i = int(np.argmin(all_exp.min(axis=(1, 2))))
+                self.best_init_val = float(self.init_grid[best_i])
+                self.Energy_sampled_p1 = all_exp[best_i]
+                self.Var_sampled_p1 = all_var[best_i]
+                self.MaxEnergy_sampled_p1 = all_max[best_i]
+                self.MinEnergy_sampled_p1 = all_min[best_i]
                 logger.info("Done measurement")
             else:
-                self.createParameterizedCircuit(depth)
-
-                # Build a list of fully-bound circuits, one per grid point.
-                # Each circuit lives in the vanilla (symmetric) subspace: all
-                # gamma parameters equal and all beta parameters equal.
+                # Build ALL circuits in one flat list: iterate init → beta → gamma.
+                # Total circuits = n_init_pts × n_beta_pts × n_gamma_pts
                 bound_circuits = []
-                for b in range(angles["beta"][2]):
-                    for g in range(angles["gamma"][2]):
-                        angle_array = (
-                            [0.0] * self.n_init
-                            + [self.gamma_grid[g]] * self.n_gamma
-                            + [self.beta_grid[b]] * self.n_beta
-                        )
-                        params = self.getParametersToBind(
-                            angle_array, self.parametrized_circuit_depth, asList=False
-                        )
-                        bound_circuits.append(
-                            self.parameterized_circuit.assign_parameters(params)
-                        )
+                for init_val in self.init_grid:
+                    for bi in range(n_beta_pts):
+                        for gi in range(n_gamma_pts):
+                            angle_array = (
+                                [init_val] * self.n_init
+                                + [self.gamma_grid[gi]] * self.n_gamma
+                                + [self.beta_grid[bi]] * self.n_beta
+                            )
+                            params = self.getParametersToBind(
+                                angle_array, self.parameterized_circuit_depth, asList=False
+                            )
+                            bound_circuits.append(
+                                self.parameterized_circuit.assign_parameters(params)
+                            )
 
-                logger.info("Executing sample_cost_landscape")
-                logger.info(f"circuits: {len(bound_circuits)}")
+                logger.info(
+                    f"Executing sample_cost_landscape — "
+                    f"{len(bound_circuits)} circuits "
+                    f"(init×beta×gamma = {n_init_pts}×{n_beta_pts}×{n_gamma_pts})"
+                )
+                backend_opts = {
+                    "max_parallel_experiments": 0,
+                    "max_parallel_shots": 1,
+                }
                 job = self.backend.run(
                     bound_circuits,
                     noise_model=self.noisemodel,
                     shots=self.shots,
-                    optimization_level=0,
+                    optimization_level=1,
                     memory=self.memory,
+                    **backend_opts,
                 )
                 logger.info("Done execute")
-                self.measurementStatistics(job)
-                logger.info("Done measurement")
+
+                if n_init_pts == 1:
+                    # Single init point - delegate to measurementStatistics as before.
+                    self.measurementStatistics(job)
+                    logger.info("Done measurement")
+                else:
+                    # Multiple init points — extract the full 3-D tensor from results.
+                    jres = job.result()
+                    counts_all = jres.get_counts()
+                    flat_exp, flat_var, flat_max, flat_min = [], [], [], []
+                    for counts in counts_all:
+                        self.stat.reset()
+                        self._add_counts_to_stat(counts)
+                        flat_exp.append(self.stat.get_CVaR())
+                        flat_var.append(self.stat.get_Variance())
+                        flat_max.append(self.stat.get_max())
+                        flat_min.append(self.stat.get_min())
+
+                    all_exp = np.array(flat_exp).reshape(n_init_pts, n_beta_pts, n_gamma_pts)
+                    all_var = np.array(flat_var).reshape(n_init_pts, n_beta_pts, n_gamma_pts)
+                    all_max = np.array(flat_max).reshape(n_init_pts, n_beta_pts, n_gamma_pts)
+                    all_min = np.array(flat_min).reshape(n_init_pts, n_beta_pts, n_gamma_pts)
+
+                    best_i = int(np.argmin(all_exp.min(axis=(1, 2))))
+                    self.best_init_val = float(self.init_grid[best_i])
+                    self.Energy_sampled_p1 = all_exp[best_i]
+                    self.Var_sampled_p1 = all_var[best_i]
+                    self.MaxEnergy_sampled_p1 = all_max[best_i]
+                    self.MinEnergy_sampled_p1 = all_min[best_i]
+                    logger.info(
+                        f"Done measurement — selected initial-state grid value: "
+                        f"{self.best_init_val:.4f} "
+                        f"(index {best_i}/{n_init_pts - 1})"
+                    )
 
         else:
             raise NotImplementedError
 
         logger.info("Calculating Energy landscape done")
+
+    def _measurement_energy(self, raw_bitstring):
+        """Return a problem-order bitstring and its cached energy."""
+        bitstring = raw_bitstring[::-1]
+        try:
+            return bitstring, self._energy_cache[bitstring]
+        except KeyError:
+            energy = self.problem.energy(bitstring)
+            self._energy_cache[bitstring] = energy
+            return bitstring, energy
+
+    def _add_counts_to_stat(self, counts):
+        """Add one Qiskit histogram to ``self.stat`` using cached energies."""
+        for raw_bitstring, count in counts.items():
+            bitstring, energy = self._measurement_energy(raw_bitstring)
+            self.stat.add_sample(energy, count, bitstring)
+
+    def clear_energy_cache(self):
+        """Clear cached energies after an in-place change to ``self.problem``."""
+        self._energy_cache.clear()
 
     def measurementStatistics(self, job):
         # """
@@ -738,14 +815,14 @@ class QAOA:
         if self.memorysize > 0:
             for i, _ in enumerate(jres.results):
                 memory_list = jres.get_memory(experiment=i)
-                if self.memorysize > 0:
-                    for measurement in memory_list:
-                        self.memory_lists.append(
-                            [measurement, self.problem.energy(measurement[::-1])]
-                        )
-                        self.memorysize -= 1
-                        if self.memorysize < 1:
-                            break
+                for measurement in memory_list:
+                    _, energy = self._measurement_energy(measurement)
+                    self.memory_lists.append([measurement, energy])
+                    self.memorysize -= 1
+                    if self.memorysize < 1:
+                        break
+                if self.memorysize < 1:
+                    break
 
         self.last_hist = counts_list
 
@@ -756,10 +833,7 @@ class QAOA:
             min_energies = []
             for i, counts in enumerate(counts_list):
                 self.stat.reset()
-                for string in counts:
-                    # qiskit binary strings use little endian encoding, but our energy function expects big endian encoding. Therefore, we reverse the order
-                    energy = self.problem.energy(string[::-1])
-                    self.stat.add_sample(energy, counts[string], string[::-1])
+                self._add_counts_to_stat(counts)
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
                 max_energies.append(self.stat.get_max())
@@ -778,10 +852,7 @@ class QAOA:
                 angles["beta"][2], angles["gamma"][2]
             )
         else:
-            for string in counts_list:
-                # qiskit binary strings use little endian encoding, but our energy function expects big endian encoding. Therefore, we reverse the order
-                energy = self.problem.energy(string[::-1])
-                self.stat.add_sample(energy, counts_list[string], string[::-1])
+            self._add_counts_to_stat(counts_list)
 
     def optimize(
         self,
@@ -964,14 +1035,14 @@ class QAOA:
         for i in range(3):  # this loop is used only used if precision is set
             if self.backend.configuration().local:
                 params = self.getParametersToBind(
-                    angles, self.parametrized_circuit_depth, asList=False
+                    angles, self.parameterized_circuit_depth, asList=False
                 )
                 bound_circuit = self.parameterized_circuit.assign_parameters(params)
                 job = self.backend.run(
                     bound_circuit,
                     noise_model=self.noisemodel,
                     shots=shots,
-                    optimization_level=0,
+                    optimization_level=1,
                     memory=self.memory,
                 )
             else:
@@ -1057,7 +1128,7 @@ class QAOA:
 
         Args:
             angle_array (np.ndarray): Flat parameter array whose length must
-                be consistent with the current ``parametrized_circuit_depth``.
+                be consistent with the current ``parameterized_circuit_depth``.
 
         Returns:
             float: Expected energy (CVaR), i.e. the value to minimise.
@@ -1068,22 +1139,20 @@ class QAOA:
         if not self.backend.configuration().local:
             raise NotImplementedError
         params = self.getParametersToBind(
-            angle_array, self.parametrized_circuit_depth, asList=False
+            angle_array, self.parameterized_circuit_depth, asList=False
         )
         bound_circuit = self.parameterized_circuit.assign_parameters(params)
         job = self.backend.run(
             bound_circuit,
             noise_model=self.noisemodel,
             shots=self.shots,
-            optimization_level=0,
+            optimization_level=1,
             memory=self.memory,
         )
         jres = job.result()
         counts = jres.get_counts()
         self.stat.reset()
-        for string in counts:
-            energy = self.problem.energy(string[::-1])
-            self.stat.add_sample(energy, counts[string], string[::-1])
+        self._add_counts_to_stat(counts)
         return self.stat.get_CVaR()
 
     def hist(self, angles, shots):
@@ -1112,7 +1181,7 @@ class QAOA:
             job = self.backend.run(
                 bound_circuit,
                 shots=shots,
-                optimization_level=0,
+                optimization_level=1,
                 memory=self.memory,
             )
         else:

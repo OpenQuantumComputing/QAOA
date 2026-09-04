@@ -103,6 +103,62 @@ def resolve_node_weights(graph, node_order, weights=None):
     return np.asarray(values, dtype=float)
 
 
+def degree_buckets(canonical):
+    """Return a list of degree buckets for the canonical graph.
+
+    Each bucket is a list of qubit indices that share the same degree, ordered
+    by increasing degree value.  Vertices within a bucket are sorted by qubit
+    index for determinism.
+
+    Example::
+
+        G = nx.path_graph(4)  # degrees: 0→1, 1→2, 2→2, 3→1
+        canonical, _ = canonical_graph(G)
+        degree_buckets(canonical)
+        # [[0, 3], [1, 2]]   (degree-1 vertices, then degree-2 vertices)
+    """
+    from collections import defaultdict
+
+    buckets = defaultdict(list)
+    for node in canonical.nodes():
+        buckets[canonical.degree[node]].append(node)
+    return [sorted(v) for _, v in sorted(buckets.items())]
+
+
+def mis_mvc_warm_start_angle(graph, grouping="uniform"):
+    """Return warm-start angle(s) for a parameterized MIS/MVC initial state.
+
+    Args:
+        graph: The problem graph (passed directly, not yet canonicalized).
+        grouping (str): One of ``"uniform"``, ``"degree"``, or ``"per_vertex"``.
+
+    Returns:
+        float | list[float]: A single angle for ``"uniform"``, or one angle per
+        bucket/vertex for the other groupings.  Each angle is
+        ``arctan(1 / sqrt(mean_degree_in_bucket))`` (clamped to ``[0, π/2]``),
+        falling back to ``π/4`` for isolated vertices (degree 0).
+    """
+    canonical, _ = canonical_graph(graph)
+
+    def _angle_for_degree(d):
+        if d == 0:
+            return np.pi / 4
+        return np.arctan(1.0 / np.sqrt(d))
+
+    if grouping == "uniform":
+        mean_deg = np.mean([canonical.degree[n] for n in canonical.nodes()])
+        return _angle_for_degree(mean_deg)
+
+    if grouping == "degree":
+        buckets = degree_buckets(canonical)
+        return [_angle_for_degree(canonical.degree[bucket[0]]) for bucket in buckets]
+
+    if grouping == "per_vertex":
+        return [_angle_for_degree(canonical.degree[n]) for n in canonical.nodes()]
+
+    raise ValueError("grouping must be 'uniform', 'degree', or 'per_vertex'")
+
+
 def validate_bitstring(string, num_qubits):
     """Validate the public q0-first bitstring convention used by qaoa."""
 
