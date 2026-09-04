@@ -71,6 +71,10 @@ class Interp(Initializer):
                 if self.init_angles is not None
                 else [getattr(qaoa, "best_init_val", 0.0)] * qaoa.n_init
             )
+            if self.init_angles is not None and len(self.init_angles) != qaoa.n_init:
+                raise ValueError(
+                    f"Interp init_angles length {len(self.init_angles)} != qaoa.n_init {qaoa.n_init}"
+                )
             candidate = np.array(
                 init_part
                 + [gamma_best] * qaoa.n_gamma
@@ -98,6 +102,10 @@ def _interp(angles, n_init, n_gamma, n_beta, init_angles=None):
     depth = (len(angles) - n_init) // n_per_layer
 
     if init_angles is not None:
+        if len(init_angles) != n_init:
+            raise ValueError(
+                f"init_angles length {len(init_angles)} != n_init {n_init}"
+            )
         init_part = list(init_angles)
     else:
         init_part = list(angles[:n_init])
