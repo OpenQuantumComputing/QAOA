@@ -17,7 +17,9 @@ class Statistic:
         maxSols (list): List of strings corresponding to maximum values.
         E (float): Expectation value of the samples.
         S (float): Variance of the samples.
-        all_values (np.ndarray): Array to store all sample values for CVaR calculation.
+        all_values (np.ndarray): Lazily expanded, sorted sample values for
+            backwards compatibility.  Internally, CVaR values are stored as
+            weighted energy bins to avoid expanding one value per shot.
 
     Methods:
         reset(): Resets all statistics to initial values.
@@ -52,7 +54,25 @@ class Statistic:
         self.maxSols = []
         self.E = 0
         self.S = 0
-        self.all_values = np.array([])
+        # Keep CVaR samples compressed by energy.  A histogram may contain
+        # thousands of shots but only a small number of distinct energies.
+        self._cvar_bins = {}
+        self._cvar_sample_count = 0
+
+    @property
+    def all_values(self):
+        """Return expanded sorted CVaR samples for backwards compatibility.
+
+        Normal CVaR calculation does not access this property, so it avoids
+        allocating an array with one entry per shot.
+        """
+        if not self._cvar_bins:
+            return np.array([])
+        values = np.fromiter(sorted(self._cvar_bins), dtype=float)
+        counts = np.fromiter(
+            (self._cvar_bins[value] for value in values), dtype=int
+        )
+        return np.repeat(values, counts)
 
     def add_sample(self, value, weight, string):
         """
@@ -83,10 +103,9 @@ class Statistic:
         self.E += weight / self.W * (value - self.E)
         self.S += weight * (value - tmp_E) * (value - self.E)
         if self.cvar < 1:
-            idx = np.searchsorted(self.all_values, value)
-            self.all_values = np.insert(
-                self.all_values, idx, np.ones(int(weight)) * value
-            )
+            count = int(weight)
+            self._cvar_bins[value] = self._cvar_bins.get(value, 0) + count
+            self._cvar_sample_count += count
 
     def get_E(self):
         """
@@ -135,8 +154,17 @@ class Statistic:
             float: The CVaR based on the samples.
         """
         if self.cvar < 1:
-            cvarK = max(1, int(np.round(self.cvar * len(self.all_values))))
-            cvar = np.sum(self.all_values[:cvarK]) / cvarK
-            return cvar
+            cvarK = max(1, int(np.round(self.cvar * self._cvar_sample_count)))
+            remaining = cvarK
+            cvar_sum = 0.0
+
+            for value in sorted(self._cvar_bins):
+                count = min(self._cvar_bins[value], remaining)
+                cvar_sum += value * count
+                remaining -= count
+                if remaining == 0:
+                    break
+
+            return cvar_sum / cvarK
         else:
             return self.get_E()

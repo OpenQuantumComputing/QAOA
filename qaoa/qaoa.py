@@ -314,6 +314,10 @@ class QAOA:
         self.shots = shots
         self.precision = precision
         self.stat = Statistic(cvar=cvar)
+        # A QAOA instance owns one problem, so energies of measured bitstrings
+        # are invariant for its lifetime.  Reuse them across optimisation and
+        # landscape jobs instead of recalculating the same objective values.
+        self._energy_cache = {}
         self.cvar = cvar
         self.memorysize = memorysize
         self.memory = self.memorysize > 0
@@ -475,8 +479,9 @@ class QAOA:
             depth (int): The depth p (number of alternating mixing and phase separating layers) of the QAOA circuit.
         """
         if self.parameterized_circuit_depth == depth:
-            LOG.info(
-                "Circuit is already of depth " + str(self.parameterized_circuit_depth)
+            LOG.debug(
+                "Reusing parameterized circuit",
+                depth=self.parameterized_circuit_depth,
             )
             return
 
@@ -551,7 +556,7 @@ class QAOA:
                 self.parameterized_circuit.barrier()
 
             if self.usebarrier:
-                self.circuit.barrier()
+                self.parameterized_circuit.barrier()
 
         self.parameterized_circuit.barrier()
         self.parameterized_circuit.measure(q, c)
@@ -559,7 +564,7 @@ class QAOA:
             self.parameterized_circuit, self.backend
             #basis_gates=['cx', 'u', 'p', 'cp', 'id', 'x', 'h', 'ry', 'cry', 'cu']
         )
-        self.parametrized_circuit_depth = depth
+        self.parameterized_circuit_depth = depth
 
     def sample_cost_landscape(
         self, angles={"gamma": [0, 2 * np.pi, 20], "beta": [0, 2 * np.pi, 20]}
@@ -649,25 +654,20 @@ class QAOA:
                                 + [self.beta_grid[bi]] * self.n_beta
                             )
                             params = self.getParametersToBind(
-                                angle_array, self.parametrized_circuit_depth, asList=False
+                                angle_array, self.parameterized_circuit_depth, asList=False
                             )
                             bound_circuit = self.parameterized_circuit.assign_parameters(params)
                             job = self.backend.run(
                                 bound_circuit,
                                 noise_model=self.noisemodel,
                                 shots=self.shots,
-                                optimization_level=0,
+                                optimization_level=1,
                                 memory=self.memory,
                             )
                             jres = job.result()
                             counts = jres.get_counts()
                             self.stat.reset()
-                            for string in counts:
-                                self.stat.add_sample(
-                                    self.problem.energy(string[::-1]),
-                                    counts[string],
-                                    string[::-1],
-                                )
+                            self._add_counts_to_stat(counts)
                             all_exp[i, bi, gi] = self.stat.get_CVaR()
                             all_var[i, bi, gi] = self.stat.get_Variance()
                             all_max[i, bi, gi] = self.stat.get_max()
@@ -699,7 +699,7 @@ class QAOA:
                                 + [self.beta_grid[bi]] * self.n_beta
                             )
                             params = self.getParametersToBind(
-                                angle_array, self.parametrized_circuit_depth, asList=False
+                                angle_array, self.parameterized_circuit_depth, asList=False
                             )
                             bound_circuits.append(
                                 self.parameterized_circuit.assign_parameters(params)
@@ -710,17 +710,22 @@ class QAOA:
                     f"{len(bound_circuits)} circuits "
                     f"(init×beta×gamma = {n_init_pts}×{n_beta_pts}×{n_gamma_pts})"
                 )
+                backend_opts = {
+                    "max_parallel_experiments": 0,
+                    "max_parallel_shots": 1,
+                }
                 job = self.backend.run(
                     bound_circuits,
                     noise_model=self.noisemodel,
                     shots=self.shots,
-                    optimization_level=0,
+                    optimization_level=1,
                     memory=self.memory,
+                    **backend_opts,
                 )
                 logger.info("Done execute")
 
                 if n_init_pts == 1:
-                    # Single init point — delegate to measurementStatistics as before.
+                    # Single init point - delegate to measurementStatistics as before.
                     self.measurementStatistics(job)
                     logger.info("Done measurement")
                 else:
@@ -730,12 +735,7 @@ class QAOA:
                     flat_exp, flat_var, flat_max, flat_min = [], [], [], []
                     for counts in counts_all:
                         self.stat.reset()
-                        for string in counts:
-                            self.stat.add_sample(
-                                self.problem.energy(string[::-1]),
-                                counts[string],
-                                string[::-1],
-                            )
+                        self._add_counts_to_stat(counts)
                         flat_exp.append(self.stat.get_CVaR())
                         flat_var.append(self.stat.get_Variance())
                         flat_max.append(self.stat.get_max())
@@ -753,7 +753,8 @@ class QAOA:
                     self.MaxEnergy_sampled_p1 = all_max[best_i]
                     self.MinEnergy_sampled_p1 = all_min[best_i]
                     logger.info(
-                        f"Done measurement — best init value: {self.best_init_val:.4f} "
+                        f"Done measurement — selected initial-state grid value: "
+                        f"{self.best_init_val:.4f} "
                         f"(index {best_i}/{n_init_pts - 1})"
                     )
 
@@ -762,6 +763,25 @@ class QAOA:
 
         logger.info("Calculating Energy landscape done")
 
+    def _measurement_energy(self, raw_bitstring):
+        """Return a problem-order bitstring and its cached energy."""
+        bitstring = raw_bitstring[::-1]
+        try:
+            return bitstring, self._energy_cache[bitstring]
+        except KeyError:
+            energy = self.problem.energy(bitstring)
+            self._energy_cache[bitstring] = energy
+            return bitstring, energy
+
+    def _add_counts_to_stat(self, counts):
+        """Add one Qiskit histogram to ``self.stat`` using cached energies."""
+        for raw_bitstring, count in counts.items():
+            bitstring, energy = self._measurement_energy(raw_bitstring)
+            self.stat.add_sample(energy, count, bitstring)
+
+    def clear_energy_cache(self):
+        """Clear cached energies after an in-place change to ``self.problem``."""
+        self._energy_cache.clear()
 
     def measurementStatistics(self, job):
         # """
@@ -795,14 +815,14 @@ class QAOA:
         if self.memorysize > 0:
             for i, _ in enumerate(jres.results):
                 memory_list = jres.get_memory(experiment=i)
-                if self.memorysize > 0:
-                    for measurement in memory_list:
-                        self.memory_lists.append(
-                            [measurement, self.problem.energy(measurement[::-1])]
-                        )
-                        self.memorysize -= 1
-                        if self.memorysize < 1:
-                            break
+                for measurement in memory_list:
+                    _, energy = self._measurement_energy(measurement)
+                    self.memory_lists.append([measurement, energy])
+                    self.memorysize -= 1
+                    if self.memorysize < 1:
+                        break
+                if self.memorysize < 1:
+                    break
 
         self.last_hist = counts_list
 
@@ -813,10 +833,7 @@ class QAOA:
             min_energies = []
             for i, counts in enumerate(counts_list):
                 self.stat.reset()
-                for string in counts:
-                    # qiskit binary strings use little endian encoding, but our energy function expects big endian encoding. Therefore, we reverse the order
-                    energy = self.problem.energy(string[::-1])
-                    self.stat.add_sample(energy, counts[string], string[::-1])
+                self._add_counts_to_stat(counts)
                 expectations.append(self.stat.get_CVaR())
                 variances.append(self.stat.get_Variance())
                 max_energies.append(self.stat.get_max())
@@ -835,10 +852,7 @@ class QAOA:
                 angles["beta"][2], angles["gamma"][2]
             )
         else:
-            for string in counts_list:
-                # qiskit binary strings use little endian encoding, but our energy function expects big endian encoding. Therefore, we reverse the order
-                energy = self.problem.energy(string[::-1])
-                self.stat.add_sample(energy, counts_list[string], string[::-1])
+            self._add_counts_to_stat(counts_list)
 
     def optimize(
         self,
@@ -1021,14 +1035,14 @@ class QAOA:
         for i in range(3):  # this loop is used only used if precision is set
             if self.backend.configuration().local:
                 params = self.getParametersToBind(
-                    angles, self.parametrized_circuit_depth, asList=False
+                    angles, self.parameterized_circuit_depth, asList=False
                 )
                 bound_circuit = self.parameterized_circuit.assign_parameters(params)
                 job = self.backend.run(
                     bound_circuit,
                     noise_model=self.noisemodel,
                     shots=shots,
-                    optimization_level=0,
+                    optimization_level=1,
                     memory=self.memory,
                 )
             else:
@@ -1114,7 +1128,7 @@ class QAOA:
 
         Args:
             angle_array (np.ndarray): Flat parameter array whose length must
-                be consistent with the current ``parametrized_circuit_depth``.
+                be consistent with the current ``parameterized_circuit_depth``.
 
         Returns:
             float: Expected energy (CVaR), i.e. the value to minimise.
@@ -1125,22 +1139,20 @@ class QAOA:
         if not self.backend.configuration().local:
             raise NotImplementedError
         params = self.getParametersToBind(
-            angle_array, self.parametrized_circuit_depth, asList=False
+            angle_array, self.parameterized_circuit_depth, asList=False
         )
         bound_circuit = self.parameterized_circuit.assign_parameters(params)
         job = self.backend.run(
             bound_circuit,
             noise_model=self.noisemodel,
             shots=self.shots,
-            optimization_level=0,
+            optimization_level=1,
             memory=self.memory,
         )
         jres = job.result()
         counts = jres.get_counts()
         self.stat.reset()
-        for string in counts:
-            energy = self.problem.energy(string[::-1])
-            self.stat.add_sample(energy, counts[string], string[::-1])
+        self._add_counts_to_stat(counts)
         return self.stat.get_CVaR()
 
     def hist(self, angles, shots):
@@ -1169,7 +1181,7 @@ class QAOA:
             job = self.backend.run(
                 bound_circuit,
                 shots=shots,
-                optimization_level=0,
+                optimization_level=1,
                 memory=self.memory,
             )
         else:
