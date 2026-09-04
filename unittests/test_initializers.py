@@ -240,6 +240,58 @@ class TestInterp(unittest.TestCase):
         # For depth=1: tmp=[0, g, 0], w=[0,1], result_l0 = 0/1 * 0 + 1/1 * g = g, result_l1 = 1/1 * g + 0/1 * 0 = g
         np.testing.assert_allclose(result, [1.0, 2.0, 1.0, 2.0], atol=1e-12)
 
+    def test_init_angles_carried_forward_unchanged(self):
+        """init part is never interpolated; it passes through untouched."""
+        from qaoa.initializers.interp import _interp
+        angles = np.array([0.7, 1.0, 2.0])  # [init, gamma, beta] at depth 1
+        result = _interp(angles, n_init=1, n_gamma=1, n_beta=1)
+        self.assertAlmostEqual(result[0], 0.7)   # init unchanged
+        self.assertEqual(len(result), 5)           # 1 init + 2 layers × 2
+
+    def test_fixed_init_angles_override(self):
+        """Explicit init_angles overrides whatever is in the angles array."""
+        from qaoa.initializers.interp import _interp
+        angles = np.array([0.7, 1.0, 2.0])
+        result = _interp(angles, n_init=1, n_gamma=1, n_beta=1, init_angles=np.array([0.42]))
+        self.assertAlmostEqual(result[0], 0.42)
+
+    def test_interp_class_with_init_angles(self):
+        """Interp(init_angles=...) fixes init params from depth 1 onward."""
+        from qaoa.initializers import Interp
+        from qaoa.initializers.interp import _interp
+
+        class FakeQAOA:
+            n_init = 1; n_gamma = 1; n_beta = 1
+            Energy_sampled_p1 = np.array([[1.0, 0.5], [0.8, 0.9]])
+            gamma_grid = np.array([0.1, 0.2])
+            beta_grid  = np.array([0.3, 0.4])
+            best_init_val = 0.0
+            def get_angles(self, d):
+                return np.array([0.99, 0.5, 0.3])
+
+        init = Interp(init_angles=[0.42])
+        # depth=1: fixed init used
+        c1 = init.get_candidates(FakeQAOA(), depth=1)[0]
+        self.assertAlmostEqual(c1[0], 0.42)
+
+        # depth=2: fixed init preserved, gamma/beta interpolated
+        c2 = init.get_candidates(FakeQAOA(), depth=2)[0]
+        self.assertAlmostEqual(c2[0], 0.42)
+
+    def test_interp_class_uses_best_init_val_from_grid(self):
+        """Interp() without init_angles picks up best_init_val from QAOA."""
+        from qaoa.initializers import Interp
+
+        class FakeQAOA:
+            n_init = 1; n_gamma = 1; n_beta = 1
+            Energy_sampled_p1 = np.array([[1.0, 0.5], [0.8, 0.9]])
+            gamma_grid = np.array([0.1, 0.2])
+            beta_grid  = np.array([0.3, 0.4])
+            best_init_val = 0.77
+
+        c = Interp().get_candidates(FakeQAOA(), depth=1)[0]
+        self.assertAlmostEqual(c[0], 0.77)
+
 
 # ---------------------------------------------------------------------------
 # LayerGrid (requires backend)
